@@ -1,0 +1,4 @@
+site_name: Pykour
+site_url: https://pykour.com/
+theme:
+  name: material
