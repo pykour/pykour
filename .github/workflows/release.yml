@@ -1,0 +1,29 @@
+name: Release Python Package
+on:
+  release:
+    types: [created]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+      - name: Install Poetry
+        run: |
+          pip install --upgrade pip
+          curl -sSL https://install.python-poetry.org | python -
+      - name: Install dependencies
+        run: |
+          poetry install --no-dev
+      - name: Build the package
+        run: |
+          poetry build
+      - name: Publish to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          poetry publish --no-interaction --username __token__ --password $POETRY_PYPI_TOKEN_PYPI

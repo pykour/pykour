@@ -1,6 +1,8 @@
 # Pykour
 
 [![Python Versions](https://img.shields.io/badge/Python-3.9%20|%203.10%20|%203.11%20|%203.12-blue)](https://www.python.org/)
+[![PyPI version](https://img.shields.io/pypi/v/pykour)](https://pypi.org/project/pykour/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/pykour)](https://pypi.org/project/pykour/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/pykour/pykour/actions/workflows/ci.yml/badge.svg)](https://github.com/pykour/pykour/actions/workflows/ci.yml)
 
@@ -11,7 +13,7 @@ The key features are:
 - **Fast**: High performance. One of the fastest Python frameworks available.
 - **Fewer bugs**: Reduce about 40% of human (developer) induced errors.
 - **Easy to learn**: Designed to be easy to use and learn. Less time reading docs.
-- **Robust**: Get production-ready code. With automatic interactive documentation.
+- **Robust**: Get production-ready code.
 
 ## Requirements
 

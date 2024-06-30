@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pykour"
 version = "0.1.0"
-description = ""
+description = "Pykour is modern, fast, and easy to use web framework for Python."
 authors = ["Takashi Yamashina <takashi.yamashina@gmail.com>"]
 readme = "README.md"
 
