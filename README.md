@@ -11,7 +11,6 @@ Pykour is modern, fast, and easy to use web framework for Python.
 The key features are:
 
 - **Fast**: High performance. One of the fastest Python frameworks available.
-- **Fewer bugs**: Reduce about 40% of human (developer) induced errors.
 - **Easy to learn**: Designed to be easy to use and learn. Less time reading docs.
 - **Robust**: Get production-ready code.
 

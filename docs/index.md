@@ -1,13 +1,12 @@
-# Welcome to MkDocs
+# Pykour
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Pykour is modern, fast, and easy to use web framework for Python.
 
-## Commands
+The key features are:
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+- **Fast**: High performance. One of the fastest Python frameworks available.
+- **Easy to learn**: Designed to be easy to use and learn. Less time reading docs.
+- **Robust**: Get production-ready code.
 
 ## Project layout
 
@@ -15,3 +14,37 @@ For full documentation visit [mkdocs.org](https://www.mkdocs.org).
     docs/
         index.md  # The documentation homepage.
         ...       # Other markdown pages, images and other files.
+
+## Requirements
+
+- Python 3.9+
+
+## Installation
+
+```bash
+pip install pykour
+```
+
+## Example
+
+### Create an application
+
+```python
+from pykour import Pykour
+
+app = Pykour()
+
+@app.route('/')
+async def index():
+    return {'message': 'Hello, World!'}
+```
+
+### Run the application
+
+```bash
+$ pykour run main:app
+```
+
+## License
+
+This project is licensed under the terms of the MIT license.
