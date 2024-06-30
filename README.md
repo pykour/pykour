@@ -30,13 +30,13 @@ pip install pykour
 ### Create an application
 
 ```python
-from pykour import Pykour, Request, Response
+from pykour import Pykour
 
 app = Pykour()
 
 @app.route('/')
-async def index(request: Request, response: Response):
-    response.text = 'Hello, World!'
+async def index():
+    return {'message': 'Hello, World!'}
 ```
 
 ### Run the application
