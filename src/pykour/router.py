@@ -63,41 +63,151 @@ class Node:
 
 class Router:
     def __init__(self, prefix: str = ""):
+        """Router class.
+
+        Args:
+            prefix: Prefix for the router.
+        """
         self.root = Node("")
         self.prefix = prefix.rstrip("/")
 
+    def __str__(self):
+        routes = []
+
+        def traverse(node, prefix=""):
+            for child in node.children:
+                new_prefix = f"{prefix}/{child.part}".strip("/")
+                for method, route in child.route_map.items():
+                    handler_name = route.handler[0].__name__
+                    route_description = f"{method} /{new_prefix} -> {handler_name}()"
+                    routes.append(route_description)
+                traverse(child, new_prefix)
+
+        traverse(self.root)
+        return "\n".join(routes)
+
     def get(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        return self.route("GET", path, status_code)
+        """Decorator for GET method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="GET", status_code=status_code)
 
     def post(self, path: str, status_code: HTTPStatus = HTTPStatus.CREATED) -> Callable:
-        return self.route("POST", path, status_code)
+        """Decorator for POST method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="POST", status_code=status_code)
 
     def put(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        return self.route("PUT", path, status_code)
+        """Decorator for PUT method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="PUT", status_code=status_code)
 
     def delete(self, path: str, status_code: HTTPStatus = HTTPStatus.NO_CONTENT) -> Callable:
-        return self.route("DELETE", path, status_code)
+        """Decorator for DELETE method.
 
-    def options(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        return self.route("OPTIONS", path, status_code)
-
-    def head(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        return self.route("HEAD", path, status_code)
-
-    def trace(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        return self.route("TRACE", path, status_code)
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="DELETE", status_code=status_code)
 
     def patch(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        return self.route("PATCH", path, status_code)
+        """Decorator for PATCH method.
 
-    def route(self, method: str, path: str, status_code: int) -> Callable:
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="PATCH", status_code=status_code)
+
+    def options(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
+        """Decorator for OPTIONS method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="OPTIONS", status_code=status_code)
+
+    def head(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
+        """Decorator for HEAD method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="HEAD", status_code=status_code)
+
+    def trace(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
+        """Decorator for TRACE method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="TRACE", status_code=status_code)
+
+    def route(self, path: str, method: str = "GET", status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+        """Decorator for route.
+
+        Args:
+            path: URL path.
+            method: HTTP method.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+
         def decorator(func):
             self.add_route(path, method, (func, status_code))
             return func
 
         return decorator
 
+    def add_router(self, router: Router):
+        """Add router.
+
+        Args:
+            router: Router instance.
+        """
+        for child in router.root.children:
+            self._merge_nodes(self.root, child, self.prefix)
+
     def add_route(self, path: str, method: str, handler: Any):
+        """Add route.
+
+        Args:
+            path: URL path.
+            method: HTTP method.
+            handler: Route handler.
+        """
         if self.prefix:
             full_path = f"/{self.prefix}{path}"
         else:
@@ -105,11 +215,14 @@ class Router:
         route = Route(full_path, method, handler)
         self.root.insert(full_path, route)
 
-    def add_router(self, router: Router):
-        for child in router.root.children:
-            self._merge_nodes(self.root, child, self.prefix)
-
     def get_route(self, path: str, method: str) -> Union[Route, None]:
+        """Get route.
+
+        Args:
+            path: URL path.
+            method: HTTP method.
+        """
+
         if self.prefix:
             if not path.startswith(f"/{self.prefix}"):
                 return None
@@ -120,6 +233,14 @@ class Router:
         return route
 
     def exists(self, path: str, method: str) -> bool:
+        """Check if route exists.
+
+        Args:
+            path: URL path.
+            method: HTTP method.
+        Returns:
+            True if route exists, False otherwise.
+        """
         return self.get_route(path, method) is not None
 
     def _merge_nodes(self, parent: Node, child: Node, prefix: str):

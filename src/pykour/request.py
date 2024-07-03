@@ -6,15 +6,22 @@ from pykour.url import URL
 
 
 class Request(typing.Mapping[str, typing.Any]):
-    def __init__(self, scope, receive):
-        print(f"Request: {scope}")
+    """Request is a class that represents a request from a client."""
+
+    def __init__(self, scope: dict[str, str], receive: typing.Callable[[], typing.Awaitable[dict]]):
+        """Initializes a new instance of the Request class.
+
+        Args:
+            scope: The ASGI scope.
+            receive: The ASGI receive function.
+        """
+
         self.scope = scope
         self.receive = receive
         self._headers = defaultdict(list)
         self.content_type = None
         self.charset = "utf-8"
 
-        # ヘッダーを解析し、Content-Typeヘッダーを先に解析する
         for key, value in self.scope["headers"]:
             decoded_key = key.decode("latin1").lower()
             decoded_value = value.decode("latin1")
@@ -41,32 +48,72 @@ class Request(typing.Mapping[str, typing.Any]):
 
     @property
     def app(self) -> str:
+        """Returns the ASGI application instance.
+
+        Returns:
+            Application name.
+        """
         return self.scope["app"]
 
     @property
     def url(self) -> URL:
+        """Returns the URL instance.
+
+        Returns:
+            URL instance.
+        """
         return URL(scope=self.scope)
 
     @property
     def headers(self) -> dict[str, list[str]]:
+        """Returns the headers.
+
+        Returns:
+            Headers.
+        """
         return self._headers
 
     def get_header(self, name: str) -> list[str]:
+        """Returns the header value.
+
+        Args:
+            name: The header name.
+        """
         return self._headers.get(name)
 
     @property
     def method(self) -> str:
+        """Returns the HTTP method.
+
+        Returns:
+            HTTP method.
+        """
         return typing.cast(str, self.scope["method"])
 
     @property
     def version(self) -> str:
+        """Returns the HTTP version.
+
+        Returns:
+            HTTP version.
+        """
         return self.scope["http_version"]
 
     @property
     def query_string(self) -> bytes:
+        """Returns the query string.
+
+        Returns:
+            Query string.
+        """
         return self.scope["query_string"]
 
     async def body(self) -> bytes:
+        """Reads the request body.
+
+        Returns:
+            The request body.
+        """
         try:
             body = b""
             more_body = True
@@ -82,6 +129,11 @@ class Request(typing.Mapping[str, typing.Any]):
             raise e
 
     async def json(self) -> typing.Any:
+        """Parses the request body as JSON.
+
+        Returns:
+            The parsed JSON object.
+        """
         try:
             body = await self.body()
             return json.loads(body)

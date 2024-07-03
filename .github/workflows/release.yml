@@ -2,8 +2,10 @@ name: Release Python Package
 on:
   release:
     types: [created]
+permissions:
+  contents: write
 jobs:
-  deploy:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -27,3 +29,24 @@ jobs:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           poetry publish --no-interaction --username __token__ --password $POETRY_PYPI_TOKEN_PYPI
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Git Credentials
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        with:
+          key: mkdocs-material-${{ env.cache_id }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+      - run: pip install mkdocs-material mkdocs-embed-external-markdown mkdocs-exclude mkdocs-redirects mkdocs-simple-hooks mkdocstrings-python tomli pyupgrade
+      - run: mkdocs gh-deploy --force

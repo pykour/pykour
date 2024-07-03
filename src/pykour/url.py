@@ -13,7 +13,15 @@ from urllib.parse import (
 
 
 class URL:
-    def __init__(self, url: str = "", scope=None) -> None:
+    """URL is a class that represents a URL."""
+
+    def __init__(self, url: str = "", scope: dict[str, str] = None) -> None:
+        """URL is a class that represents a URL.
+
+        Args:
+            url: The URL.
+            scope: The ASGI scope.
+        """
         if scope is not None:
             scheme = scope.get("scheme", "http")
             server = scope.get("server", None)
@@ -45,46 +53,101 @@ class URL:
 
     @property
     def components(self) -> SplitResult:
+        """Returns the URL components.
+
+        Returns:
+            The URL components.
+        """
         return urlsplit(self.url)
 
     @property
     def scheme(self) -> str:
+        """Returns the scheme.
+
+        Returns:
+            The scheme.
+        """
         return self.components.scheme
 
     @property
     def netloc(self) -> str:
+        """Returns the network location.
+
+        Returns:
+            The network location.
+        """
         return self.components.netloc
 
     @property
     def path(self) -> str:
+        """Returns the path.
+
+        Returns:
+            The path.
+        """
         return self.components.path
 
     @property
     def query(self) -> str:
+        """Returns the query string.
+
+        Returns:
+            The query string.
+        """
         return self.components.query
 
     @property
     def fragment(self) -> str:
+        """Returns the fragment.
+
+        Returns:
+            The fragment.
+        """
         return self.components.fragment
 
     @property
     def username(self) -> str:
+        """Returns the username.
+
+        Returns:
+            The username.
+        """
         return self.components.username
 
     @property
     def password(self) -> str:
+        """Returns the password.
+
+        Returns:
+            The password.
+        """
         return self.components.password
 
     @property
     def hostname(self) -> str:
+        """Returns the hostname.
+
+        Returns:
+            The hostname.
+        """
         return self.components.hostname
 
     @property
     def port(self) -> int:
+        """Returns the port number.
+
+        Returns:
+            The port number.
+        """
         return self.components.port
 
     @property
     def is_secure(self) -> bool:
+        """Returns True if the URL is secure.
+
+        Returns:
+            True if the URL is secure.
+        """
         return self.scheme in ("https", "wss")
 
     @property

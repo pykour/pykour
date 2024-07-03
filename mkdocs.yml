@@ -1,4 +1,54 @@
 site_name: Pykour
+site_description: Pykour is modern, fast, and easy to use web framework for Python.
 site_url: https://pykour.com/
 theme:
   name: material
+  features:
+    - content.tabs.link
+    - content.code.annotate
+    - content.code.copy
+    - announce.dismiss
+    - navigation.tabs
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.preview
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - toc.follow
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - API Documentation:
+      - core:
+        - Pykour: api/pykour.md
+        - Router: api/router.md
+        - Request: api/request.md
+        - Response: api/response.md
+        - URL: api/url.md
+      - exceptions:
+        - HTTPException: api/httpexception.md
+        - ResourceNotFoundException: api/resourcenotfoundexception.md
+  - Release Notes: release-notes.md
+repo_name: pykour/pykour
+repo_url: https://github.com/pykour/pykour
+edit_uri: ''
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [./src]
+          options:
+            members_order: source
+            separate_signature: true
+            filters: ["!^_"]
+            docstring_options:
+              ignore_init_summary: true
+            merge_init_into_class: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+          import:
+            - https://docs.python.org/3/objects.inv

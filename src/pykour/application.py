@@ -1,6 +1,6 @@
 import json
 from http import HTTPStatus
-from typing import Callable
+from typing import Callable, Union
 
 import pykour.exceptions as ex
 from pykour.call import call
@@ -11,39 +11,116 @@ from pykour.router import Router
 
 
 class Pykour:
+    """Pykour application class."""
+
     supported_protocols = ["http"]
 
     def __init__(self):
+        """Initialize Pykour application."""
         self.router = Router()
         self._config = None
 
-    def get(self, path: str, status_code=HTTPStatus.OK) -> Callable:
-        return self.route("GET", path, status_code)
+    def get(self, path: str, status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+        """Decorator for GET method.
 
-    def post(self, path: str, status_code=HTTPStatus.CREATED) -> Callable:
-        return self.route("POST", path, status_code)
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="GET", status_code=status_code)
 
-    def put(self, path: str, status_code=HTTPStatus.OK) -> Callable:
-        return self.route("PUT", path, status_code)
+    def post(self, path: str, status_code: Union[HTTPStatus, int] = HTTPStatus.CREATED) -> Callable:
+        """Decorator for POST method.
 
-    def delete(self, path: str, status_code=HTTPStatus.NO_CONTENT) -> Callable:
-        return self.route("DELETE", path, status_code)
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="POST", status_code=status_code)
 
-    def patch(self, path: str, status_code=HTTPStatus.OK) -> Callable:
-        return self.route("PATCH", path, status_code)
+    def put(self, path: str, status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+        """Decorator for PUT method.
 
-    def options(self, path: str, status_code=HTTPStatus.OK) -> Callable:
-        return self.route("OPTIONS", path, status_code)
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="PUT", status_code=status_code)
 
-    def head(self, path: str, status_code=HTTPStatus.OK) -> Callable:
-        return self.route("HEAD", path, status_code)
+    def delete(self, path: str, status_code: Union[HTTPStatus, int] = HTTPStatus.NO_CONTENT) -> Callable:
+        """Decorator for DELETE method.
 
-    def trace(self, path: str, status_code=HTTPStatus.OK) -> Callable:
-        return self.route("TRACE", path, status_code)
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="DELETE", status_code=status_code)
 
-    def route(self, method: str, path: str, status_code: int) -> Callable:
+    def patch(self, path: str, status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+        """Decorator for PATCH method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="PATCH", status_code=status_code)
+
+    def options(self, path: str, status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+        """Decorator for OPTIONS method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="OPTIONS", status_code=status_code)
+
+    def head(self, path: str, status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+        """Decorator for HEAD method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="HEAD", status_code=status_code)
+
+    def trace(self, path: str, status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+        """Decorator for TRACE method.
+
+        Args:
+            path: URL path.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+        return self.route(path=path, method="TRACE", status_code=status_code)
+
+    def route(self, path: str, method: str = "GET", status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+        """Decorator for route.
+
+        Args:
+            path: URL path.
+            method: HTTP method.
+            status_code: HTTP status code.
+        Returns:
+            Route decorator.
+        """
+
         def decorator(func):
-            self.router.add_route(path, method, (func, status_code))
+            self.router.add_route(path=path, method=method, handler=(func, status_code))
             return func
 
         return decorator

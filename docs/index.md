@@ -1,19 +1,23 @@
 # Pykour
 
-Pykour is modern, fast, and easy to use web framework for Python.
+Pykour is a web application framework for Python, designed to quickly implement REST APIs.
+Its usage is very similar to Flask and FastAPI, making it relatively easy to learn in a short period of time.
 
-The key features are:
+## Features
 
-- **Fast**: High performance. One of the fastest Python frameworks available.
-- **Easy to learn**: Designed to be easy to use and learn. Less time reading docs.
-- **Robust**: Get production-ready code.
+Pykour is a web application framework specialized for building REST APIs.
 
-## Project layout
+It is designed to deliver high performance, ensuring efficient handling of requests and responses,
+making your applications run smoothly and quickly.
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+One of the standout features of Pykour is its low learning curve.
+Developers can master it in a short period of time, making it accessible even for those who are new to web development.
+Pykour's structure and usage are similar to popular frameworks like Flask and FastAPI.
+This familiarity allows developers to transition easily and leverage their existing knowledge,
+speeding up the development process.
+
+Whether you are building simple APIs or complex, data-driven applications,
+Pykour provides the tools and flexibility you need to achieve your goals with ease and efficiency.
 
 ## Requirements
 

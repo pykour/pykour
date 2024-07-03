@@ -4,6 +4,8 @@ from http import HTTPStatus
 
 
 class HTTPException(Exception):
+    """HTTPException is a base class for HTTP exceptions."""
+
     def __init__(self, status_code: int, message: str | None = None) -> None:
         if message is None:
             message = HTTPStatus(status_code).phrase
@@ -19,5 +21,7 @@ class HTTPException(Exception):
 
 
 class ResourceNotFoundException(HTTPException):
+    """ResourceNotFoundException is raised when a resource is not found."""
+
     def __init__(self, message: str | None = None) -> None:
         super().__init__(status_code=HTTPStatus.NOT_FOUND, message=message)

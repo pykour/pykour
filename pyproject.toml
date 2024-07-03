@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pykour"
-version = "0.1.0"
+version = "0.1.1"
 description = "Pykour is modern, fast, and easy to use web framework for Python."
 authors = ["Takashi Yamashina <takashi.yamashina@gmail.com>"]
 readme = "README.md"
@@ -38,9 +38,15 @@ flake8 = "^7.1.0"
 bandit = "^1.7.9"
 safety = "^3.2.3"
 
-
 [tool.poetry.group.doc.dependencies]
 mkdocs-material = "^9.5.27"
+mkdocs-embed-external-markdown = "^3.0.2"
+mkdocs-exclude = "^1.0.2"
+mkdocs-redirects = "^1.2.1"
+mkdocs-simple-hooks = "^0.1.5"
+mkdocstrings-python = "^1.10.5"
+tomli = "^2.0.1"
+pyupgrade = "^3.16.0"
 
 [build-system]
 requires = ["poetry-core"]

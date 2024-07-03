@@ -45,7 +45,7 @@ def main():
             server_header=False,
         )
     elif args.command == "version":
-        print("Pykour v0.1.0")
+        print("Pykour v0.1.1")
     else:
         parser.print_help()
 
