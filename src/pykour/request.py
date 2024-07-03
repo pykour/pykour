@@ -1,14 +1,14 @@
 import json
-import typing
+from typing import MutableMapping, Mapping, Any, Callable, Awaitable, Iterator, cast
 from collections import defaultdict
 
 from pykour.url import URL
 
 
-class Request(typing.Mapping[str, typing.Any]):
+class Request(Mapping[str, Any]):
     """Request is a class that represents a request from a client."""
 
-    def __init__(self, scope: dict[str, str], receive: typing.Callable[[], typing.Awaitable[dict]]):
+    def __init__(self, scope: MutableMapping[str, Any], receive: Callable[[], Awaitable[dict]]):
         """Initializes a new instance of the Request class.
 
         Args:
@@ -34,10 +34,10 @@ class Request(typing.Mapping[str, typing.Any]):
 
         self._stream_consumed = False
 
-    def __getitem__(self, key: str) -> typing.Any:
+    def __getitem__(self, key: str) -> Any:
         return self.scope[key]
 
-    def __iter__(self) -> typing.Iterator[typing.Any]:
+    def __iter__(self) -> Iterator[Any]:
         return iter(self.scope)
 
     def __len__(self) -> int:
@@ -88,7 +88,7 @@ class Request(typing.Mapping[str, typing.Any]):
         Returns:
             HTTP method.
         """
-        return typing.cast(str, self.scope["method"])
+        return cast(str, self.scope["method"])
 
     @property
     def version(self) -> str:
@@ -128,7 +128,7 @@ class Request(typing.Mapping[str, typing.Any]):
             print(f"Error occurred while receiving body: {e}")
             raise e
 
-    async def json(self) -> typing.Any:
+    async def json(self) -> Any:
         """Parses the request body as JSON.
 
         Returns:

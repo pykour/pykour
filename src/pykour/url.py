@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import typing
+from typing import Any, MutableMapping
 from urllib.parse import (
     SplitResult,
     parse_qsl,
@@ -15,7 +15,7 @@ from urllib.parse import (
 class URL:
     """URL is a class that represents a URL."""
 
-    def __init__(self, url: str = "", scope: dict[str, str] = None) -> None:
+    def __init__(self, url: str = "", scope: MutableMapping[str, Any] = None) -> None:
         """URL is a class that represents a URL.
 
         Args:
@@ -190,7 +190,7 @@ class URL:
         components = self.components._replace(**kwargs)
         return self.__class__(components.geturl())
 
-    def __eq__(self, other: typing.Any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         return str(self) == str(other)
 
     def __str__(self) -> str:
