@@ -36,6 +36,17 @@ def test_url_creation_with_scope_without_server():
     assert str(url) == "http://example.com/home?param=value"
 
 
+def test_url_creation_with_scope_without_server_without_host_header():
+    scope = {
+        "scheme": "http",
+        "path": "/home",
+        "query_string": b"param=value",
+        "headers": [(b"content-type", b"text/html")],
+    }
+    url = URL(scope=scope)
+    assert str(url) == "/home?param=value"
+
+
 def test_url_creation_with_scope_with_default_port():
     scope = {
         "scheme": "http",
@@ -46,6 +57,18 @@ def test_url_creation_with_scope_with_default_port():
     }
     url = URL(scope=scope)
     assert str(url) == "http://example.com/home?param=value"
+
+
+def test_url_creation_with_scope_with_default_port_without_host_header():
+    scope = {
+        "scheme": "http",
+        "server": ("localhost", 80),
+        "path": "/home",
+        "query_string": b"param=value",
+        "headers": [(b"content-type", b"text/html")],
+    }
+    url = URL(scope=scope)
+    assert str(url) == "http://localhost/home?param=value"
 
 
 def test_url_creation_with_scope_without_query_string():
@@ -74,10 +97,10 @@ def test_url_components():
 
 def test_url_is_secure():
     url = URL("https://hostname")
-    assert url.is_secure == True
+    assert url.is_secure is True
 
     url = URL("http://hostname")
-    assert url.is_secure == False
+    assert url.is_secure is False
 
 
 def test_url_query_params():
@@ -109,6 +132,17 @@ def test_url_replace():
     assert replaced_url.path == "/newpath"
     assert replaced_url.query == "newquery=newvalue"
     assert replaced_url.fragment == "newfragment"
+
+
+def test_url_replace_with_port():
+    url = URL("http://hostname/path")
+    replaced_url = url.replace(
+        port=8080,
+    )
+    assert replaced_url.scheme == "http"
+    assert replaced_url.hostname == "hostname"
+    assert replaced_url.port == 8080
+    assert replaced_url.path == "/path"
 
 
 def test_url_equality():

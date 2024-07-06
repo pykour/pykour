@@ -86,6 +86,9 @@ class Router:
         traverse(self.root)
         return "\n".join(routes)
 
+    def __repr__(self):
+        return "Router(prefix='{}')".format(self.prefix)
+
     def get(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
         """Decorator for GET method.
 
