@@ -15,6 +15,7 @@ class BaseSchemaMetaclass(ABCMeta):
 
 
 class BaseSchema(metaclass=BaseSchemaMetaclass):
+    """Base class for schema."""
 
     def __init__(self, /, **data: Any) -> None:
         self._validate(data)
@@ -33,6 +34,14 @@ class BaseSchema(metaclass=BaseSchemaMetaclass):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> BaseSchema:
+        """
+        Create instance from dictionary.
+
+        Args:
+            data: Dictionary with data.
+        Returns:
+            Instance of schema.
+        """
         init_data = {}
         field_types = get_type_hints(cls)
 
