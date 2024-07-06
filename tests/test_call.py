@@ -1,13 +1,14 @@
 import json
 from datetime import datetime
 from enum import Enum
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 
 import pytest
 
 from pykour.call import call
 from pykour.request import Request
 from pykour.response import Response
+from pykour.schema import BaseSchema
 
 
 class Color(Enum):
@@ -121,3 +122,20 @@ async def test_function_call_with_invalid_dict_parameter():
 
     with pytest.raises(json.JSONDecodeError):
         await call(func, {"x": "not a valid json"}, Mock(spec=Request), Mock(spec=Response))
+
+
+@pytest.mark.asyncio
+async def test_function_call_with_schema_parameter():
+    class UserSchema(BaseSchema):
+        name: str
+        age: int
+
+    async def func(user: UserSchema):
+        return {"name": user.name, "age": user.age}
+
+    request_mock = Mock(spec=Request)
+    request_mock.json = AsyncMock(return_value={"name": "john", "age": 10})
+
+    result = await call(func, {}, request_mock, Mock(spec=Response))
+    assert result["name"] == "john"
+    assert result["age"] == 10
