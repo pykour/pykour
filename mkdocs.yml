@@ -33,6 +33,7 @@ nav:
         - Request: api/request.md
         - Response: api/response.md
         - URL: api/url.md
+        - BaseSchema: api/baseschema.md
       - exceptions:
         - HTTPException: api/httpexception.md
         - ResourceNotFoundException: api/resourcenotfoundexception.md

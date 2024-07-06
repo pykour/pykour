@@ -1,5 +1,16 @@
 # Release Notes
 
+## Unreleased
+
+### Features
+
+- Add BaseSchema and @validate decorator
+
+### Enhancements
+
+- Improved of test cases
+- Support codecov.io
+
 ## 0.1.1 - 2024-07-03
 
 ### Changed
