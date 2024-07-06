@@ -25,7 +25,9 @@ theme:
     - toc.follow
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
+  - User's Guide:
+      - Installation: installation.md
+      - Quickstart: quickstart.md
   - API Documentation:
       - core:
         - Pykour: api/pykour.md
