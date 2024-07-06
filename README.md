@@ -1,4 +1,4 @@
-# Pykour
+# ![Pykour](docs/assets/pykour.png)
 
 [![Python Versions](https://img.shields.io/badge/Python-3.9%20|%203.10%20|%203.11%20|%203.12-blue)](https://www.python.org/)
 [![PyPI version](https://img.shields.io/pypi/v/pykour)](https://pypi.org/project/pykour/)
