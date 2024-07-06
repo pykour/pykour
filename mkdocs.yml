@@ -3,6 +3,10 @@ site_description: Pykour is modern, fast, and easy to use web framework for Pyth
 site_url: https://pykour.com/
 theme:
   name: material
+  logo: assets/logo.png
+  favicon: assets/favicon.ico
+  palette:
+    primary: indigo
   features:
     - content.tabs.link
     - content.code.annotate
