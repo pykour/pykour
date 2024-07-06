@@ -4,6 +4,7 @@ import signal
 import sys
 import asyncio
 from functools import partial
+import os
 
 from pykour import __version__
 
@@ -15,6 +16,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
 """
+
+sys.path.append(os.getcwd())
 
 
 class PykourArgumentParser(argparse.ArgumentParser):
