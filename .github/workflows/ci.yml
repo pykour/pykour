@@ -63,7 +63,7 @@ jobs:
        run: |
          poetry install --with "typing"
      - name: Run mypy
-       run: poetry run mypy .
+       run: poetry run mypy src
   unittest:
     name: Unit tests
     runs-on: ubuntu-latest
