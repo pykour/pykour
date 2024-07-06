@@ -9,8 +9,8 @@ class BaseSchemaMetaclass(ABCMeta):
         validators = {key: value for key, value in attrs.items() if hasattr(value, "__validator__")}
 
         cls = super().__new__(mcs, cls_name, bases, attrs, **kwargs)
-        cls.__fields__ = fields
-        cls.__validators__ = validators
+        cls.__fields__ = fields  # type: ignore[attr-defined]
+        cls.__validators__ = validators  # type: ignore[attr-defined]
         return cls
 
 
@@ -25,7 +25,7 @@ class BaseSchema(metaclass=BaseSchemaMetaclass):
             setattr(self, key, value)
 
     def _validate(self, data: Dict[str, Any]) -> None:
-        for validator_name, validator_fn in self.__class__.__validators__.items():
+        for validator_name, validator_fn in self.__class__.__validators__.items():  # type: ignore[attr-defined]
             field_name = validator_fn.__validator__
             if field_name in data:
                 value = data[field_name]
