@@ -41,7 +41,7 @@ def test_main_run_command(mock_exit, mock_uvicorn_run):
         main()
         mock_uvicorn_run.assert_called_once_with(
             "main:app",
-            host="127.0.0.1",
+            host="0.0.0.0",
             port=8000,
             reload=False,
             workers=1,
