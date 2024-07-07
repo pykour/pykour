@@ -1,6 +1,6 @@
 from __future__ import annotations
 from http import HTTPStatus
-from typing import Any, Callable, Dict, Union
+from typing import Any, Callable, Dict, Union, List
 
 
 class Route:
@@ -234,6 +234,24 @@ class Router:
         if route:
             route.set_variables(variables)
         return route
+
+    def get_allowed_methods(self, path: str) -> List[str]:
+        """Get allowed HTTP methods for the specified path.
+
+        Args:
+            path: URL path.
+
+        Returns:
+            List of allowed HTTP methods.
+        """
+        allowed_methods = []
+        http_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"]
+
+        for method in http_methods:
+            if self.get_route(path, method):
+                allowed_methods.append(method)
+
+        return allowed_methods
 
     def exists(self, path: str, method: str) -> bool:
         """Check if route exists.
