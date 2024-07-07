@@ -166,7 +166,6 @@ class Pykour:
 
                     if response.status == HTTPStatus.NO_CONTENT:
                         # No content to send
-                        response.add_header("Content-Length", str(len(response_body)))
                         response.content = ""
 
                     if method == "OPTIONS":
