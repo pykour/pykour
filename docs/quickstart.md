@@ -31,4 +31,17 @@ To run the application, use the pykour command or python -m pykour. You need to 
 $ pykour run main:app
 ```
 
+Now, open your browser and go to `http://localhost:8000/`. You should see the message "Hello, World!".
+
+## Routing
+
+Pykour uses the `route()` decorator to define routes. The decorator takes a single argument, the URL path.
+
+```python
+@app.route('/hello')
+def hello():
+    return { "message": "Hello, Pykour!" }
+```
+
+
 

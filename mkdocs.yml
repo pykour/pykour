@@ -28,6 +28,7 @@ nav:
   - User's Guide:
       - Installation: installation.md
       - Quickstart: quickstart.md
+      - Pykour CLI: cli.md
   - API Documentation:
       - core:
         - Pykour: api/pykour.md
