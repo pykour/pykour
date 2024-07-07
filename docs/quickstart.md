@@ -25,7 +25,8 @@ So, what's happening here?
 
 Save it as `main.py` or something similar.
 
-To run the application, use the pykour command or python -m pykour. You need to tell the Pykour where you application is with the `main:py`.
+To run the application, use the pykour command or python -m pykour. You need to tell Pykour where your application is 
+located using `main:app`.
 
 ```bash
 $ pykour run main:app
@@ -55,7 +56,39 @@ def post_hello():
     return { "message": "Hello, Pykour!" }
 ```
 
-We recommend using `get()`, `post()`, `put()`, `delete()`, `patch()`, `options()`, `head()` and `trace()` for each HTTP method.
+## Variables in Routes
+
+You can also use variables within a route. 
+
+```python
+@app.route('/hello/{name}')
+def hello_name(name):
+    return { "message": f"Hello, {name}!" }
+```
+
+`{name}` or `:name` is mapped to the argument `name`. By default, it is mapped with type str, but it can also be mapped 
+to int or float, depending on the type hint.
+
+```python
+@app.route('/users/:age')
+def user_age(age: int):
+    return { "message": f"User age is {age}" }
+```
+
+## HTTP Methods
+
+Web applications use different HTTP methods when accessing URLs. You should familiarize yourself with the HTTP methods 
+as you work with Pykour.
+
+```python
+@app.route('/hello', method='POST')
+def post_hello():
+    return { "message": "Hello, Pykour!" }
+```
+
+You can also use the `get()`, `post()`, `put()`, `delete()`, `patch()`, `options()`, `head()` and `trace()` decorators,
+which are shortcuts for the `route()` decorator.
+
 
 ```python
 @app.get('/')
@@ -77,7 +110,12 @@ def delete():
 @app.patch('/')
 def patch():
     ...
+```
 
+If you want to support `OPTIONS`, `HEAD`, and `TRACE` method, you can use the `options()`, `head()` , and `trace()` decorator. Pykour does the processing to respond to
+the OPTIONS method response, so it only needs to declare an empty method.
+
+```python
 @app.options('/')
 def options():
     ...

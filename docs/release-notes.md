@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## 0.1.2 - 2024-07-07
 
 ### Features
 
@@ -8,8 +8,16 @@
 
 ### Enhancements
 
+- Write User's Guide
 - Improved of test cases
 - Support codecov.io
+- Changing the default host for Pykour CLI
+- Setup Icon and Logo
+
+### Fixed
+
+- Internal Server Error occurs when using the DELETE method
+- Add the current directory to the module search path
 
 ## 0.1.1 - 2024-07-03
 

@@ -27,7 +27,7 @@ $ python3 -m venv .venv
 
 ### Activate the virtual environment
 
-Before your work on your project, activate the virtual environment.
+Before you work on your project, activate the virtual environment.
 
 ```bash
 $ source .venv/bin/activate
