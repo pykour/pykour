@@ -11,3 +11,5 @@ $ pykour run main:app
 ### `pykour run`
 
 When you run `pykour run`, it will run on production mode by default.
+
+It will listen on the IP address `0.0.0.0`, which means it will be accessible from any IP address.

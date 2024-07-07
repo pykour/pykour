@@ -38,10 +38,55 @@ Now, open your browser and go to `http://localhost:8000/`. You should see the me
 Pykour uses the `route()` decorator to define routes. The decorator takes a single argument, the URL path.
 
 ```python
+@app.route('/')
+def index():
+    return { "message": "Index Page" }
+
 @app.route('/hello')
 def hello():
     return { "message": "Hello, Pykour!" }
 ```
 
+The `route()` method defines a route with the `GET` method. You can also specify the HTTP methods explicitly.
 
+```python
+@app.route('/hello', method='POST')
+def post_hello():
+    return { "message": "Hello, Pykour!" }
+```
 
+We recommend using `get()`, `post()`, `put()`, `delete()`, `patch()`, `options()`, `head()` and `trace()` for each HTTP method.
+
+```python
+@app.get('/')
+def get():
+    ...
+
+@app.post('/')
+def post():
+    ...
+
+@app.put('/')
+def put():
+    ...
+
+@app.delete('/')
+def delete():
+    ...
+
+@app.patch('/')
+def patch():
+    ...
+
+@app.options('/')
+def options():
+    ...
+
+@app.head('/')
+def head():
+    ...
+
+@app.trace('/')
+def trace():
+    ...
+```
