@@ -8,7 +8,7 @@ def test_parse_args_run_command():
     args = parse_args(["run", "main:app"])
     assert args.command == "run"
     assert args.app == "main:app"
-    assert args.host == "127.0.0.1"
+    assert args.host == "0.0.0.0"
     assert args.port == 8000
     assert args.reload is False
     assert args.workers == 1
