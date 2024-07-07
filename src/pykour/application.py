@@ -142,6 +142,8 @@ class Pykour:
         path = scope["path"]
         method = scope["method"]
 
+        allowed_methods = self.router.get_allowed_methods(path)
+
         if self.router.exists(path, method):
             route = self.router.get_route(path, method)
             route_fun, status_code = route.handler
@@ -150,14 +152,33 @@ class Pykour:
                 request = Request(scope, receive)
                 response = Response(send, status_code)
                 try:
-                    response_body = await call(route_fun, variables, request, response)
+                    if method != "TRACE":
+                        response_body = await call(route_fun, variables, request, response)
+                    else:
+                        response_body = "TRACE request received."
+
                     if type(response_body) is dict or type(response_body) is list:
                         response.content = json.dumps(response_body)
                         response.content_type = "application/json"
                     elif type(response_body) is str:
                         response.content = response_body
                         response.content_type = "text/plain"
-                    else:
+
+                    if response.status == HTTPStatus.NO_CONTENT:
+                        # No content to send
+                        response.add_header("Content-Length", str(len(response_body)))
+                        response.content = ""
+
+                    if method == "OPTIONS":
+                        response.add_header("Allow", ", ".join(self.router.get_allowed_methods(path)))
+                        response.content = ""
+                    elif method == "HEAD":
+                        response.add_header("Content-Length", str(len(str(response_body))))
+                        response.content = ""
+                    elif method == "TRACE":
+                        response.add_header("Content-Type", "message/http")
+                        response.content = (await request.body()).decode("utf-8")
+                    if response.content_type is None:
                         raise ValueError("Unsupported response type: %s" % type(response_body))
                 except ex.HTTPException as e:
                     response = Response(
@@ -169,12 +190,15 @@ class Pykour:
                 except Exception as e:
                     response = Response(send, status_code=HTTPStatus.INTERNAL_SERVER_ERROR)
                     response.content = str(e)
-
             else:
                 response = Response(send, status_code=HTTPStatus.NOT_FOUND, content_type="text/plain")
+                response.content = "Not Found"
+        elif allowed_methods != [] and method not in allowed_methods:
+            response = Response(send, status_code=HTTPStatus.METHOD_NOT_ALLOWED, content_type="text/plain")
+            response.add_header("Allow", ", ".join(self.router.get_allowed_methods(path)))
+            response.content = "Method Not Allowed"
         else:
             response = Response(send, status_code=HTTPStatus.NOT_FOUND, content_type="text/plain")
-            response.content = "Not Found"
             response.content = "Not Found"
 
         return response

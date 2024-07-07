@@ -146,4 +146,7 @@ class Response:
                 "headers": self._headers,
             }
         )
-        await self.send({"type": "http.response.body", "body": self._content.encode(self._charset)})
+        if self._status_code == HTTPStatus.NO_CONTENT or self.content is None or self.content == "":
+            await self.send({"type": "http.response.body", "body": b""})
+        else:
+            await self.send({"type": "http.response.body", "body": self._content.encode(self._charset)})
