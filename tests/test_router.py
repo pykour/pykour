@@ -143,3 +143,39 @@ def test_string_representation():
 
     assert str(router) == "GET /test -> handler()"
     assert repr(router) == "Router(prefix='')"
+
+
+def test_get_allowed_methods():
+    router = Router()
+
+    @router.get("/test")
+    def handler(): ...
+
+    methods = router.get_allowed_methods("/test")
+    assert methods == ["GET"]
+
+
+def test_add_router():
+    router = Router()
+    router2 = Router()
+
+    @router2.get("/test")
+    def handler(): ...
+
+    router.add_router(router2)
+    assert router.exists("/test", "GET")
+    assert router.get_allowed_methods("/test") == ["GET"]
+    assert str(router) == "GET /test -> handler()"
+    assert repr(router) == "Router(prefix='')"
+
+
+def test_add_route_with_prefix():
+    router = Router(prefix="/api")
+
+    @router.get("/test")
+    def handler(): ...
+
+    assert router.exists("/api/test", "GET")
+    # assert router.get_allowed_methods("/api/test") == ["GET"]
+    assert str(router) == "GET /api/test -> handler()"
+    assert repr(router) == "Router(prefix='/api')"

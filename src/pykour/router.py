@@ -200,8 +200,15 @@ class Router:
         Args:
             router: Router instance.
         """
-        for child in router.root.children:
-            self._merge_nodes(self.root, child, self.prefix)
+
+        def traverse(node, prefix=""):
+            for child in node.children:
+                new_prefix = f"{prefix}/{child.part}".strip("/")
+                for method, route in child.route_map.items():
+                    self.add_route(new_prefix, method, route.handler)
+                traverse(child, new_prefix)
+
+        traverse(router.root)
 
     def add_route(self, path: str, method: str, handler: Any):
         """Add route.
@@ -225,11 +232,6 @@ class Router:
             path: URL path.
             method: HTTP method.
         """
-
-        if self.prefix:
-            if not path.startswith(f"/{self.prefix}"):
-                return None
-            path = path[len(self.prefix) + 1 :]
         route, variables = self.root.search(path, method)
         if route:
             route.set_variables(variables)
@@ -263,22 +265,3 @@ class Router:
             True if route exists, False otherwise.
         """
         return self.get_route(path, method) is not None
-
-    def _merge_nodes(self, parent: Node, child: Node, prefix: str):
-        if prefix:
-            full_part = f"{prefix}/{child.part}".strip("/")
-        else:
-            full_part = child.part.strip("/")
-
-        existing_child = parent.match_child(full_part)
-        if existing_child:
-            for method, route in child.route_map.items():
-                existing_child.route_map[method] = route
-            for grandchild in child.children:
-                self._merge_nodes(existing_child, grandchild, full_part)
-        else:
-            new_node = Node(full_part, child.is_wild)
-            new_node.route_map = child.route_map.copy()
-            parent.children.append(new_node)
-            for grandchild in child.children:
-                self._merge_nodes(new_node, grandchild, full_part)

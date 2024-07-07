@@ -1,3 +1,8 @@
+from http import HTTPStatus
+from unittest.mock import AsyncMock
+
+import pytest
+
 from pykour.response import Response
 
 
@@ -54,3 +59,79 @@ def test_add_header_new_key():
         ("Content-Type", "application/json; charset=utf-8"),
         ("Content-Length", "42"),
     ]
+
+
+def test_content():
+    response = Response(None, status_code=200)
+    response.content = "Hello, World!"
+    assert response.content == "Hello, World!"
+    assert response.headers == [
+        ("Content-Type", "application/json; charset=utf-8"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_render_no_content():
+    send_mock = AsyncMock()
+    response = Response(send=send_mock, status_code=HTTPStatus.NO_CONTENT)
+    await response.render()
+
+    send_mock.assert_any_await(
+        {
+            "type": "http.response.start",
+            "status": HTTPStatus.NO_CONTENT,
+            "headers": [("Content-Type", "application/json; charset=utf-8")],
+        }
+    )
+    send_mock.assert_any_await({"type": "http.response.body", "body": b""})
+
+
+@pytest.mark.asyncio
+async def test_render_with_content():
+    send_mock = AsyncMock()
+    response = Response(send=send_mock, status_code=HTTPStatus.OK)
+    response._content = "Hello, world!"
+    await response.render()
+
+    send_mock.assert_any_await(
+        {
+            "type": "http.response.start",
+            "status": HTTPStatus.OK,
+            "headers": [("Content-Type", "application/json; charset=utf-8")],
+        }
+    )
+    send_mock.assert_any_await({"type": "http.response.body", "body": b"Hello, world!"})
+
+
+@pytest.mark.asyncio
+async def test_render_empty_content():
+    send_mock = AsyncMock()
+    response = Response(send=send_mock, status_code=HTTPStatus.OK)
+    response._content = ""
+    await response.render()
+
+    send_mock.assert_any_await(
+        {
+            "type": "http.response.start",
+            "status": HTTPStatus.OK,
+            "headers": [("Content-Type", "application/json; charset=utf-8")],
+        }
+    )
+    send_mock.assert_any_await({"type": "http.response.body", "body": b""})
+
+
+@pytest.mark.asyncio
+async def test_render_none_content():
+    send_mock = AsyncMock()
+    response = Response(send=send_mock, status_code=HTTPStatus.OK)
+    response._content = None
+    await response.render()
+
+    send_mock.assert_any_await(
+        {
+            "type": "http.response.start",
+            "status": HTTPStatus.OK,
+            "headers": [("Content-Type", "application/json; charset=utf-8")],
+        }
+    )
+    send_mock.assert_any_await({"type": "http.response.body", "body": b""})
