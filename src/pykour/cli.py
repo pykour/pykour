@@ -4,6 +4,7 @@ import signal
 import sys
 import asyncio
 from functools import partial
+import os
 
 from pykour import __version__
 
@@ -15,6 +16,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
 """
+
+sys.path.append(os.getcwd())
 
 
 class PykourArgumentParser(argparse.ArgumentParser):
@@ -38,7 +41,7 @@ def parse_args(args):
     # Add the 'run' command
     run_parser = subparsers.add_parser("run", help="Run Web Server")
     run_parser.add_argument("app", type=str, help="The ASGI app instance to run, e.g., main:app")
-    run_parser.add_argument("--host", type=str, default="127.0.0.1", help="The host to bind to")
+    run_parser.add_argument("--host", type=str, default="0.0.0.0", help="The host to bind to")
     run_parser.add_argument("--port", type=int, default=8000, help="The port to bind to")
     run_parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
     run_parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
