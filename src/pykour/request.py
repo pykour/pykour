@@ -1,14 +1,15 @@
 import json
-from typing import MutableMapping, Mapping, Any, Callable, Awaitable, Iterator, cast
+from typing import Mapping, Any, Iterator, cast
 from collections import defaultdict
 
+from pykour.types import Scope, Receive
 from pykour.url import URL
 
 
 class Request(Mapping[str, Any]):
     """Request is a class that represents a request from a client."""
 
-    def __init__(self, scope: MutableMapping[str, Any], receive: Callable[[], Awaitable[dict]]):
+    def __init__(self, scope: Scope, receive: Receive):
         """Initializes a new instance of the Request class.
 
         Args:

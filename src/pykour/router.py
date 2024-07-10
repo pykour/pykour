@@ -8,10 +8,10 @@ class Route:
         self.path = path
         self.method = method
         self.handler = handler
-        self.variables: Dict[str, str] = {}
+        self.path_params: Dict[str, str] = {}
 
-    def set_variables(self, variables: Dict[str, str]):
-        self.variables = variables
+    def set_path_params(self, path_params: Dict[str, str]):
+        self.path_params = path_params
 
 
 class Node:
@@ -39,7 +39,7 @@ class Node:
 
     def search(self, path: str, method: str):
         parts = path.strip("/").split("/")
-        variables = {}
+        path_params = {}
 
         node = self
         for part in parts:
@@ -48,11 +48,11 @@ class Node:
                 return None, {}
             if child.is_wild:
                 var_name = child.part.lstrip(":*{").rstrip("}")
-                variables[var_name] = part
+                path_params[var_name] = part
             node = child
 
         route = node.route_map.get(method)
-        return route, variables
+        return route, path_params
 
     def match_child(self, part: str):
         for child in self.children:
@@ -232,9 +232,9 @@ class Router:
             path: URL path.
             method: HTTP method.
         """
-        route, variables = self.root.search(path, method)
+        route, path_params = self.root.search(path, method)
         if route:
-            route.set_variables(variables)
+            route.set_path_params(path_params)
         return route
 
     def get_allowed_methods(self, path: str) -> List[str]:

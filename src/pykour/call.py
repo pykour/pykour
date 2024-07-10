@@ -1,8 +1,8 @@
 import inspect
 import json
 from datetime import datetime
-from enum import Enum
 from typing import Any, Callable, Dict
+from enum import Enum
 
 from pykour.request import Request
 from pykour.response import Response
@@ -29,8 +29,11 @@ def cast_to_type(value: Any, to_type: type) -> Any:
         return value
 
 
-async def call(func: Callable, variables: Dict[str, str], request: Request, response: Response) -> Any:
+async def call(func: Callable, request: Request, response: Response) -> Any:
     sig = inspect.signature(func)
+
+    path_params = request.scope.get("path_params", {})
+
     bound_args: Dict[str, Any] = {}
 
     for param_name, param in sig.parameters.items():
@@ -40,8 +43,8 @@ async def call(func: Callable, variables: Dict[str, str], request: Request, resp
             bound_args[param_name] = request
         elif param.annotation is Response or param_name == "response" or param_name == "res" or param_name == "resp":
             bound_args[param_name] = response
-        elif param_name in variables:
-            bound_args[param_name] = cast_to_type(variables[param_name], param.annotation)
+        elif param_name in path_params:
+            bound_args[param_name] = cast_to_type(path_params[param_name], param.annotation)
 
     result = func(**bound_args)
 

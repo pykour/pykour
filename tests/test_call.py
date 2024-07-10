@@ -1,118 +1,86 @@
 import json
 from datetime import datetime
 from enum import Enum
+from typing import Dict, Any
 from unittest.mock import Mock, AsyncMock
 
 import pytest
 
+from pykour import Response, Request
 from pykour.call import call
-from pykour.request import Request
-from pykour.response import Response
 from pykour.schema import BaseSchema
 
 
-class Color(Enum):
-    RED = 1
-    GREEN = 2
-    BLUE = 3
-
-
 @pytest.mark.asyncio
-async def test_function_call_with_int_parameter():
+async def test_function_call_with_valid_int_parameter():
     async def func(x: int):
         return x
 
-    result = await call(func, {"x": "1"}, Mock(spec=Request), Mock(spec=Response))
-    assert result == 1
+    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "123"}}), Mock(spec=Response))
+    assert result == 123
 
 
 @pytest.mark.asyncio
-async def test_function_call_with_float_parameter():
+async def test_function_call_with_valid_float_parameter():
     async def func(x: float):
         return x
 
-    result = await call(func, {"x": "1.1"}, Mock(spec=Request), Mock(spec=Response))
-    assert result == 1.1
+    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "123.45"}}), Mock(spec=Response))
+    assert result == 123.45
 
 
 @pytest.mark.asyncio
-async def test_function_call_with_bool_parameter():
+async def test_function_call_with_valid_bool_parameter():
     async def func(x: bool):
         return x
 
-    result = await call(func, {"x": "true"}, Mock(spec=Request), Mock(spec=Response))
+    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "true"}}), Mock(spec=Response))
     assert result is True
 
 
 @pytest.mark.asyncio
-async def test_function_call_with_datetime_parameter():
+async def test_function_call_with_valid_datetime_parameter():
     async def func(x: datetime):
         return x
 
-    result = await call(func, {"x": "2022-01-01"}, Mock(spec=Request), Mock(spec=Response))
-    assert result == datetime(2022, 1, 1)
+    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "2023-10-01"}}), Mock(spec=Response))
+    assert result == datetime(2023, 10, 1)
 
 
 @pytest.mark.asyncio
-async def test_function_call_with_request_response_parameters():
-    async def func(request: Request, response: Response):
-        return request, response
-
-    request = Mock(spec=Request)
-    response = Mock(spec=Response)
-    result_request, result_response = await call(func, {}, request, response)
-    assert result_request is request
-    assert result_response is response
-
-
-@pytest.mark.asyncio
-async def test_function_call_with_missing_variable():
-    async def func(x: int):
-        return x
-
-    with pytest.raises(TypeError):
-        await call(func, {}, Mock(spec=Request), Mock(spec=Response))
-
-
-@pytest.mark.asyncio
-async def test_function_call_with_enum_parameter():
-    async def func(x: Color):
-        return x
-
-    result = await call(func, {"x": "RED"}, Mock(spec=Request), Mock(spec=Response))
-    assert result == Color.RED
-
-
-@pytest.mark.asyncio
-async def test_function_call_with_invalid_enum_parameter():
-    async def func(x: Color):
-        return x
-
-    with pytest.raises(ValueError):
-        await call(func, {"x": "PURPLE"}, Mock(spec=Request), Mock(spec=Response))
-
-
-@pytest.mark.asyncio
-async def test_function_call_with_dict_parameter():
+async def test_function_call_with_valid_dict_parameter():
     async def func(x: dict):
         return x
 
-    result = await call(
-        func,
-        {"x": json.dumps({"key": "value"})},
-        Mock(spec=Request),
-        Mock(spec=Response),
-    )
+    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": '{"key": "value"}'}}), Mock(spec=Response))
     assert result == {"key": "value"}
 
 
 @pytest.mark.asyncio
-async def test_function_call_with_str_parameter():
-    async def func(x: str):
+async def test_function_call_with_invalid_int_parameter():
+    async def func(x: int):
         return x
 
-    result = await call(func, {"x": "hello"}, Mock(spec=Request), Mock(spec=Response))
-    assert result == "hello"
+    with pytest.raises(ValueError):
+        await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid"}}), Mock(spec=Response))
+
+
+@pytest.mark.asyncio
+async def test_function_call_with_invalid_float_parameter():
+    async def func(x: float):
+        return x
+
+    with pytest.raises(ValueError):
+        await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid"}}), Mock(spec=Response))
+
+
+@pytest.mark.asyncio
+async def test_function_call_with_invalid_datetime_parameter():
+    async def func(x: datetime):
+        return x
+
+    with pytest.raises(ValueError):
+        await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid-date"}}), Mock(spec=Response))
 
 
 @pytest.mark.asyncio
@@ -121,21 +89,98 @@ async def test_function_call_with_invalid_dict_parameter():
         return x
 
     with pytest.raises(json.JSONDecodeError):
-        await call(func, {"x": "not a valid json"}, Mock(spec=Request), Mock(spec=Response))
+        await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid-json"}}), Mock(spec=Response))
 
 
 @pytest.mark.asyncio
-async def test_function_call_with_schema_parameter():
-    class UserSchema(BaseSchema):
-        name: str
-        age: int
+async def test_function_call_with_missing_path_param():
+    async def func(x: int):
+        return x
 
-    async def func(user: UserSchema):
-        return {"name": user.name, "age": user.age}
+    with pytest.raises(TypeError):
+        await call(func, Mock(spec=Request, scope={"path_params": {}}), Mock(spec=Response))
 
-    request_mock = Mock(spec=Request)
-    request_mock.json = AsyncMock(return_value={"name": "john", "age": 10})
 
-    result = await call(func, {}, request_mock, Mock(spec=Response))
-    assert result["name"] == "john"
-    assert result["age"] == 10
+class Color(Enum):
+    RED = "red"
+    GREEN = "green"
+    BLUE = "blue"
+
+
+@pytest.mark.asyncio
+async def test_function_call_with_valid_enum_parameter():
+    async def func(x: Color):
+        return x
+
+    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "RED"}}), Mock(spec=Response))
+    assert result == Color.RED
+
+
+@pytest.mark.asyncio
+async def test_function_call_with_valid_str_parameter():
+    async def func(x: str):
+        return x
+
+    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "hello"}}), Mock(spec=Response))
+    assert result == "hello"
+
+
+@pytest.mark.asyncio
+async def test_function_call_with_invalid_enum_parameter():
+    async def func(x: Color):
+        return x
+
+    with pytest.raises(ValueError):
+        await call(func, Mock(spec=Request, scope={"path_params": {"x": "INVALID_COLOR"}}), Mock(spec=Response))
+
+
+class TestSchema(BaseSchema):
+    field: str
+
+
+# サンプル関数
+async def sample_function(schema: TestSchema, request: Request, response: Response):
+    return {"schema": schema.field, "request": request.scope, "response": response.status}
+
+
+def sample_sync_function(schema: TestSchema, request: Request, response: Response):
+    return {"schema": schema.field, "request": request.scope, "response": response.status}
+
+
+# モックリクエストを準備
+@pytest.fixture
+def scope() -> Dict[str, Any]:
+    return {
+        "type": "http",
+        "method": "POST",
+        "headers": [(b"content-type", b"application/json; charset=utf-8")],
+        "path_params": {},
+    }
+
+
+@pytest.fixture
+def dummy_request(scope) -> Request:
+    send = AsyncMock()
+    send.return_value = {"type": "http.request", "body": b'{"field": "value"}', "more_body": False}
+    return Request(scope, send)
+
+
+@pytest.fixture
+def dummy_response() -> Response:
+    receive = AsyncMock()
+    return Response(receive, 200)
+
+
+# テストケース
+@pytest.mark.asyncio
+async def test_call_with_schema_request_response(dummy_request: Request, dummy_response: Response):
+    result = await call(sample_function, dummy_request, dummy_response)
+
+    # 検証
+    assert result == {"schema": "value", "request": dummy_request.scope, "response": dummy_response.status}
+
+
+@pytest.mark.asyncio
+async def test_call_with_sync_function(dummy_request: Request, dummy_response: Response):
+    result = await call(sample_sync_function, dummy_request, dummy_response)
+    assert result == {"schema": "value", "request": dummy_request.scope, "response": dummy_response.status}
