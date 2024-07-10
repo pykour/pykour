@@ -3,6 +3,8 @@
   <component name="Black">
     <option name="enabledOnReformat" value="true" />
     <option name="enabledOnSave" value="true" />
+    <option name="executionMode" value="BINARY" />
+    <option name="pathToExecutable" value="/opt/homebrew/bin/black" />
     <option name="sdkName" value="Poetry (pykour)" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Poetry (pykour)" project-jdk-type="Python SDK" />

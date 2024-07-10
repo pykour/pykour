@@ -1,14 +1,16 @@
 from typing import Union, Callable, Any, Awaitable
 from http import HTTPStatus
 
+from pykour.types import Send, HTTPStatusCode
+
 
 class Response:
     """Response is a class that represents an HTTP response."""
 
     def __init__(
         self,
-        send: Callable[[dict[str, Any]], Awaitable[None]],
-        status_code: Union[HTTPStatus, int],
+        send: Send,
+        status_code: HTTPStatusCode,
         charset: str = "utf-8",
         content_type: str = "application/json",
     ) -> None:
@@ -30,7 +32,7 @@ class Response:
         self._content = ""
 
     @property
-    def status(self) -> Union[HTTPStatus, int]:
+    def status(self) -> HTTPStatusCode:
         """Get the status code of the response.
 
         Returns:
@@ -39,7 +41,7 @@ class Response:
         return self._status_code
 
     @status.setter
-    def status(self, status_code: Union[HTTPStatus, int]) -> None:
+    def status(self, status_code: HTTPStatusCode) -> None:
         """Set the status code of the response.
 
         Args:

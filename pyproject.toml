@@ -31,8 +31,8 @@ mypy = "^1.10"
 types-pyyaml = "^6.0.12.20240311"
 
 [tool.poetry.group.dev.dependencies]
-black = "^24.4.2"
 flake8 = "^7.1.0"
+black = "^24.4.2"
 
 [tool.poetry.group.security.dependencies]
 bandit = "^1.7.9"
