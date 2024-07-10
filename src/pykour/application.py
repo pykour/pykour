@@ -4,9 +4,10 @@ from typing import Callable, Union
 
 import pykour.exceptions as ex
 from pykour.call import call
+from pykour.middleware.requestid import RequestIDMiddleware
 from pykour.request import Request
 from pykour.response import Response
-from pykour.router import Router, Route
+from pykour.router import Router
 from pykour.types import Scope, Receive, Send, ASGIApp, HTTPStatusCode
 
 
@@ -14,6 +15,7 @@ class Pykour:
     def __init__(self):
         self.router = Router()
         self.app: ASGIApp = RootASGIApp()
+        self.add_middleware(RequestIDMiddleware)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         scope["app"] = self
@@ -225,13 +227,3 @@ class RootASGIApp:
         response = Response(send, status_code=status_code, content_type="text/plain")
         response.content = message
         await response.render()
-
-    @staticmethod
-    def get_route(scope: Scope) -> Union[Route, None]:
-        app = scope["app"]
-        path = scope["path"]
-        method = scope["method"]
-        if app.router.exists(path, method):
-            return app.router.get_route(path, method)
-        else:
-            return None

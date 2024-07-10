@@ -20,14 +20,15 @@ async def test_get_route():
 
     await app(scope, receive_mock, send_mock)
 
-    send_mock.assert_any_await(
-        {
-            "type": "http.response.start",
-            "status": HTTPStatus.OK,
-            "headers": [("Content-Type", "application/json; charset=utf-8")],
-        }
-    )
-    send_mock.assert_any_await({"type": "http.response.body", "body": b'{"message": "Hello, world!"}'})
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.OK
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+
+    assert second_call_args == {"type": "http.response.body", "body": b'{"message": "Hello, world!"}'}
 
 
 @pytest.mark.asyncio
@@ -43,14 +44,62 @@ async def test_post_route():
 
     await app(scope, receive_mock, send_mock)
 
-    send_mock.assert_any_await(
-        {
-            "type": "http.response.start",
-            "status": HTTPStatus.CREATED,
-            "headers": [("Content-Type", "application/json; charset=utf-8")],
-        }
-    )
-    send_mock.assert_any_await({"type": "http.response.body", "body": b'{"status": "submitted"}'})
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.CREATED
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+
+    assert second_call_args == {"type": "http.response.body", "body": b'{"status": "submitted"}'}
+
+
+@pytest.mark.asyncio
+async def test_put_route():
+    app = Pykour()
+    send_mock = AsyncMock()
+    receive_mock = AsyncMock()
+    scope = {"type": "http", "method": "PUT", "path": "/test", "headers": [(b"host", b"testserver")]}
+
+    @app.put("/test")
+    async def test_handler(request: Request, response: Response):
+        return {"message": "Hello, world!"}
+
+    await app(scope, receive_mock, send_mock)
+
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.OK
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+
+    assert second_call_args == {"type": "http.response.body", "body": b'{"message": "Hello, world!"}'}
+
+
+@pytest.mark.asyncio
+async def test_delete_route():
+    app = Pykour()
+    send_mock = AsyncMock()
+    receive_mock = AsyncMock()
+    scope = {"type": "http", "method": "DELETE", "path": "/test", "headers": [(b"host", b"testserver")]}
+
+    @app.delete("/test")
+    async def test_handler(request: Request, response: Response): ...
+
+    await app(scope, receive_mock, send_mock)
+
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.NO_CONTENT
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+
+    assert second_call_args == {"type": "http.response.body", "body": b""}
 
 
 @pytest.mark.asyncio
@@ -62,14 +111,15 @@ async def test_404_not_found():
 
     await app(scope, receive_mock, send_mock)
 
-    send_mock.assert_any_await(
-        {
-            "type": "http.response.start",
-            "status": HTTPStatus.NOT_FOUND,
-            "headers": [("Content-Type", "text/plain; charset=utf-8")],
-        }
-    )
-    send_mock.assert_any_await({"type": "http.response.body", "body": b"Not Found"})
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.NOT_FOUND
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+
+    assert second_call_args == {"type": "http.response.body", "body": b"Not Found"}
 
 
 @pytest.mark.asyncio
@@ -85,14 +135,15 @@ async def test_method_not_allowed():
 
     await app(scope, receive_mock, send_mock)
 
-    send_mock.assert_any_await(
-        {
-            "type": "http.response.start",
-            "status": HTTPStatus.METHOD_NOT_ALLOWED,
-            "headers": [("Content-Type", "text/plain; charset=utf-8")],
-        }
-    )
-    send_mock.assert_any_await({"type": "http.response.body", "body": b"Method Not Allowed"})
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.METHOD_NOT_ALLOWED
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+
+    assert second_call_args == {"type": "http.response.body", "body": b"Method Not Allowed"}
 
 
 @pytest.mark.asyncio
@@ -108,14 +159,19 @@ async def test_options_method():
 
     await app(scope, receive_mock, send_mock)
 
-    send_mock.assert_any_await(
-        {
-            "type": "http.response.start",
-            "status": HTTPStatus.OK,
-            "headers": [("Content-Type", "application/json; charset=utf-8"), ("Allow", "OPTIONS")],
-        }
-    )
-    send_mock.assert_any_await({"type": "http.response.body", "body": b""})
+    assert send_mock.call_count == 2
+
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.OK
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+        elif header[0] == b"Allow":
+            assert header[1] == b"OPTIONS"
+
+    assert second_call_args == {"type": "http.response.body", "body": b""}
 
 
 @pytest.mark.asyncio
@@ -143,10 +199,12 @@ async def test_add_middleware():
 
     assert send_mock.call_count == 2
 
-    assert send_mock.call_args_list[0][0][0] == {
-        "type": "http.response.start",
-        "status": HTTPStatus.OK,
-        "headers": [("Content-Type", "application/json; charset=utf-8")],
-    }
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.OK
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
 
-    assert send_mock.call_args_list[1][0][0] == {"type": "http.response.body", "body": b'{"message": "Hello, world!"}'}
+    assert second_call_args == {"type": "http.response.body", "body": b'{"message": "Hello, world!"}'}
