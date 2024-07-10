@@ -131,7 +131,7 @@ class Pykour:
         self.router.add_router(router)
 
 
-class RootASGIApp(ASGIApp):
+class RootASGIApp:
     """Pykour application class."""
 
     def __init__(self):

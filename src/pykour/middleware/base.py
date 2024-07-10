@@ -1,10 +1,7 @@
-from typing import MutableMapping, Any, Callable, Awaitable
-
-from pykour import Pykour
 from pykour.types import ASGIApp, Scope, Receive, Send
 
 
-class BaseMiddleware(ASGIApp):
+class BaseMiddleware:
     """Base middleware class."""
 
     def __init__(self, app: ASGIApp):

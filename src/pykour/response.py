@@ -1,4 +1,3 @@
-from typing import Union, Callable, Any, Awaitable
 from http import HTTPStatus
 
 from pykour.types import Send, HTTPStatusCode

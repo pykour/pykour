@@ -1,5 +1,5 @@
 import json
-from typing import MutableMapping, Mapping, Any, Callable, Awaitable, Iterator, cast
+from typing import Mapping, Any, Iterator, cast
 from collections import defaultdict
 
 from pykour.types import Scope, Receive
