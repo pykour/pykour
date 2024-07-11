@@ -3,6 +3,7 @@ from http import HTTPStatus
 from typing import Callable, Union
 
 import pykour.exceptions as ex
+from pykour.config import Config
 from pykour.call import call
 from pykour.middleware.requestid import RequestIDMiddleware
 from pykour.request import Request
@@ -12,7 +13,8 @@ from pykour.types import Scope, Receive, Send, ASGIApp, HTTPStatusCode
 
 
 class Pykour:
-    def __init__(self):
+    def __init__(self, config: Config = None):
+        self.config = config
         self.router = Router()
         self.app: ASGIApp = RootASGIApp()
         self.add_middleware(RequestIDMiddleware)

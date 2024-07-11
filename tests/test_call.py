@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock
 
 import pytest
 
-from pykour import Response, Request
+from pykour import Response, Request, Pykour
 from pykour.call import call
 from pykour.schema import BaseSchema
 
@@ -98,7 +98,7 @@ async def test_function_call_with_missing_path_param():
         return x
 
     with pytest.raises(TypeError):
-        await call(func, Mock(spec=Request, scope={"path_params": {}}), Mock(spec=Response))
+        await call(func, Mock(spec=Request, scope={"path_params": {}, "app": Pykour()}), Mock(spec=Response))
 
 
 class Color(Enum):
