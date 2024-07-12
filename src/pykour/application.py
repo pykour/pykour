@@ -13,8 +13,8 @@ from pykour.types import Scope, Receive, Send, ASGIApp, HTTPStatusCode
 
 
 class Pykour:
-    def __init__(self, config: Config = None):
-        self.config = config
+    def __init__(self, config: str = None):
+        self._config = Config(config) if config else None
         self.router = Router()
         self.app: ASGIApp = RootASGIApp()
         self.add_middleware(RequestIDMiddleware)
@@ -22,6 +22,10 @@ class Pykour:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         scope["app"] = self
         await self.app(scope, receive, send)
+
+    @property
+    def config(self) -> Config:
+        return self._config
 
     def add_middleware(self, middleware, **kwargs) -> None:
         self.app = middleware(self.app, **kwargs)
