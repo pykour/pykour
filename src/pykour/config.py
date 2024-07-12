@@ -1,10 +1,22 @@
 from __future__ import annotations
 
+import logging
 import os
+from typing import Any, Union, Optional
 
 import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+
+logger = logging.getLogger("uvicorn.app")
+
+
+def replace_placeholders(config: dict):
+    for key, value in config.items():
+        if isinstance(value, dict):
+            replace_placeholders(value)
+        elif isinstance(value, str):
+            config[key] = os.path.expandvars(value)
 
 
 class ConfigFileHandler(FileSystemEventHandler):
@@ -14,6 +26,7 @@ class ConfigFileHandler(FileSystemEventHandler):
     def on_modified(self, event):
         if event.src_path == self.config.filepath:
             self.config.load()
+            logger.info("Config file has been modified. Reloading...")
 
 
 class Config:
@@ -27,17 +40,24 @@ class Config:
     def load(self):
         try:
             with open(self.filepath, "r") as file:
-                self.config = yaml.safe_load(file)
+                logger.info(f"Loading config file: {self.filepath}")
+                content = yaml.safe_load(file)
+                if isinstance(content, str):
+                    logger.error("Format of config file is invalid. Expected a yaml format.")
+                    content = {}
+                else:
+                    replace_placeholders(content)
+                self.config = content
             self._last_modified = os.path.getmtime(self.filepath)
         except FileNotFoundError:
-            print(f"Config file not found: {self.filepath}")
+            logger.error(f"Config file not found: {self.filepath}")
         except yaml.YAMLError as e:
-            print(f"Error parsing YAML file: {e}")
+            logger.error(f"Error parsing YAML file: {e}")
 
     def reload(self):
         current_mtime = os.path.getmtime(self.filepath)
         if current_mtime > self._last_modified:
-            print("Config file has been modified. Reloading...")
+            logger.info("Config file has been modified. Reloading...")
             self.load()
 
     def _setup_watchdog(self):
@@ -46,7 +66,7 @@ class Config:
         self.observer.schedule(event_handler, path=os.path.dirname(self.filepath), recursive=False)
         self.observer.start()
 
-    def get(self, key, default=None):
+    def get(self, key: str, default: Union[Any, None] = None):
         keys = key.split(".")
         d = self.config
         for k in keys:
@@ -54,6 +74,30 @@ class Config:
                 return default
             d = d[k]
         return d
+
+    def get_int(self, key: str, default: Optional[int] = None) -> Optional[int]:
+        value = self.get(key, default)
+        if value is None:
+            return default
+        if isinstance(value, (int, float, str)):
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                raise ValueError(f"Cannot cast value of key '{key}' to int: {value}")
+        else:
+            raise ValueError(f"Cannot cast value of key '{key}' to int: {value}")
+
+    def get_float(self, key: str, default: Optional[float] = None) -> Optional[float]:
+        value = self.get(key, default)
+        if value is None:
+            return default
+        if isinstance(value, (int, float, str)):
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                raise ValueError(f"Cannot cast value of key '{key}' to float: {value}")
+        else:
+            raise ValueError(f"Cannot cast value of key '{key}' to float: {value}")
 
     def __del__(self):
         self.observer.stop()
