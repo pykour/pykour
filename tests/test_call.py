@@ -6,7 +6,7 @@ from unittest.mock import Mock, AsyncMock
 
 import pytest
 
-from pykour import Response, Request, Pykour
+from pykour import Response, Request, Pykour, Config
 from pykour.call import call
 from pykour.schema import BaseSchema
 
@@ -184,3 +184,17 @@ async def test_call_with_schema_request_response(dummy_request: Request, dummy_r
 async def test_call_with_sync_function(dummy_request: Request, dummy_response: Response):
     result = await call(sample_sync_function, dummy_request, dummy_response)
     assert result == {"schema": "value", "request": dummy_request.scope, "response": dummy_response.status}
+
+
+@pytest.mark.asyncio
+async def test_config_argument_is_set_correctly(mocker):
+    _config = Config("config.yaml")
+    mocker.patch.object(Pykour, "config", _config)
+
+    async def func(config: Config):
+        return "value"
+
+    request = Mock(spec=Request, scope={"path_params": {}, "app": Pykour("config.yaml")})
+    response = Mock(spec=Response)
+    result = await call(func, request, response)
+    assert result == "value"
