@@ -1,8 +1,6 @@
 import pytest
-import sys
 import os
-from unittest.mock import patch, Mock
-from pykour.cli import main, parse_args, usage_text
+from pykour.cli import main, parse_args
 
 
 def test_version_argument_displays_version(mocker):

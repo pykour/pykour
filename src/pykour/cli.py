@@ -1,7 +1,6 @@
 import argparse
 
 from gunicorn.app.base import BaseApplication
-from uvicorn_worker import UvicornWorker
 import uvicorn
 import signal
 import sys
