@@ -1,4 +1,5 @@
 import json
+import os
 from http import HTTPStatus
 from typing import Callable, Union
 
@@ -15,6 +16,7 @@ from pykour.types import Scope, Receive, Send, ASGIApp, HTTPStatusCode
 class Pykour:
     def __init__(self, config: str = None):
         self._config = Config(config) if config else None
+        self.production_mode = os.getenv("PYKOUR_ENV") == "production"
         self.router = Router()
         self.app: ASGIApp = RootASGIApp()
         self.add_middleware(RequestIDMiddleware)

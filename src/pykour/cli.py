@@ -73,6 +73,8 @@ def main(args=None):
         print(usage_text)
         sys.exit(0)
     elif args.command == "dev":
+        os.environ["PYKOUR_ENV"] = "development"
+
         uvicorn.run(
             args.app,
             host=args.host,
@@ -82,6 +84,7 @@ def main(args=None):
             server_header=False,
         )
     elif args.command == "run":
+        os.environ["PYKOUR_ENV"] = "production"
 
         class StandaloneApplication(BaseApplication):
             def __init__(self, app, opts=None):
