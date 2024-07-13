@@ -103,6 +103,56 @@ async def test_delete_route():
 
 
 @pytest.mark.asyncio
+async def test_patch_route():
+    app = Pykour()
+    send_mock = AsyncMock()
+    receive_mock = AsyncMock()
+    scope = {"type": "http", "method": "PATCH", "path": "/test", "headers": [(b"host", b"testserver")]}
+
+    @app.patch("/test")
+    async def test_handler(request: Request, response: Response):
+        return {"message": "Hello, world!"}
+
+    await app(scope, receive_mock, send_mock)
+
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.OK
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+
+    assert second_call_args == {"type": "http.response.body", "body": b'{"message": "Hello, world!"}'}
+
+
+@pytest.mark.asyncio
+async def test_head_route():
+    app = Pykour()
+    send_mock = AsyncMock()
+    receive_mock = AsyncMock()
+    scope = {"type": "http", "method": "HEAD", "path": "/test", "headers": [(b"host", b"testserver")]}
+
+    @app.head("/test")
+    async def test_handler(request: Request, response: Response):
+        return {"message": "Hello, world!"}
+
+    await app(scope, receive_mock, send_mock)
+
+    first_call_args = send_mock.call_args_list[0][0][0]
+    second_call_args = send_mock.call_args_list[1][0][0]
+    assert first_call_args["type"] == "http.response.start"
+    assert first_call_args["status"] == HTTPStatus.OK
+    for header in first_call_args["headers"]:
+        if header[0] == b"Content-Type":
+            assert header[1] == b"application/json; charset=utf-8"
+        elif header[0] == b"Content-Length":
+            assert header[1] == b"24"
+
+    assert second_call_args == {"type": "http.response.body", "body": b""}
+
+
+@pytest.mark.asyncio
 async def test_404_not_found():
     app = Pykour()
     send_mock = AsyncMock()
@@ -208,3 +258,10 @@ async def test_add_middleware():
             assert header[1] == b"application/json; charset=utf-8"
 
     assert second_call_args == {"type": "http.response.body", "body": b'{"message": "Hello, world!"}'}
+
+
+@pytest.mark.asyncio
+def test_get_config():
+    app = Pykour()
+    app._config = {"key": "value"}
+    assert app.config == {"key": "value"}

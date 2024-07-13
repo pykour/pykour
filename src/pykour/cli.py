@@ -1,5 +1,6 @@
 import argparse
 
+from gunicorn.app.base import BaseApplication
 import uvicorn
 import signal
 import sys
@@ -39,13 +40,21 @@ def parse_args(args):
 
     subparsers = parser.add_subparsers(dest="command")
 
-    # Add the 'run' command
-    run_parser = subparsers.add_parser("run", help="Run Web Server")
+    # Add the 'dev' subcommand
+    dev_parser = subparsers.add_parser("dev", help="Run Web Server for Development")
+    dev_parser.add_argument("app", type=str, help="The ASGI app instance to run, e.g., main:app")
+    dev_parser.add_argument("--host", type=str, default="127.0.0.1", help="The host to bind to")
+    dev_parser.add_argument("--port", type=int, default=8000, help="The port to bind to")
+    dev_parser.add_argument("--reload", action="store_true", default=True, help="Enable auto-reload")
+    dev_parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
+
+    # Add the 'run' subcommand
+    run_parser = subparsers.add_parser("run", help="Run Web Server for Production")
     run_parser.add_argument("app", type=str, help="The ASGI app instance to run, e.g., main:app")
     run_parser.add_argument("--host", type=str, default="0.0.0.0", help="The host to bind to")
     run_parser.add_argument("--port", type=int, default=8000, help="The port to bind to")
-    run_parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
-    run_parser.add_argument("--workers", type=int, default=1, help="Number of worker processes")
+    run_parser.add_argument("--reload", action="store_true", default=False, help="Enable auto-reload")
+    run_parser.add_argument("--workers", type=int, default=(os.cpu_count() * 2) + 1, help="Number of worker processes")
 
     # Parse the arguments
     return parser.parse_args(args)
@@ -63,7 +72,9 @@ def main(args=None):
     if args.help:
         print(usage_text)
         sys.exit(0)
-    elif args.command == "run":
+    elif args.command == "dev":
+        os.environ["PYKOUR_ENV"] = "development"
+
         uvicorn.run(
             args.app,
             host=args.host,
@@ -72,6 +83,36 @@ def main(args=None):
             workers=args.workers,
             server_header=False,
         )
+    elif args.command == "run":
+        os.environ["PYKOUR_ENV"] = "production"
+
+        class StandaloneApplication(BaseApplication):
+            def __init__(self, app, opts=None):
+                self.app = app
+                self.options = opts or {}
+                super().__init__()
+
+            def load_config(self):
+                config = {
+                    key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None
+                }
+                for key, value in config.items():
+                    self.cfg.set(key.lower(), value)
+
+            def load(self):
+                return self.app
+
+        options = {
+            "bind": args.host + ":" + str(args.port),
+            "workers": args.workers,
+            "worker_class": "uvicorn_worker.UvicornWorker",
+            "reload": args.reload,
+        }
+
+        StandaloneApplication(
+            args.app,
+            options,
+        ).run()
     else:
         print(usage_text)
         sys.exit(1)
