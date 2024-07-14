@@ -1,3 +1,4 @@
+import pytest
 from pykour.router import Router, Node, Route
 
 
@@ -127,12 +128,10 @@ def test_head_method():
 def test_trace_method():
     router = Router()
 
-    @router.trace("/test")
-    def handler(): ...
+    with pytest.raises(ValueError):
 
-    route = router.get_route("/test", "TRACE")
-    assert route.path == "/test"
-    assert router.exists("/test", "TRACE")
+        @router.route("/test", method="TRACE")
+        def handler(): ...
 
 
 def test_string_representation():
@@ -176,6 +175,5 @@ def test_add_route_with_prefix():
     def handler(): ...
 
     assert router.exists("/api/test", "GET")
-    # assert router.get_allowed_methods("/api/test") == ["GET"]
     assert str(router) == "GET /api/test -> handler()"
     assert repr(router) == "Router(prefix='/api')"
