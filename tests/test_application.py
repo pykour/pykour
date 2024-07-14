@@ -282,3 +282,17 @@ async def test_request_unsuported_method():
     assert send_mock.call_count == 2
     assert send_mock.call_args_list[0][0][0]["status"] == HTTPStatus.NOT_FOUND
     assert send_mock.call_args_list[1][0][0]["body"] == b"Not Found"
+
+
+@pytest.mark.asyncio
+async def test_set_unsupported_method():
+    app = Pykour()
+    send_mock = AsyncMock()
+    receive_mock = AsyncMock()
+    scope = {"type": "http", "method": "TRACE", "path": "/test", "headers": [(b"host", b"testserver")]}
+
+    with pytest.raises(ValueError):
+
+        @app.route("/test", method="TRACE")
+        async def trace_handler(request: Request, response: Response):
+            return {"message": "This is TRACE"}
