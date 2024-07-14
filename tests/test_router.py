@@ -129,6 +129,7 @@ def test_trace_method():
     router = Router()
 
     with pytest.raises(ValueError):
+
         @router.route("/test", method="TRACE")
         def handler(): ...
 

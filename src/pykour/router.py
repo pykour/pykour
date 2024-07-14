@@ -241,7 +241,15 @@ class Router:
             List of allowed HTTP methods.
         """
         allowed_methods = []
-        http_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD",]
+        http_methods = [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "OPTIONS",
+            "HEAD",
+        ]
 
         for method in http_methods:
             if self.get_route(path, method):

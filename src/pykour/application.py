@@ -148,7 +148,7 @@ class RootASGIApp:
         method = scope["method"]
 
         # Check if the method is supported
-        if not method in Pykour.SUPPORTED_METHODS:
+        if method not in Pykour.SUPPORTED_METHODS:
             await RootASGIApp.handle_error(send, HTTPStatus.NOT_FOUND, "Not Found")
             return
 
