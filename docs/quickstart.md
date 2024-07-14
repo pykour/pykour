@@ -72,6 +72,7 @@ def post_hello():
 ## Variables in Routes
 
 You can also use variables within a route. 
+ルートパス内で変数を使用することもできます。
 
 ```python
 @app.route('/hello/{name}')
@@ -79,14 +80,25 @@ def hello_name(name):
     return { "message": f"Hello, {name}!" }
 ```
 
-`{name}` or `:name` is mapped to the argument `name`. By default, it is mapped with type str, but it can also be mapped 
-to int or float, depending on the type hint.
+`{name}` または `:name`は引数`name`にマップされます。デフォルトでは、str型にマップされますが、型ヒントに応じてintまたはfloatにマップする
+こともできます。
+
 
 ```python
 @app.route('/users/:age')
 def user_age(age: int):
     return { "message": f"User age is {age}" }
 ```
+
+`POST`メソッドや`PUT`メソッドでデータを受信する場合、辞書型でデータを受け取ったり、`BaseSchema`クラスのサブクラスを使用してデータを受け取る
+ことができます。
+
+```python
+@app.route('/users', method="POST")
+def create_user(data: dict):
+    return { 'message': 'User created', 'name': data['name'] }
+```
+
 
 ## HTTP Methods
 
@@ -130,6 +142,8 @@ def head():
     ...
 ```
 
-`TRACE`メソッドはセキュリティ上の理由からサポートされていません。`GET`、`POST`、`PUT`、`DELETE`、`PATCH`、`OPTIONS`、`HEAD`メソッドを
+`TRACE`メソッドはセキュリティ上の理由からサポートされていません。
+
+`GET`、`POST`、`PUT`、`DELETE`、`PATCH`、`OPTIONS`、`HEAD`メソッドを
 以外のメソッドは`route()`デコレーターで設定できず、ショートカットデコレーターも提供していません。
 サポートされていないHTTPメソッドでアクセスされた場合は、Pykourは`404 Not Found`ステータスコードを返します。
