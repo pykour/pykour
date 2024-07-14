@@ -265,3 +265,34 @@ def test_get_config():
     app = Pykour()
     app._config = {"key": "value"}
     assert app.config == {"key": "value"}
+
+
+@pytest.mark.asyncio
+async def test_request_unsuported_method():
+    app = Pykour()
+    send_mock = AsyncMock()
+    receive_mock = AsyncMock()
+    scope = {"type": "http", "method": "TRACE", "path": "/test", "headers": [(b"host", b"testserver")]}
+
+    @app.get("/test")
+    async def test_handler(request: Request, response: Response):
+        return {"message": "Hello, world!"}
+
+    await app(scope, receive_mock, send_mock)
+    assert send_mock.call_count == 2
+    assert send_mock.call_args_list[0][0][0]["status"] == HTTPStatus.NOT_FOUND
+    assert send_mock.call_args_list[1][0][0]["body"] == b"Not Found"
+
+
+@pytest.mark.asyncio
+async def test_set_unsupported_method():
+    app = Pykour()
+    send_mock = AsyncMock()
+    receive_mock = AsyncMock()
+    scope = {"type": "http", "method": "TRACE", "path": "/test", "headers": [(b"host", b"testserver")]}
+
+    with pytest.raises(ValueError):
+
+        @app.route("/test", method="TRACE")
+        async def trace_handler(request: Request, response: Response):
+            return {"message": "This is TRACE"}
