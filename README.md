@@ -10,19 +10,24 @@
 **Documentation**: https://pykour.com  
 **Source Code**: https://github.com/pykour/pykour
 
+## This version is a beta version
+
+This version is for evaluation purposes only and is not recommended for production use. Please note the following points
+for the beta version:
+
+- Features may be incomplete.
+- Bugs and unexpected behavior may be present.
+- APIs and internal structures may change in future versions.
+
 ## Features
 
-Pykour is a web application framework for Python, designed to quickly implement REST APIs.
-Its usage is very similar to Flask and FastAPI, making it relatively easy to learn in a short period of time.
+Pykour is a web application framework for Python designed to quickly implement REST APIs. It provides an interface very 
+similar to Flask and FastAPI, allowing those familiar with these frameworks to learn it in a short period.
 
-PykourはPython向けのWebアプリケーションフレームワークで、REST APIを素早く実装することを目的としています。
-FlaskやFastAPIに非常に似たインターフェースを提供しており、これらのフレームワークを習得している人にとっては短期間で学習することができます。
-
-- **REST API Specialized**: PykourはREST APIサーバーを構築することに特化したWebアプリケーションフレームワークです。
-- **Fast**: Pykourは非常に高速に動作するように設計されています。
-- **Easy**: PykourはFlaskやFastAPIに似たインターフェースを持ち、短時間で使用および学習できるように設計されています。ドキュメントも短時間で読めるようにしています。
-- **Robust**: Pykourは非常に堅牢で信頼性が高いフレームワークです。高いテストカバレッジを達成しています。
-
+- REST API Specialized: Pykour is a web application framework specifically designed for building REST API servers.
+- Fast: Pykour is engineered to operate at high speeds.
+- Easy: With an interface similar to Flask and FastAPI, Pykour is designed for quick use and learning. The documentation is also concise, enabling rapid reading.
+- Robust: Pykour is a highly robust and reliable framework, achieving high test coverage.
 
 ## Requirements
 

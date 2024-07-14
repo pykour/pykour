@@ -32,6 +32,12 @@ class Pykour:
         return self._config
 
     def add_middleware(self, middleware, **kwargs) -> None:
+        """Add middleware to the application.
+
+        Args:
+            middleware: Middleware class.
+            **kwargs: Middleware arguments.
+        """
         self.app = middleware(self.app, **kwargs)
 
     def get(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
@@ -132,6 +138,11 @@ class Pykour:
         return decorator
 
     def add_router(self, router: Router) -> None:
+        """Add a router to the application.
+
+        Args:
+            router: Router object.
+        """
         self.router.add_router(router)
 
 

@@ -6,6 +6,7 @@
         # explicit members list so we can set order and include `__init__` easily
         members:
           - __init__
+          - route
           - get
           - post
           - put
@@ -13,5 +14,5 @@
           - patch
           - options
           - head
-          - trace
-          - route
+          - add_router
+          - add_middleware

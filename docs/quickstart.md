@@ -1,10 +1,10 @@
 # Quickstart
 
-Pykourの基本的な使い方を学びましょう。プロジェクトのセットアップとPykourのインストールは[Installation](installation.md)に従ってください。
+Let’s learn the basics of using Pykour. Follow the [Installation](installation.md) for project setup and Pykour installation.
 
 ## Hello, World!
 
-最小のPykourアプリケーションは次のようになります:
+A minimal Pykour application looks like this:
 
 ```python
 from pykour import Pykour
@@ -16,28 +16,26 @@ def hello():
     return { "message": "Hello, Pykour!" }
 ```
 
-このコードは何をしているのでしょうか？
+What is this code doing?
 
-1. 最初に`pykour`モジュールから`Pykour`クラスをインポートします。
-2. 次に`Pykour`クラスのインスタンスを作成し、`app`変数に割り当てます。
-3. `route()`デコレーターを使って`/`ルートを定義します。
-4. `hello()`関数は、単一のキーとバリューのペアを持つ辞書を返します。
+1.	First, it imports the `Pykour` class from the `pykour` module.
+2.	Next, it creates an instance of the `Pykour` class and assigns it to the app variable.
+3.	It defines the `/` route using the route() decorator.
+4.	The `hello()` function returns a dictionary with a single key-value pair.
 
-このコードを`main.py`などの名前で保存します。
+Save this code with a name like `main.py`.
 
-アプリケーションを実行するには、`main:app`を指定して`pykour`コマンドにアプリケーションの場所を教える必要があります。
+To run the application, you need to tell the `pykour` command where your application is located by specifying `main:app`.
 
 ```bash
 $ pykour dev main:app
 ```
 
-ブラウザを開いて [http://localhost:8000/](http://localhost:8000/) に移動します。`{"message": "Hello, Pykour"}`というテキストが表示されるはずです。
+Open your browser and go to [http://localhost:8000/](http://localhost:8000/). You should see the text `{"message": "Hello, Pykour"}`.
 
 ## Routing
 
-Pykour uses the `route()` decorator to define routes. The decorator takes a single argument, the URL path.
-
-Pykourでは、`route()`デコレーターを使用してルートを定義します。デコレーターはURLパスを取ります。
+In Pykour, routes are defined using the `route()` decorator, which takes a URL path.
 
 ```python
 @app.route('/')
@@ -49,8 +47,8 @@ def hello():
     return { "message": "Hello, Pykour!" }
 ```
 
-`route()`デコレーターは、デフォルトでは`GET`メソッドを持つルートを定義します。`GET`以外のHTTPメソッドを使用したい場合は、HTTPメソッドを明示的に
-指定することもできます。
+By default, the `route()` decorator defines routes with the `GET` method. If you want to use HTTP methods other than 
+`GET`, you can explicitly specify the HTTP method.
 
 ```python
 @app.route('/hello', method="POST")
@@ -58,8 +56,8 @@ def post_hello():
     return { "message": "Hello, Pykour!" }
 ```
 
-`route()`デコレーターは、デフォルトでは`200 OK`ステータスコードを持つルートを定義します。ステータスコードを変更したい場合は、
-`status_code`引数を使用してステータスコードを指定できます。
+The `route()` decorator also defines routes with a default status code of `200 OK`.
+If you want to change the status code, you can specify it using the `status_code` argument.
 
 ```python
 @app.route('/hello', method="POST", status_code=201)
@@ -67,12 +65,9 @@ def post_hello():
     return { "message": "Hello, Pykour!" }
 ```
 
-
-
 ## Variables in Routes
 
-You can also use variables within a route. 
-ルートパス内で変数を使用することもできます。
+You can also use variables within the route path.
 
 ```python
 @app.route('/hello/{name}')
@@ -80,9 +75,8 @@ def hello_name(name):
     return { "message": f"Hello, {name}!" }
 ```
 
-`{name}` または `:name`は引数`name`にマップされます。デフォルトでは、str型にマップされますが、型ヒントに応じてintまたはfloatにマップする
-こともできます。
-
+`{name}` or `:name` maps to the name argument. 
+By default, it maps to the str type, but it can also map to `int` or `float` based on the type hint.
 
 ```python
 @app.route('/users/:age')
@@ -90,8 +84,7 @@ def user_age(age: int):
     return { "message": f"User age is {age}" }
 ```
 
-`POST`メソッドや`PUT`メソッドでデータを受信する場合、辞書型でデータを受け取ったり、`BaseSchema`クラスのサブクラスを使用してデータを受け取る
-ことができます。
+When receiving data with `POST` or `PUT` methods, you can accept data as a dictionary.
 
 ```python
 @app.route('/users', method="POST")
@@ -99,13 +92,26 @@ def create_user(data: dict):
     return { 'message': 'User created', 'name': data['name'] }
 ```
 
+Additionally, you can receive data using a schema.
+
+```python
+from pykour.schema import BaseSchema
+
+class UserSchema(BaseSchema):
+    name: str
+    age: int
+
+
+@app.route('/users', method="POST")
+def create_user(data: UserSchema):
+    return { 'message': 'User created', 'name': data.name }
+```
 
 ## HTTP Methods
 
-REST APIでは異なるHTTPメソッドを使用します。Pykourでは、各HTTPメソッドに対応したデコレーターを提供しています。
+In a REST API, different HTTP methods are used. Pykour provides decorators corresponding to each HTTP method.
 
-`get()`, `post()`, `put()`, `delete()`, `patch()`デコレーターは、`route()`デコレーターの
-ショートカットです。
+The `get()`, `post()`, `put()`, `delete()`, and `patch()` decorators are shortcuts for the `route()` decorator.
 
 ```python
 @app.get('/')
@@ -129,8 +135,8 @@ def patch():
     ...
 ```
 
-もし、`OPTIONS`, `HEAD`メソッドをサポートしたい場合は、`options()`, `head()`デコレーターを使用できます。
-Pykourは`OPTIONS`メソッドのレスポンスを返すための処理を行うので、空のメソッドを宣言するだけでよいです。
+If you want to support the `OPTIONS` and `HEAD` methods, you can use the `options()` and `head()` decorators. 
+Pykour handles the response for the `OPTIONS` and `HEAD` methods, so you only need to declare an empty method.
 
 ```python
 @app.options('/')
@@ -142,8 +148,27 @@ def head():
     ...
 ```
 
-`TRACE`メソッドはセキュリティ上の理由からサポートされていません。
+The `TRACE` method is not supported for security reasons.
 
-`GET`、`POST`、`PUT`、`DELETE`、`PATCH`、`OPTIONS`、`HEAD`メソッドを
-以外のメソッドは`route()`デコレーターで設定できず、ショートカットデコレーターも提供していません。
-サポートされていないHTTPメソッドでアクセスされた場合は、Pykourは`404 Not Found`ステータスコードを返します。
+Methods other than `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`, and `HEAD` cannot be set with the `route()` 
+decorator, and shortcut decorators are not provided. If an unsupported HTTP method is accessed, 
+Pykour will return a `404 Not Found` status code.
+
+## Schema
+
+In Pykour, you can use schemas to receive request data. A schema is a class that defines the structure of the data.
+
+```python
+from pykour.schema import BaseSchema
+
+class UserSchema(BaseSchema):
+    name: str
+    age: int
+
+@app.route('/users', method="POST")
+def create_user(data: UserSchema):
+    return { 'message': 'User created', 'name': data.name }
+
+```
+
+The `BaseSchema` class is the base class for defining schemas. When defining a schema, inherit from the `BaseSchema` class.

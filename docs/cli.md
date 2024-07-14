@@ -1,9 +1,9 @@
 # Pykour CLI
 
-Pykour CLIは、Pykourアプリケーションを提供したり、Pykourプロジェクトを管理したりするために使用できるコマンドラインプログラムです。
-Pykourをインストールすると、ターミナルにpykourコマンドが追加されます。
+The Pykour CLI is a command-line program that can be used to serve Pykour applications and manage Pykour projects. 
+Once you install Pykour, the pykour command is added to your terminal.
 
-Pykourアプリケーションを実行するために、`pykour dev`コマンドを使用します。
+To run a Pykour application, use the `pykour dev` command.
 
 ```bash
 $ pykour dev main:app
@@ -22,11 +22,13 @@ INFO:     Application startup complete.
 $ pykour dev main:app
 ```
 
-`pykour dev`コマンドを実行すると、Pykourアプリケーションを開発モードで実行します。
-デフォルトでは、`auto-reload`が有効になっており、コードを変更するとサーバーが自動的にリロードされます。これはリソースを大量に消費し、安定性が
-低下するため、開発モードでのみ使用するべきです。
-デフォルトでは、IPアドレス`127.0.0.1`および`8000`ポートでリッスンし、ローカルマシンからのみアクセス可能です。IPアドレスやポートを変更する必要が
-ある場合は、`--host`および`--port`オプションを使用できます。
+Running the `pykour dev` command executes the Pykour application in development mode. 
+
+By default, **auto-reload** is enabled, so the server automatically reloads when code changes.
+This mode consumes a lot of resources and reduces stability, so it should only be used in development.
+
+By default, it listens on IP address `127.0.0.1` and port `8000`, making it accessible only from the local machine. 
+If you need to change the IP address or port, you can use the `--host` and `--port` options.
 
 ### `pykour run`
 
@@ -34,7 +36,8 @@ $ pykour dev main:app
 $ pykour run main:app
 ```
 
-`pykour run`コマンドを実行すると、Pykourアプリケーションを本番モードで実行します。
-`auto-reload`がデフォルトでは無効になっているため、コードを変更してもサーバーはリロードされません。
-デフォルトでは、IPアドレス`0.0.0.0`および`8000`ポートでリッスンし、どのIPアドレスからでもアクセス可能です。IPアドレスやポートを変更する必要が
-ある場合は、`--host`および`--port`オプションを使用できます。
+Running the `pykour run` command executes the Pykour application in production mode.
+**Auto-reload** is disabled by default, so the server will not reload when code changes.
+
+By default, it listens on IP address `0.0.0.0` and port `8000`, making it accessible from any IP address.
+If you need to change the IP address or port, you can use the `--host` and `--port` options.
