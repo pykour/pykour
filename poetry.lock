@@ -1329,6 +1329,16 @@ pyyaml = "*"
 extra = ["pygments (>=2.12)"]
 
 [[package]]
+name = "pysqlite3"
+version = "0.5.3"
+description = "DB-API 2.0 interface for Sqlite 3.x"
+optional = true
+python-versions = "*"
+files = [
+    {file = "pysqlite3-0.5.3.tar.gz", hash = "sha256:54a98e05b087c2c064c8d5b58e9b8f403082eadf830d7d30ede4ecf6a5a5f143"},
+]
+
+[[package]]
 name = "pytest"
 version = "8.2.2"
 description = "pytest: simple powerful testing with Python"
@@ -2020,4 +2030,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9"
-content-hash = "7db09ab4a13d9252800782d62c416bd2f144d68990a34d6512c9c740f42f53f1"
+content-hash = "214eda19e0ff0285488a0454903e9b8bc91c0de58120ab3bb8a7c185b50daf85"
