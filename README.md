@@ -7,8 +7,22 @@
 [![CI](https://github.com/pykour/pykour/actions/workflows/ci.yml/badge.svg)](https://github.com/pykour/pykour/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pykour/pykour/graph/badge.svg?token=VJR4NSJ5FZ)](https://codecov.io/gh/pykour/pykour)
 
+**Documentation**: https://pykour.com  
+**Source Code**: https://github.com/pykour/pykour
+
+## Features
+
 Pykour is a web application framework for Python, designed to quickly implement REST APIs.
 Its usage is very similar to Flask and FastAPI, making it relatively easy to learn in a short period of time.
+
+PykourはPython向けのWebアプリケーションフレームワークで、REST APIを素早く実装することを目的としています。
+FlaskやFastAPIに非常に似たインターフェースを提供しており、これらのフレームワークを習得している人にとっては短期間で学習することができます。
+
+- **REST API Specialized**: PykourはREST APIサーバーを構築することに特化したWebアプリケーションフレームワークです。
+- **Fast**: Pykourは非常に高速に動作するように設計されています。
+- **Easy**: PykourはFlaskやFastAPIに似たインターフェースを持ち、短時間で使用および学習できるように設計されています。ドキュメントも短時間で読めるようにしています。
+- **Robust**: Pykourは非常に堅牢で信頼性が高いフレームワークです。高いテストカバレッジを達成しています。
+
 
 ## Requirements
 
@@ -29,7 +43,7 @@ from pykour import Pykour
 
 app = Pykour()
 
-@app.route('/')
+@app.get('/')
 async def index():
     return {'message': 'Hello, World!'}
 ```
@@ -37,7 +51,7 @@ async def index():
 ### Run the application
 
 ```bash
-$ pykour run main:app
+$ pykour dev main:app
 ```
 
 ## License

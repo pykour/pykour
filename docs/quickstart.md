@@ -1,10 +1,10 @@
 # Quickstart
 
-This is a quickstart guide for the `myapp` application.
+Pykourの基本的な使い方を学びましょう。プロジェクトのセットアップとPykourのインストールは[Installation](installation.md)に従ってください。
 
 ## Hello, World!
 
-A minimal Pykour application looks like this:
+最小のPykourアプリケーションは次のようになります:
 
 ```python
 from pykour import Pykour
@@ -12,31 +12,32 @@ from pykour import Pykour
 app = Pykour()
 
 @app.route('/')
-def hello_world():
-    return { "message": "Hello, World!" }
+def hello():
+    return { "message": "Hello, Pykour!" }
 ```
 
-So, what's happening here?
+このコードは何をしているのでしょうか？
 
-1. First we imported the `Pykour` class from the `pykour` module.
-2. Next we create an instance of the `Pykour` class and assign it to the variable `app`.
-3. We then use the route() decorator to define a route for the root URL `/`.
-4. The `hello_world()` function returns a dictionary with a single key-value pair.
+1. 最初に`pykour`モジュールから`Pykour`クラスをインポートします。
+2. 次に`Pykour`クラスのインスタンスを作成し、`app`変数に割り当てます。
+3. `route()`デコレーターを使って`/`ルートを定義します。
+4. `hello()`関数は、単一のキーとバリューのペアを持つ辞書を返します。
 
-Save it as `main.py` or something similar.
+このコードを`main.py`などの名前で保存します。
 
-To run the application, use the pykour command or python -m pykour. You need to tell Pykour where your application is 
-located using `main:app`.
+アプリケーションを実行するには、`main:app`を指定して`pykour`コマンドにアプリケーションの場所を教える必要があります。
 
 ```bash
-$ pykour run main:app
+$ pykour dev main:app
 ```
 
-Now, open your browser and go to `http://localhost:8000/`. You should see the message "Hello, World!".
+ブラウザを開いて [http://localhost:8000/](http://localhost:8000/) に移動します。`{"message": "Hello, Pykour"}`というテキストが表示されるはずです。
 
 ## Routing
 
 Pykour uses the `route()` decorator to define routes. The decorator takes a single argument, the URL path.
+
+Pykourでは、`route()`デコレーターを使用してルートを定義します。デコレーターはURLパスを取ります。
 
 ```python
 @app.route('/')
@@ -48,13 +49,25 @@ def hello():
     return { "message": "Hello, Pykour!" }
 ```
 
-The `route()` method defines a route with the `GET` method. You can also specify the HTTP methods explicitly.
+`route()`デコレーターは、デフォルトでは`GET`メソッドを持つルートを定義します。`GET`以外のHTTPメソッドを使用したい場合は、HTTPメソッドを明示的に
+指定することもできます。
 
 ```python
-@app.route('/hello', method='POST')
+@app.route('/hello', method="POST")
 def post_hello():
     return { "message": "Hello, Pykour!" }
 ```
+
+`route()`デコレーターは、デフォルトでは`200 OK`ステータスコードを持つルートを定義します。ステータスコードを変更したい場合は、
+`status_code`引数を使用してステータスコードを指定できます。
+
+```python
+@app.route('/hello', method="POST", status_code=201)
+def post_hello():
+    return { "message": "Hello, Pykour!" }
+```
+
+
 
 ## Variables in Routes
 
@@ -77,18 +90,10 @@ def user_age(age: int):
 
 ## HTTP Methods
 
-Web applications use different HTTP methods when accessing URLs. You should familiarize yourself with the HTTP methods 
-as you work with Pykour.
+REST APIでは異なるHTTPメソッドを使用します。Pykourでは、各HTTPメソッドに対応したデコレーターを提供しています。
 
-```python
-@app.route('/hello', method='POST')
-def post_hello():
-    return { "message": "Hello, Pykour!" }
-```
-
-You can also use the `get()`, `post()`, `put()`, `delete()`, `patch()`, `options()`, `head()` and `trace()` decorators,
-which are shortcuts for the `route()` decorator.
-
+`get()`, `post()`, `put()`, `delete()`, `patch()`デコレーターは、`route()`デコレーターの
+ショートカットです。
 
 ```python
 @app.get('/')
@@ -112,8 +117,8 @@ def patch():
     ...
 ```
 
-If you want to support `OPTIONS`, `HEAD`, and `TRACE` method, you can use the `options()`, `head()` , and `trace()` decorator. Pykour does the processing to respond to
-the OPTIONS method response, so it only needs to declare an empty method.
+もし、`OPTIONS`, `HEAD`メソッドをサポートしたい場合は、`options()`, `head()`デコレーターを使用できます。
+Pykourは`OPTIONS`メソッドのレスポンスを返すための処理を行うので、空のメソッドを宣言するだけでよいです。
 
 ```python
 @app.options('/')
@@ -123,8 +128,8 @@ def options():
 @app.head('/')
 def head():
     ...
-
-@app.trace('/')
-def trace():
-    ...
 ```
+
+`TRACE`メソッドはセキュリティ上の理由からサポートされていません。`GET`、`POST`、`PUT`、`DELETE`、`PATCH`、`OPTIONS`、`HEAD`メソッドを
+以外のメソッドは`route()`デコレーターで設定できず、ショートカットデコレーターも提供していません。
+サポートされていないHTTPメソッドでアクセスされた場合は、Pykourは`404 Not Found`ステータスコードを返します。
