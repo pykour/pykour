@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from enum import Enum
 from typing import Dict, Any
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, MagicMock
 
 import pytest
 
@@ -48,15 +48,6 @@ async def test_function_call_with_valid_datetime_parameter():
 
 
 @pytest.mark.asyncio
-async def test_function_call_with_valid_dict_parameter():
-    async def func(x: dict):
-        return x
-
-    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": '{"key": "value"}'}}), Mock(spec=Response))
-    assert result == {"key": "value"}
-
-
-@pytest.mark.asyncio
 async def test_function_call_with_invalid_int_parameter():
     async def func(x: int):
         return x
@@ -81,15 +72,6 @@ async def test_function_call_with_invalid_datetime_parameter():
 
     with pytest.raises(ValueError):
         await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid-date"}}), Mock(spec=Response))
-
-
-@pytest.mark.asyncio
-async def test_function_call_with_invalid_dict_parameter():
-    async def func(x: dict):
-        return x
-
-    with pytest.raises(json.JSONDecodeError):
-        await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid-json"}}), Mock(spec=Response))
 
 
 @pytest.mark.asyncio
@@ -198,3 +180,27 @@ async def test_config_argument_is_set_correctly(mocker):
     response = Mock(spec=Response)
     result = await call(func, request, response)
     assert result == "value"
+
+
+async def dummy_function(data: dict):
+    return data
+
+
+@pytest.mark.asyncio
+async def test_call_with_dict_annotation():
+    # Mock the request and response objects
+    request = MagicMock(spec=Request)
+    response = MagicMock(spec=Response)
+
+    request.scope = {"path_params": {}}
+
+    # Mock the request.json() method to return a specific dict
+    request.json = AsyncMock(return_value={"key": "value"})
+
+    # Define the callable to test
+    func = dummy_function
+
+    # Call the function and assert the result
+    result = await call(func, request, response)
+
+    assert result == {"key": "value"}

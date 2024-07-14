@@ -1,7 +1,7 @@
 import inspect
 import json
 from datetime import datetime
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, get_origin
 from enum import Enum
 
 from pykour.config import Config
@@ -24,8 +24,6 @@ def cast_to_type(value: Any, to_type: type) -> Any:
             return to_type[value]
         except KeyError:
             raise ValueError(f"{value} is not a valid {to_type.__name__}")
-    elif to_type == dict:
-        return json.loads(value)
     else:
         return value
 
@@ -40,6 +38,8 @@ async def call(func: Callable, request: Request, response: Response) -> Any:
     for param_name, param in sig.parameters.items():
         if isinstance(param.annotation, type) and issubclass(param.annotation, BaseSchema):
             bound_args[param_name] = param.annotation.from_dict(await request.json())
+        elif param.annotation is dict or get_origin(param.annotation) is dict:
+            bound_args[param_name] = await request.json()
         elif param.annotation is Request or param_name == "request" or param_name == "req":
             bound_args[param_name] = request
         elif param.annotation is Response or param_name == "response" or param_name == "res" or param_name == "resp":
