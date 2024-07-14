@@ -1,5 +1,22 @@
 # Release Notes
 
+## 0.1.3 - 2024-07-15
+
+### Features
+
+- Support for dict type arguments in route methods
+- Implementation of the dev subcommand
+- Support configuration file
+- Support Middleware
+
+### Enhancement
+
+- Discontinued support for the TRACE method
+
+### Fixed
+
+- Internal Server Error occurs when using the DELETE method
+
 ## 0.1.2 - 2024-07-07
 
 ### Features
