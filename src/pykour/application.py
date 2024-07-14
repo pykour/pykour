@@ -14,6 +14,8 @@ from pykour.types import Scope, Receive, Send, ASGIApp, HTTPStatusCode
 
 
 class Pykour:
+    SUPPORTED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
+
     def __init__(self, config: str = None):
         self._config = Config(config) if config else None
         self.production_mode = os.getenv("PYKOUR_ENV") == "production"
@@ -109,17 +111,6 @@ class Pykour:
         """
         return self.route(path=path, method="HEAD", status_code=status_code)
 
-    def trace(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
-        """Decorator for TRACE method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="TRACE", status_code=status_code)
-
     def route(self, path: str, method: str = "GET", status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
         """Decorator for route.
 
@@ -130,6 +121,9 @@ class Pykour:
         Returns:
             Route decorator.
         """
+
+        if method not in self.SUPPORTED_METHODS:
+            raise ValueError(f"Unsupported HTTP method: {method}")
 
         def decorator(func):
             self.router.add_route(path=path, method=method, handler=(func, status_code))
@@ -153,6 +147,12 @@ class RootASGIApp:
         path = scope["path"]
         method = scope["method"]
 
+        # Check if the method is supported
+        if not method in Pykour.SUPPORTED_METHODS:
+            await RootASGIApp.handle_error(send, HTTPStatus.NOT_FOUND, "Not Found")
+            return
+
+        # Check if the method is allowed
         if not RootASGIApp.is_method_allowed(scope):
             await RootASGIApp.handle_error(send, HTTPStatus.METHOD_NOT_ALLOWED, "Method Not Allowed")
             return
@@ -178,6 +178,7 @@ class RootASGIApp:
         app = scope["app"]
         path = scope["path"]
         method = scope["method"]
+
         route = app.router.get_route(path, method)
         route_fun, status_code = route.handler
         path_params = route.path_params
@@ -196,8 +197,7 @@ class RootASGIApp:
     @staticmethod
     async def process_request(route_fun: Callable, request: Request, response: Response):
         """Process the request and return the response body."""
-        if request.method != "TRACE":
-            return await call(route_fun, request, response)
+        return await call(route_fun, request, response)
 
     @staticmethod
     async def prepare_response(scope: Scope, request: Request, response: Response, response_body):
@@ -221,9 +221,6 @@ class RootASGIApp:
         elif method == "HEAD":
             response.add_header("Content-Length", str(len(str(response_body))))
             response.content = ""
-        elif method == "TRACE":
-            response.add_header("Content-Type", "message/http")
-            response.content = (await request.body()).decode("utf-8")
 
         if response.content_type is None:
             raise ValueError("Unsupported response type: %s" % type(response_body))
