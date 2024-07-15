@@ -6,7 +6,6 @@ from typing import Callable, Union
 import pykour.exceptions as ex
 from pykour.config import Config
 from pykour.call import call
-from pykour.middleware.requestid import RequestIDMiddleware
 from pykour.request import Request
 from pykour.response import Response
 from pykour.router import Router
@@ -21,7 +20,6 @@ class Pykour:
         self.production_mode = os.getenv("PYKOUR_ENV") == "production"
         self.router = Router()
         self.app: ASGIApp = RootASGIApp()
-        self.add_middleware(RequestIDMiddleware)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         scope["app"] = self
@@ -154,6 +152,10 @@ class RootASGIApp:
         ...
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await RootASGIApp.handle_error(send, HTTPStatus.BAD_REQUEST, "Bad Request")
+            return
+
         app = scope["app"]
         path = scope["path"]
         method = scope["method"]
