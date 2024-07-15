@@ -7,7 +7,7 @@ from pykour.types import Scope, Receive, Send, Message, ASGIApp
 
 class UUIDMiddleware(BaseMiddleware):
 
-    def __init__(self, app, header_name="x-request-id"):
+    def __init__(self, app, header_name="X-Request-ID"):
         super().__init__(app)
         self.header_name = header_name
         self.logger = logging.getLogger("uvicorn")
@@ -23,7 +23,7 @@ class UUIDMiddleware(BaseMiddleware):
 
         # scopeからX-Request-IDヘッダーをチェック
         for header in scope["headers"]:
-            if header[0].decode("latin1") == "x-request-id":
+            if header[0].decode("latin1") == self.header_name:
                 request_id = header[1].decode("latin1")
                 break
 
@@ -32,7 +32,7 @@ class UUIDMiddleware(BaseMiddleware):
             scope["headers"].append((self.header_name.encode("latin1"), request_id.encode("latin1")))
 
         scope["request_id"] = request_id
-        self.logger.info(f"REQUEST ID: {scope['request_id']}")
+        self.logger.info(f"{self.header_name}: {scope['request_id']}")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         if scope["type"] != "http":
@@ -46,7 +46,7 @@ class UUIDMiddleware(BaseMiddleware):
 
     async def send_with_request_id(self, message: Message) -> None:
         if message["type"] == "http.response.start":
-            message["headers"].append((b"X-Request-ID", self.scope["request_id"].encode()))
+            message["headers"].append((self.header_name.encode("latin1"), self.scope["request_id"].encode()))
         await self.send(message)
 
 

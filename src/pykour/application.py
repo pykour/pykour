@@ -1,11 +1,12 @@
 import json
 import os
 from http import HTTPStatus
-from typing import Callable, Union
+from typing import Callable, Union, Dict, Any, MutableMapping
 
 import pykour.exceptions as ex
 from pykour.config import Config
 from pykour.call import call
+from pykour.middleware import BaseMiddleware
 from pykour.request import Request
 from pykour.response import Response
 from pykour.router import Router
@@ -29,12 +30,12 @@ class Pykour:
     def config(self) -> Config:
         return self._config
 
-    def add_middleware(self, middleware, **kwargs) -> None:
+    def add_middleware(self, middleware: Callable, **kwargs: Dict[str, Any]) -> None:
         """Add middleware to the application.
 
         Args:
             middleware: Middleware class.
-            **kwargs: Middleware arguments.
+            kwargs: Middleware arguments.
         """
         self.app = middleware(self.app, **kwargs)
 
