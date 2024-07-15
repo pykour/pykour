@@ -1,5 +1,11 @@
 # Release Notes
 
+## Not released yet
+
+### Enhancements
+
+- Add Codacy badge
+
 ## 0.1.3 - 2024-07-15
 
 ### Features
