@@ -1,12 +1,11 @@
 import json
 import os
 from http import HTTPStatus
-from typing import Callable, Union, Dict, Any, MutableMapping
+from typing import Callable, Union, Dict, Any
 
 import pykour.exceptions as ex
 from pykour.config import Config
 from pykour.call import call
-from pykour.middleware import BaseMiddleware
 from pykour.request import Request
 from pykour.response import Response
 from pykour.router import Router

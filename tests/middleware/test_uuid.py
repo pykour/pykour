@@ -14,7 +14,7 @@ async def test_request_id_is_added_if_not_present():
 
     await middleware(scope, receive, send)
 
-    assert any(header[0] == b"x-request-id" for header in scope["headers"])
+    assert any(header[0] == b"X-Request-ID" for header in scope["headers"])
     app_mock.assert_awaited_once()
 
 
@@ -23,7 +23,7 @@ async def test_request_id_is_preserved_if_present():
     app_mock = AsyncMock()
     middleware = UUIDMiddleware(app_mock)
     request_id = str(uuid4())
-    scope = {"type": "http", "headers": [(b"x-request-id", request_id.encode("latin1"))]}
+    scope = {"type": "http", "headers": [(b"X-Request-ID", request_id.encode("latin1"))]}
     receive = AsyncMock()
     send = AsyncMock()
 
