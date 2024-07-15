@@ -1,12 +1,11 @@
 import json
 import os
 from http import HTTPStatus
-from typing import Callable, Union
+from typing import Callable, Union, Dict, Any
 
 import pykour.exceptions as ex
 from pykour.config import Config
 from pykour.call import call
-from pykour.middleware.requestid import RequestIDMiddleware
 from pykour.request import Request
 from pykour.response import Response
 from pykour.router import Router
@@ -21,7 +20,6 @@ class Pykour:
         self.production_mode = os.getenv("PYKOUR_ENV") == "production"
         self.router = Router()
         self.app: ASGIApp = RootASGIApp()
-        self.add_middleware(RequestIDMiddleware)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         scope["app"] = self
@@ -31,12 +29,12 @@ class Pykour:
     def config(self) -> Config:
         return self._config
 
-    def add_middleware(self, middleware, **kwargs) -> None:
+    def add_middleware(self, middleware: Callable, **kwargs: Dict[str, Any]) -> None:
         """Add middleware to the application.
 
         Args:
             middleware: Middleware class.
-            **kwargs: Middleware arguments.
+            kwargs: Middleware arguments.
         """
         self.app = middleware(self.app, **kwargs)
 
@@ -154,6 +152,10 @@ class RootASGIApp:
         ...
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await RootASGIApp.handle_error(send, HTTPStatus.BAD_REQUEST, "Bad Request")
+            return
+
         app = scope["app"]
         path = scope["path"]
         method = scope["method"]

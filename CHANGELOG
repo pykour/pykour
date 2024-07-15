@@ -7,7 +7,7 @@
 - Support for dict type arguments in route methods
 - Implementation of the dev subcommand
 - Support configuration file
-- Support Middleware
+- Support Middleware (UUID, GZIP)
 
 ### Enhancement
 
