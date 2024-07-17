@@ -24,6 +24,7 @@ def test_dev_command_runs_uvicorn(mocker):
     mock_run.assert_called_once_with(
         "main:app",
         host="127.0.0.1",
+        log_level="critical",
         port=8000,
         reload=True,
         workers=1,

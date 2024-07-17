@@ -12,7 +12,7 @@ async def test_get_route():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "GET", "path": "/test", "headers": [(b"host", b"testserver")]}
+    scope = {"type": "http", "scheme": "http", "method": "GET", "path": "/test", "headers": [(b"host", b"testserver")]}
 
     @app.get("/test")
     async def test_handler(request: Request, response: Response):
@@ -36,7 +36,13 @@ async def test_post_route():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "POST", "path": "/submit", "headers": [(b"host", b"testserver")]}
+    scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "POST",
+        "path": "/submit",
+        "headers": [(b"host", b"testserver")],
+    }
 
     @app.post("/submit")
     async def submit_handler(request: Request, response: Response):
@@ -60,7 +66,7 @@ async def test_put_route():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "PUT", "path": "/test", "headers": [(b"host", b"testserver")]}
+    scope = {"type": "http", "scheme": "http", "method": "PUT", "path": "/test", "headers": [(b"host", b"testserver")]}
 
     @app.put("/test")
     async def test_handler(request: Request, response: Response):
@@ -84,7 +90,13 @@ async def test_delete_route():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "DELETE", "path": "/test", "headers": [(b"host", b"testserver")]}
+    scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "DELETE",
+        "path": "/test",
+        "headers": [(b"host", b"testserver")],
+    }
 
     @app.delete("/test")
     async def test_handler(request: Request, response: Response): ...
@@ -107,7 +119,13 @@ async def test_patch_route():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "PATCH", "path": "/test", "headers": [(b"host", b"testserver")]}
+    scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "PATCH",
+        "path": "/test",
+        "headers": [(b"host", b"testserver")],
+    }
 
     @app.patch("/test")
     async def test_handler(request: Request, response: Response):
@@ -131,7 +149,7 @@ async def test_head_route():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "HEAD", "path": "/test", "headers": [(b"host", b"testserver")]}
+    scope = {"type": "http", "scheme": "http", "method": "HEAD", "path": "/test", "headers": [(b"host", b"testserver")]}
 
     @app.head("/test")
     async def test_handler(request: Request, response: Response):
@@ -157,7 +175,13 @@ async def test_404_not_found():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "GET", "path": "/nonexistent", "headers": [(b"host", b"testserver")]}
+    scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "GET",
+        "path": "/nonexistent",
+        "headers": [(b"host", b"testserver")],
+    }
 
     await app(scope, receive_mock, send_mock)
 
@@ -177,7 +201,13 @@ async def test_method_not_allowed():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "POST", "path": "/onlyget", "headers": [(b"host", b"testserver")]}
+    scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "POST",
+        "path": "/onlyget",
+        "headers": [(b"host", b"testserver")],
+    }
 
     @app.get("/onlyget")
     async def only_get_handler(request: Request, response: Response):
@@ -201,7 +231,13 @@ async def test_options_method():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "OPTIONS", "path": "/options", "headers": [(b"host", b"testserver")]}
+    scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "OPTIONS",
+        "path": "/options",
+        "headers": [(b"host", b"testserver")],
+    }
 
     @app.options("/options")
     async def options_handler(request: Request, response: Response):
@@ -239,7 +275,13 @@ async def test_add_middleware():
 
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    dummy_scope = {"type": "http", "method": "GET", "path": "/test", "headers": [(b"host", b"testserver")]}
+    dummy_scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "GET",
+        "path": "/test",
+        "headers": [(b"host", b"testserver")],
+    }
 
     @app.get("/test")
     async def test_handler(request: Request, response: Response):
@@ -272,7 +314,13 @@ async def test_request_unsuported_method():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "TRACE", "path": "/test", "headers": [(b"host", b"testserver")]}
+    scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "TRACE",
+        "path": "/test",
+        "headers": [(b"host", b"testserver")],
+    }
 
     @app.get("/test")
     async def test_handler(request: Request, response: Response):
@@ -289,7 +337,13 @@ async def test_set_unsupported_method():
     app = Pykour()
     send_mock = AsyncMock()
     receive_mock = AsyncMock()
-    scope = {"type": "http", "method": "TRACE", "path": "/test", "headers": [(b"host", b"testserver")]}
+    scope = {
+        "type": "http",
+        "scheme": "http",
+        "method": "TRACE",
+        "path": "/test",
+        "headers": [(b"host", b"testserver")],
+    }
 
     with pytest.raises(ValueError):
 
