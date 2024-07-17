@@ -33,37 +33,17 @@ class LogLevel(Enum):
 
 
 class InterceptHandler(logging.Handler):
-    def emit(self, record): ...
+    def emit(self, record):
+        pass
 
 
-TRACE_LEVEL = 5
 ACCESS_LEVEL = 25
-
-CUSTOM_LOG_LEVELS = {
-    "TRACE": TRACE_LEVEL,
-    "ACCESS": ACCESS_LEVEL,
-}
-
-
-def trace(self, message, *args, **kws):
-    self._log(TRACE_LEVEL, message, args, **kws)
-
-
-def access(self, message, *args, **kws):
-    self._log(ACCESS_LEVEL, message, args, **kws)
-
-
-logging.addLevelName(TRACE_LEVEL, "TRACE")
-logging.Logger.trace = trace
 logging.addLevelName(ACCESS_LEVEL, "ACCESS")
-logging.Logger.access = access
 
 
 class CustomFormatter(logging.Formatter):
-    converter = datetime.fromtimestamp
-
     def formatTime(self, record, datefmt=None):
-        dt = self.converter(record.created)
+        dt = datetime.fromtimestamp(record.created).astimezone()
         if datefmt:
             s = dt.strftime(datefmt)
         else:
@@ -79,7 +59,6 @@ class CustomFormatter(logging.Formatter):
         return utc_offset
 
     def format(self, record):
-        # ログレベル名を6文字に固定
         record.levelname = f"{record.levelname:<6}"
         return super().format(record)
 
@@ -136,10 +115,11 @@ def write_access_log(request: Request, response: Response, elapsed: float) -> No
     if status == "-":
         phrase = "-"
     else:
-        phrase = HTTPStatus(status).phrase
+        phrase = HTTPStatus(response.status).phrase
     content = response.content or ""
 
-    logger.access(
+    logger.log(
+        ACCESS_LEVEL,
         f"{client} - - {method} {path} {scheme}/{version} {category_color}{status} {phrase}{Style.RESET_ALL}"
         + f" {len(str(content))} {elapsed:.6f}",
     )

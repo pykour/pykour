@@ -53,7 +53,7 @@ class Pykour:
             kwargs: Middleware arguments.
         """
 
-        self.logger.trace(f"Add middleware: {middleware.__name__}")
+        self.logger.debug(f"Add middleware: {middleware.__name__}")
         self.app = middleware(self.app, **kwargs)
 
     def get(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
@@ -148,7 +148,7 @@ class Pykour:
             raise ValueError(f"Unsupported HTTP Method: {method}")
 
         def decorator(func):
-            self.logger.trace(f"Add route: GET {path} -> {func.__name__}()")
+            self.logger.debug(f"Add route: GET {path} -> {func.__name__}()")
             self.router.add_route(path=path, method=method, handler=(func, status_code))
             return func
 
@@ -173,26 +173,25 @@ class RootASGIApp:
         self.logger = logging.getLogger("pykour")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        app = scope["app"]
         request = Request(scope, receive)
         response = Response(send)
         start_time = time.perf_counter()
         try:
             # Check if the scheme is supported
             if not self.is_supported_scheme(request):
-                self.logger.trace(f"Unsupported scheme: {request.scheme}")
+                self.logger.debug(f"Unsupported scheme: {request.scheme}")
                 await self.handle_bad_request(request, response)
                 return
 
             # Check if the method is supported
             if not self.is_supported_method(request):
-                self.logger.trace(f"Unsupported HTTP Method: {request.method}")
+                self.logger.debug(f"Unsupported HTTP Method: {request.method}")
                 await self.handle_not_found(request, response)
                 return
 
             # Check if the method is allowed
             if not self.is_method_allowed(request):
-                self.logger.trace(f"Method not allowed: {request.method}")
+                self.logger.debug(f"Method not allowed: {request.method}")
                 await self.handle_method_not_allowed(request, response)
                 return
 
@@ -200,7 +199,7 @@ class RootASGIApp:
             if self.exists_route(request):
                 await self.handle_request(self, request, response)
             else:
-                self.logger.trace(f"Route not found: {request.path}")
+                self.logger.debug(f"Route not found: {request.path}")
                 await self.handle_not_found(request, response)
 
         finally:
