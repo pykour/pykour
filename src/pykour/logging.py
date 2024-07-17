@@ -38,12 +38,21 @@ class InterceptHandler(logging.Handler):
 
 
 ACCESS_LEVEL = 25
+
+
+def access(self, message, *args, **kws):
+    self._log(ACCESS_LEVEL, message, args, **kws)
+
+
 logging.addLevelName(ACCESS_LEVEL, "ACCESS")
+logging.Logger.access = access  # type: ignore[attr-defined]
 
 
 class CustomFormatter(logging.Formatter):
+    converter = datetime.fromtimestamp  # type: ignore[assignment]
+
     def formatTime(self, record, datefmt=None):
-        dt = datetime.fromtimestamp(record.created).astimezone()
+        dt = self.converter(record.created)  # type: ignore[has-type]
         if datefmt:
             s = dt.strftime(datefmt)
         else:
@@ -59,6 +68,7 @@ class CustomFormatter(logging.Formatter):
         return utc_offset
 
     def format(self, record):
+        # ログレベル名を6文字に固定
         record.levelname = f"{record.levelname:<6}"
         return super().format(record)
 
@@ -90,12 +100,9 @@ def setup_logging(log_levels=None) -> None:
     levels_filter = SpecificLevelsFilter(levels=log_levels)
     console_handler.addFilter(levels_filter)
 
-    access_logger = logging.getLogger("pykour.access")
-    access_logger.setLevel(logging.NOTSET)
-    access_logger.addHandler(console_handler)
-    app_logger = logging.getLogger("pykour")
-    app_logger.setLevel(logging.NOTSET)
-    app_logger.addHandler(console_handler)
+    logger = logging.getLogger("pykour")
+    logger.setLevel(logging.NOTSET)
+    logger.addHandler(console_handler)
 
 
 def write_access_log(request: Request, response: Response, elapsed: float) -> None:
@@ -118,8 +125,7 @@ def write_access_log(request: Request, response: Response, elapsed: float) -> No
         phrase = HTTPStatus(response.status).phrase
     content = response.content or ""
 
-    logger.log(
-        ACCESS_LEVEL,
+    logger.access(  # type: ignore[attr-defined]
         f"{client} - - {method} {path} {scheme}/{version} {category_color}{status} {phrase}{Style.RESET_ALL}"
         + f" {len(str(content))} {elapsed:.6f}",
     )
