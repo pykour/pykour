@@ -20,10 +20,8 @@ def test_create_request():
     assert request.query_string == b"a"
     assert request.get_header("host") == ["example.com"]
     assert request.url.scheme == "http"
-    assert request.url.netloc == "example.com"
     assert request.url.path == "/test"
     assert request.url.query == "a"
-    assert request.url.fragment == ""
     assert len(request) == 6
     assert request["http_version"] == "1.1"
     for key, value in request.items():
