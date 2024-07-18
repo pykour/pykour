@@ -119,8 +119,9 @@ class Config:
         return level_numbers
 
     def __del__(self):
-        self.observer.stop()
-        self.observer.join()
+        if hasattr(self, "observer"):
+            self.observer.stop()
+            self.observer.join()
 
     def __str__(self):
         return yaml.dump(self.config, default_flow_style=False, allow_unicode=True, sort_keys=False)

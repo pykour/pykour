@@ -113,7 +113,7 @@ def test_setup_logging_default(mock_get_logger):
     setup_logging()
 
     expected_levels = [logging.INFO, logging.WARN, logging.ERROR, ACCESS_LEVEL_NO]
-    assert mock_logger.setLevel.called_with(logging.NOTSET)
+    mock_logger.setLevel.assert_called_with(logging.NOTSET)
     added_handler = mock_logger.addHandler.call_args[0][0]
     assert isinstance(added_handler, logging.StreamHandler)
 
