@@ -9,7 +9,7 @@ class Response:
     def __init__(
         self,
         send: Send,
-        status_code: HTTPStatusCode,
+        status_code: HTTPStatusCode = HTTPStatus.OK,
         charset: str = "utf-8",
         content_type: str = "application/json",
     ) -> None:

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Union, Optional
+from typing import Any, Union, Optional, List
 
 import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-logger = logging.getLogger("uvicorn.app")
+from pykour.logging import ACCESS_LEVEL_NO
 
 
 def replace_placeholders(config: dict):
@@ -26,38 +26,41 @@ class ConfigFileHandler(FileSystemEventHandler):
     def on_modified(self, event):
         if event.src_path == self.config.filepath:
             self.config.load()
-            logger.info("Config file has been modified. Reloading...")
+            print("Config file has been modified. Reloading...")
 
 
 class Config:
-    def __init__(self, filepath):
-        self.filepath = os.path.abspath(filepath)
+    KEY_PYKOUR_LOGGING_LEVEL = "pykour.logging.level"
+
+    def __init__(self, filepath=None):
         self.config = {}
         self._last_modified = 0.0
-        self.load()
-        self._setup_watchdog()
+        if filepath is not None:
+            self.filepath = os.path.abspath(filepath)
+            self.load()
+            self._setup_watchdog()
 
     def load(self):
         try:
             with open(self.filepath, "r") as file:
-                logger.info(f"Loading config file: {self.filepath}")
+                print(f"Loading config file: {self.filepath}")
                 content = yaml.safe_load(file)
                 if isinstance(content, str):
-                    logger.error("Format of config file is invalid. Expected a yaml format.")
+                    print("Format of config file is invalid. Expected a yaml format.")
                     content = {}
                 else:
                     replace_placeholders(content)
                 self.config = content
             self._last_modified = os.path.getmtime(self.filepath)
         except FileNotFoundError:
-            logger.error(f"Config file not found: {self.filepath}")
+            print(f"Config file not found: {self.filepath}")
         except yaml.YAMLError as e:
-            logger.error(f"Error parsing YAML file: {e}")
+            print(f"Error parsing YAML file: {e}")
 
     def reload(self):
         current_mtime = os.path.getmtime(self.filepath)
         if current_mtime > self._last_modified:
-            logger.info("Config file has been modified. Reloading...")
+            print("Config file has been modified. Reloading...")
             self.load()
 
     def _setup_watchdog(self):
@@ -99,9 +102,26 @@ class Config:
         else:
             raise ValueError(f"Cannot cast value of key '{key}' to float: {value}")
 
+    def get_log_levels(self) -> List[int]:
+        log_levels = self.get(self.KEY_PYKOUR_LOGGING_LEVEL, "INFO, WARN, ERROR")
+        level_names = [level.strip().upper() for level in log_levels.split(",")]
+
+        level_numbers = []
+        for level_name in level_names:
+            try:
+                level_number = getattr(logging, level_name)
+                level_numbers.append(level_number)
+            except AttributeError:
+                raise ValueError(f"Unknown log level: {level_name}")
+
+        level_numbers.append(ACCESS_LEVEL_NO)
+
+        return level_numbers
+
     def __del__(self):
-        self.observer.stop()
-        self.observer.join()
+        if hasattr(self, "observer"):
+            self.observer.stop()
+            self.observer.join()
 
     def __str__(self):
         return yaml.dump(self.config, default_flow_style=False, allow_unicode=True, sort_keys=False)

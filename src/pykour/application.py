@@ -1,25 +1,41 @@
+import logging
+import time
 import json
 import os
 from http import HTTPStatus
-from typing import Callable, Union, Dict, Any
+from typing import Callable, Dict, Any
 
 import pykour.exceptions as ex
 from pykour.config import Config
 from pykour.call import call
+from pykour.logging import setup_logging, write_access_log
+
+
 from pykour.request import Request
 from pykour.response import Response
 from pykour.router import Router
 from pykour.types import Scope, Receive, Send, ASGIApp, HTTPStatusCode
+from colorama import Fore
+
+
+STATUS_COLORS = {
+    "2xx": Fore.GREEN,
+    "3xx": Fore.BLUE,
+    "4xx": Fore.YELLOW,
+    "5xx": Fore.RED,
+}
 
 
 class Pykour:
     SUPPORTED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
 
     def __init__(self, config: str = None):
-        self._config = Config(config) if config else None
+        self._config = Config(config) if config else Config()
+        setup_logging(self._config.get_log_levels())
         self.production_mode = os.getenv("PYKOUR_ENV") == "production"
         self.router = Router()
         self.app: ASGIApp = RootASGIApp()
+        self.logger = logging.getLogger("pykour")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         scope["app"] = self
@@ -36,6 +52,8 @@ class Pykour:
             middleware: Middleware class.
             kwargs: Middleware arguments.
         """
+
+        self.logger.debug(f"Add middleware: {middleware.__name__}")
         self.app = middleware(self.app, **kwargs)
 
     def get(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
@@ -127,9 +145,10 @@ class Pykour:
         """
 
         if method not in self.SUPPORTED_METHODS:
-            raise ValueError(f"Unsupported HTTP method: {method}")
+            raise ValueError(f"Unsupported HTTP Method: {method}")
 
         def decorator(func):
+            self.logger.debug(f"Add route: GET {path} -> {func.__name__}()")
             self.router.add_route(path=path, method=method, handler=(func, status_code))
             return func
 
@@ -147,101 +166,168 @@ class Pykour:
 class RootASGIApp:
     """Pykour application class."""
 
+    SUPPORTED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
+
     def __init__(self):
         """Initialize Pykour application."""
-        ...
+        self.logger = logging.getLogger("pykour")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
-            await RootASGIApp.handle_error(send, HTTPStatus.BAD_REQUEST, "Bad Request")
-            return
+        request = Request(scope, receive)
+        response = Response(send)
+        start_time = time.perf_counter()
+        try:
+            # Check if the scheme is supported
+            if not self.is_supported_scheme(request):
+                self.logger.debug(f"Unsupported scheme: {request.scheme}")
+                await self.handle_bad_request(request, response)
+                return
 
-        app = scope["app"]
-        path = scope["path"]
-        method = scope["method"]
+            # Check if the method is supported
+            if not self.is_supported_method(request):
+                self.logger.debug(f"Unsupported HTTP Method: {request.method}")
+                await self.handle_not_found(request, response)
+                return
 
-        # Check if the method is supported
-        if method not in Pykour.SUPPORTED_METHODS:
-            await RootASGIApp.handle_error(send, HTTPStatus.NOT_FOUND, "Not Found")
-            return
+            # Check if the method is allowed
+            if not self.is_method_allowed(request):
+                self.logger.debug(f"Method not allowed: {request.method}")
+                await self.handle_method_not_allowed(request, response)
+                return
 
-        # Check if the method is allowed
-        if not RootASGIApp.is_method_allowed(scope):
-            await RootASGIApp.handle_error(send, HTTPStatus.METHOD_NOT_ALLOWED, "Method Not Allowed")
-            return
+            # Process the request if the route exists
+            if self.exists_route(request):
+                await self.handle_request(self, request, response)
+            else:
+                self.logger.debug(f"Route not found: {request.path}")
+                await self.handle_not_found(request, response)
 
-        # Process the request if the route exists
-        if app.router.exists(path, method):
-            await self.handle_route(scope, receive, send)
-        else:
-            await self.handle_error(send, HTTPStatus.NOT_FOUND, "Not Found")
+        finally:
+            end_time = time.perf_counter()
+            write_access_log(request, response, (end_time - start_time) * 1000)
 
     @staticmethod
-    def is_method_allowed(scope: Scope) -> bool:
+    async def handle_bad_request(request: Request, response: Response) -> None:
+        response.status = HTTPStatus.BAD_REQUEST
+        response.content_type = "text/plain"
+        response.content = HTTPStatus.BAD_REQUEST.phrase
+        for accept in request.accept:
+            if accept in ["application/json"]:
+                response.content_type = accept
+                response.content = json.dumps({"error": HTTPStatus.BAD_REQUEST.phrase})
+                break
+        await response.render()
+
+    @staticmethod
+    async def handle_not_found(request: Request, response: Response) -> None:
+        response.status = HTTPStatus.NOT_FOUND
+        response.content_type = "text/plain"
+        response.content = HTTPStatus.NOT_FOUND.phrase
+        for accept in request.accept:
+            if accept in ["application/json"]:
+                response.content_type = accept
+                response.content = json.dumps({"error": HTTPStatus.NOT_FOUND.phrase})
+                break
+        await response.render()
+
+    @staticmethod
+    async def handle_method_not_allowed(request: Request, response: Response) -> None:
+        response.status = HTTPStatus.METHOD_NOT_ALLOWED
+        response.content_type = "text/plain"
+        response.content = HTTPStatus.METHOD_NOT_ALLOWED.phrase
+        for accept in request.accept:
+            if accept in ["application/json"]:
+                response.content_type = accept
+                response.content = json.dumps({"error": HTTPStatus.METHOD_NOT_ALLOWED.phrase})
+                break
+        await response.render()
+
+    @staticmethod
+    async def handle_internal_server_error(request: Request, response: Response) -> None:
+        response.status = HTTPStatus.INTERNAL_SERVER_ERROR
+        response.content_type = "text/plain"
+        response.content = HTTPStatus.INTERNAL_SERVER_ERROR.phrase
+        for accept in request.accept:
+            if accept in ["application/json"]:
+                response.content_type = accept
+                response.content = json.dumps({"error": HTTPStatus.INTERNAL_SERVER_ERROR.phrase})
+                break
+        await response.render()
+
+    @staticmethod
+    async def handle_http_exception(request: Request, response: Response, e: ex.HTTPException) -> None:
+        response.status = e.status_code
+        response.content_type = "text/plain"
+        response.content = e.message
+        for accept in request.accept:
+            if accept in ["application/json"]:
+                response.content_type = accept
+                response.content = json.dumps({"error": e.message})
+                break
+        await response.render()
+
+    @staticmethod
+    async def handle_request(self, request: Request, response: Response):
+        """Handle request for a route."""
+
+        app = request.app
+        route = app.router.get_route(request.path, request.method)
+        route_fun, status_code = route.handler
+        response.status = status_code
+
+        # noinspection PyBroadException
+        try:
+            response_body = await call(route_fun, request, response)
+
+            if isinstance(response_body, (dict, list)):
+                response.content = json.dumps(response_body)
+                response.content_type = "application/json"
+            elif isinstance(response_body, str):
+                response.content = response_body
+                response.content_type = "text/plain"
+
+            if response.status == HTTPStatus.NO_CONTENT:
+                response.content = ""
+
+            if request.method == "OPTIONS":
+                response.add_header("Allow", ", ".join(app.router.get_allowed_methods(request.path)))
+                response.content = ""
+            elif request.method == "HEAD":
+                response.add_header("Content-Length", str(len(str(response_body))))
+                response.content = ""
+
+            if response.content_type is None:
+                raise ValueError("Unsupported response type: %s" % type(response_body))
+
+            await response.render()
+        except ex.HTTPException as e:
+            await self.handle_http_exception(request, response, e)
+        except Exception:
+            await self.handle_bad_request(request, response)
+
+    @staticmethod
+    def is_supported_scheme(request: Request) -> bool:
+        """Check if the scheme is supported."""
+        return request.scheme in ["HTTP"]
+
+    @staticmethod
+    def is_supported_method(request: Request) -> bool:
+        """Check if the method is supported."""
+        return request.method in RootASGIApp.SUPPORTED_METHODS
+
+    @staticmethod
+    def is_method_allowed(request: Request) -> bool:
         """Check if the method is allowed for the given path."""
-        app = scope["app"]
-        path = scope["path"]
-        method = scope["method"]
+        app = request.app
+        path = request.path
+        method = request.method
         allowed_methods = app.router.get_allowed_methods(path)
         return allowed_methods == [] or method in allowed_methods
 
     @staticmethod
-    async def handle_route(scope: Scope, receive: Receive, send: Send):
-        """Handle request for an existing route."""
-        app = scope["app"]
-        path = scope["path"]
-        method = scope["method"]
-
-        route = app.router.get_route(path, method)
-        route_fun, status_code = route.handler
-        path_params = route.path_params
-        scope["path_params"] = path_params
-        request = Request(scope, receive)
-        response = Response(send, status_code)
-
-        try:
-            response_body = await RootASGIApp.process_request(route_fun, request, response)
-            await RootASGIApp.prepare_response(scope, request, response, response_body)
-        except ex.HTTPException as e:
-            await RootASGIApp.handle_error(send, e.status_code, e.message)
-        except Exception as e:
-            await RootASGIApp.handle_error(send, HTTPStatus.INTERNAL_SERVER_ERROR, str(e))
-
-    @staticmethod
-    async def process_request(route_fun: Callable, request: Request, response: Response):
-        """Process the request and return the response body."""
-        return await call(route_fun, request, response)
-
-    @staticmethod
-    async def prepare_response(scope: Scope, request: Request, response: Response, response_body):
-        """Prepare the response based on the request method and response body."""
-        app = scope["app"]
-        path = scope["path"]
-        method = scope["method"]
-        if isinstance(response_body, (dict, list)):
-            response.content = json.dumps(response_body)
-            response.content_type = "application/json"
-        elif isinstance(response_body, str):
-            response.content = response_body
-            response.content_type = "text/plain"
-
-        if response.status == HTTPStatus.NO_CONTENT:
-            response.content = ""
-
-        if method == "OPTIONS":
-            response.add_header("Allow", ", ".join(app.router.get_allowed_methods(path)))
-            response.content = ""
-        elif method == "HEAD":
-            response.add_header("Content-Length", str(len(str(response_body))))
-            response.content = ""
-
-        if response.content_type is None:
-            raise ValueError("Unsupported response type: %s" % type(response_body))
-
-        await response.render()
-
-    @staticmethod
-    async def handle_error(send: Send, status_code: Union[HTTPStatus, int], message: str):
-        response = Response(send, status_code=status_code, content_type="text/plain")
-        response.content = message
-        await response.render()
+    def exists_route(request: Request) -> bool:
+        """Check if the route exists."""
+        app = request.app
+        path = request.path
+        method = request.method
+        return app.router.exists(path, method)

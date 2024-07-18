@@ -35,6 +35,9 @@ async def mock_receive():
 async def test_small_response(app: Pykour):
     scope = {
         "type": "http",
+        "scheme": "http",
+        "http_version": "1.1",
+        "client": ("127.0.0.1", 50000),
         "method": "GET",
         "path": "/small",
         "headers": [(b"accept-encoding", b"gzip")],
@@ -61,6 +64,9 @@ async def test_small_response(app: Pykour):
 async def test_large_response(app: Pykour):
     scope = {
         "type": "http",
+        "scheme": "http",
+        "http_version": "1.1",
+        "client": ("127.0.0.1", 50000),
         "method": "GET",
         "path": "/large",
         "headers": [(b"accept-encoding", b"gzip")],
@@ -92,6 +98,9 @@ async def test_large_response(app: Pykour):
 async def test_uncompressed_response(app: Pykour):
     scope = {
         "type": "http",
+        "scheme": "http",
+        "http_version": "1.1",
+        "client": ("127.0.0.1", 50000),
         "method": "GET",
         "path": "/uncompressed",
         "headers": [],
