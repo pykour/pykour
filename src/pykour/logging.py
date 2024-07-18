@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-from enum import Enum
 from http import HTTPStatus
 
 from colorama import Fore, Style
@@ -24,27 +23,20 @@ STATUS_COLORS = {
 }
 
 
-class LogLevel(Enum):
-    TRACE = 1
-    INFO = 2
-    WARN = 3
-    ERROR = 4
-    ACCESS = 5
-
-
 class InterceptHandler(logging.Handler):
     def emit(self, record):
         pass
 
 
-ACCESS_LEVEL = 25
+ACCESS_LEVEL_NO = 25
+ACCESS_LEVEL_NAME = "ACCESS"
 
 
 def access(self, message, *args, **kws):
-    self._log(ACCESS_LEVEL, message, args, **kws)
+    self._log(ACCESS_LEVEL_NO, message, args, **kws)
 
 
-logging.addLevelName(ACCESS_LEVEL, "ACCESS")
+logging.addLevelName(ACCESS_LEVEL_NO, ACCESS_LEVEL_NAME)
 logging.Logger.access = access  # type: ignore[attr-defined]
 
 
@@ -56,10 +48,7 @@ class CustomFormatter(logging.Formatter):
         if datefmt:
             s = dt.strftime(datefmt)
         else:
-            try:
-                s = dt.isoformat(timespec="milliseconds")
-            except TypeError:
-                s = dt.isoformat()
+            s = dt.isoformat(timespec="milliseconds")
         return s + self.format_time_zone()
 
     @staticmethod
@@ -68,7 +57,6 @@ class CustomFormatter(logging.Formatter):
         return utc_offset
 
     def format(self, record):
-        # ログレベル名を6文字に固定
         record.levelname = f"{record.levelname:<6}"
         return super().format(record)
 
@@ -84,7 +72,7 @@ class SpecificLevelsFilter(logging.Filter):
 
 def setup_logging(log_levels=None) -> None:
     if log_levels is None:
-        log_levels = [logging.INFO, logging.WARN, logging.ERROR, ACCESS_LEVEL]
+        log_levels = [logging.INFO, logging.WARN, logging.ERROR, ACCESS_LEVEL_NO]
 
     # Suppress logging from Uvicorn and Gunicorn
     for _logger in ("uvicorn", "uvicorn.error", "uvicorn.access", "gunicorn.error"):
@@ -94,7 +82,7 @@ def setup_logging(log_levels=None) -> None:
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.NOTSET)
-    level_color = LOG_COLORS.get(LogLevel.ACCESS.name, Fore.WHITE)
+    level_color = LOG_COLORS.get(ACCESS_LEVEL_NAME, Fore.WHITE)
     formatter = CustomFormatter(f"{level_color}%(levelname)s{Style.RESET_ALL} [%(asctime)s] %(message)s")
     console_handler.setFormatter(formatter)
     levels_filter = SpecificLevelsFilter(levels=log_levels)
@@ -118,11 +106,8 @@ def write_access_log(request: Request, response: Response, elapsed: float) -> No
     path = request.path or "-"
     scheme = request.scheme or "-"
     version = request.version or "-"
-    status = response.status or "-"
-    if status == "-":
-        phrase = "-"
-    else:
-        phrase = HTTPStatus(response.status).phrase
+    status = response.status
+    phrase = HTTPStatus(response.status).phrase
     content = response.content or ""
 
     logger.access(  # type: ignore[attr-defined]

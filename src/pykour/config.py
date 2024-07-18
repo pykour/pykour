@@ -8,7 +8,7 @@ import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from pykour.logging import ACCESS_LEVEL
+from pykour.logging import ACCESS_LEVEL_NO
 
 
 def replace_placeholders(config: dict):
@@ -114,7 +114,7 @@ class Config:
             except AttributeError:
                 raise ValueError(f"Unknown log level: {level_name}")
 
-        level_numbers.append(ACCESS_LEVEL)
+        level_numbers.append(ACCESS_LEVEL_NO)
 
         return level_numbers
 
