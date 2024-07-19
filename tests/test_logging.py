@@ -130,3 +130,11 @@ def test_write_access_log(mock_get_logger, mock_request, mock_response):
     assert "200 OK" in log_message
     assert "16" in log_message
     assert "0.123456" in log_message
+
+
+def test_intercept_handler():
+    from pykour.logging import InterceptHandler
+
+    handler = InterceptHandler()
+    record = logging.LogRecord("name", logging.INFO, "pathname", 1, "test", [], None)
+    handler.emit(record)
