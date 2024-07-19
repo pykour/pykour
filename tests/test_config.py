@@ -1,7 +1,8 @@
 import pytest
+from pytest_mock import mocker
 from watchdog.observers import Observer
 
-from pykour.config import Config, ConfigFileHandler
+from pykour.config import Config, ConfigFileHandler, replace_placeholders
 
 
 def test_config_initialization():
@@ -180,3 +181,46 @@ def test_get_value_from_nested_keys_with_default():
     config = Config("config.yaml")
     config.config = {"level1": {"level2": {}}}
     assert config.get("level1.level2.nonexistent", "default") == "default"
+
+
+def test_get_log_levels():
+    config = Config()
+    config.config = {"pykour": {"logging": {"level": "INFO, WARN, ERROR"}}}
+    assert config.get_log_levels() == [20, 30, 40, 25]
+
+
+def test_get_log_levels_unknown_error():
+    config = Config()
+    with pytest.raises(ValueError):
+        config.config = {"pykour": {"logging": {"level": "INFO, WARN, UNKNOWN"}}}
+        config.get_log_levels()
+
+
+@pytest.fixture
+def mock_observer(mocker):
+    mock = mocker.patch("watchdog.observers.Observer")
+    return mock
+
+
+def test_call_del_with_mock_observer(mock_observer):
+    config = Config()
+    config.observer = mock_observer()
+    config.__del__()
+    mock_observer().stop.assert_called()
+    mock_observer().join.assert_called()
+
+
+@pytest.fixture
+def nested_dict_with_env_vars():
+    return {"outer": {"inner": "${HOME}/inner_path", "unchanged": "no_env_var"}, "env_var": "${USER}"}
+
+
+def test_replace_placeholders_with_nested_dict(nested_dict_with_env_vars, monkeypatch):
+    # Setup environment variables for the test
+    monkeypatch.setenv("HOME", "/home/testuser")
+    monkeypatch.setenv("USER", "testuser")
+
+    expected = {"outer": {"inner": "/home/testuser/inner_path", "unchanged": "no_env_var"}, "env_var": "testuser"}
+
+    replace_placeholders(nested_dict_with_env_vars)
+    assert nested_dict_with_env_vars == expected

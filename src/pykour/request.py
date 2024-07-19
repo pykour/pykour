@@ -192,7 +192,7 @@ class Request(Mapping[str, Any]):
     @staticmethod
     def parse_accept_header(accept_header: str) -> List[Tuple[str, float]]:
         """
-        Acceptヘッダーをパースし、(MIMEタイプ, q値)のタプルのリストを返す。
+        Parse the accept header and return a sorted list of MIME types.
         """
         accept_values = accept_header.split(",")
         result = []
@@ -200,7 +200,7 @@ class Request(Mapping[str, Any]):
         for value in accept_values:
             parts = value.split(";")
             mime_type = parts[0].strip()
-            q_value = 1.0  # デフォルトのq値は1.0
+            q_value = 1.0
 
             if len(parts) > 1 and parts[1].strip().startswith("q="):
                 try:
@@ -210,13 +210,12 @@ class Request(Mapping[str, Any]):
 
             result.append((mime_type, q_value))
 
-        # q値でソート（降順）
         result.sort(key=lambda x: x[1], reverse=True)
         return result
 
     def get_sorted_accept_list(self, scope: Scope) -> List[str]:
         """
-        ASGIのScopeからAcceptヘッダーを取り出し、優先度の高い順にソートしたリストを返す。
+        Parse the accept header and return a sorted list of MIME types.
         """
         headers = scope.get("headers", [])
         accept_header = ""

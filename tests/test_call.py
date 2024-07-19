@@ -129,7 +129,6 @@ def sample_sync_function(schema: TestSchema, request: Request, response: Respons
     return {"schema": schema.field, "request": request.scope, "response": response.status}
 
 
-# モックリクエストを準備
 @pytest.fixture
 def scope() -> Dict[str, Any]:
     return {

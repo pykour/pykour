@@ -29,7 +29,7 @@ nav:
       - Installation: installation.md
       - Quickstart: quickstart.md
       - Pykour CLI: cli.md
-  - API Documentation:
+  - API Docs:
       - core:
         - Pykour: api/pykour.md
         - Router: api/router.md

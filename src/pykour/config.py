@@ -54,8 +54,6 @@ class Config:
             self._last_modified = os.path.getmtime(self.filepath)
         except FileNotFoundError:
             print(f"Config file not found: {self.filepath}")
-        except yaml.YAMLError as e:
-            print(f"Error parsing YAML file: {e}")
 
     def reload(self):
         current_mtime = os.path.getmtime(self.filepath)
