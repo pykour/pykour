@@ -201,8 +201,6 @@ app = Pykour()
 app.add_middleware(gzip_middleware)
 ```
 
-`gzip_middleware`は`minimum_size`で指定されたサイズより大きいレスポンスのみを圧縮します。デフォルトの`minimum_size`は`1024`(バイト)です。
-
 `gzip_middleware` compresses only responses larger than the size specified by `minimum_size`. The default `minimum_size` 
 is `1024` bytes.
 

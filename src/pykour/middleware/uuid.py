@@ -18,16 +18,16 @@ class UUIDMiddleware(BaseMiddleware):
         receive: Receive,
         send: Send,
     ):
-        # デフォルトのUUIDを生成
+        # generate default request_id
         request_id = str(uuid4())
 
-        # scopeからX-Request-IDヘッダーをチェック
+        # check if X-Request-ID exists in headers
         for header in scope["headers"]:
             if header[0].decode("latin1") == self.header_name:
                 request_id = header[1].decode("latin1")
                 break
 
-        # 新しいX-Request-IDをヘッダーに追加（存在しない場合）
+        # if not, add X-Request-ID to headers
         if not any(header[0].decode("latin1") == self.header_name for header in scope["headers"]):
             scope["headers"].append((self.header_name.encode("latin1"), request_id.encode("latin1")))
 
