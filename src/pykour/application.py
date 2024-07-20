@@ -53,7 +53,8 @@ class Pykour:
             kwargs: Middleware arguments.
         """
 
-        self.logger.debug(f"Add middleware: {middleware.__name__}")
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(f"Add middleware: {middleware.__name__}")
         self.app = middleware(self.app, **kwargs)
 
     def get(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
@@ -148,7 +149,6 @@ class Pykour:
             raise ValueError(f"Unsupported HTTP Method: {method}")
 
         def decorator(func):
-            self.logger.debug(f"Add route: GET {path} -> {func.__name__}()")
             self.router.add_route(path=path, method=method, handler=(func, status_code))
             return func
 
@@ -180,19 +180,20 @@ class RootASGIApp:
         try:
             # Check if the scheme is supported
             if not self.is_supported_scheme(request):
-                self.logger.debug(f"Unsupported scheme: {request.scheme}")
                 await self.handle_bad_request(request, response)
                 return
 
             # Check if the method is supported
             if not self.is_supported_method(request):
-                self.logger.debug(f"Unsupported HTTP Method: {request.method}")
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"Unsupported HTTP Method: {request.method}")
                 await self.handle_not_found(request, response)
                 return
 
             # Check if the method is allowed
             if not self.is_method_allowed(request):
-                self.logger.debug(f"Method not allowed: {request.method}")
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"Method not allowed: {request.method}")
                 await self.handle_method_not_allowed(request, response)
                 return
 
@@ -200,7 +201,8 @@ class RootASGIApp:
             if self.exists_route(request):
                 await self.handle_request(self, request, response)
             else:
-                self.logger.debug(f"Route not found: {request.path}")
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    self.logger.debug(f"Route not found: {request.path}")
                 await self.handle_not_found(request, response)
 
         finally:
@@ -280,31 +282,31 @@ class RootASGIApp:
         try:
             response_body = await call(route_fun, request, response)
 
-            if isinstance(response_body, (dict, list)):
-                response.content = json.dumps(response_body)
-                response.content_type = "application/json"
-            elif isinstance(response_body, str):
-                response.content = response_body
-                response.content_type = "text/plain"
-
             if response.status == HTTPStatus.NO_CONTENT:
                 response.content = ""
-
-            if request.method == "OPTIONS":
+                response.content_type = "text/plain"
+            elif request.method == "OPTIONS":
                 response.add_header("Allow", ", ".join(app.router.get_allowed_methods(request.path)))
                 response.content = ""
             elif request.method == "HEAD":
                 response.add_header("Content-Length", str(len(str(response_body))))
                 response.content = ""
-
-            if response.content_type is None:
+            elif isinstance(response_body, (dict, list)):
+                response.content = json.dumps(response_body)
+                response.content_type = "application/json"
+            elif isinstance(response_body, str):
+                response.content = response_body
+                response.content_type = "text/plain"
+            else:
                 raise ValueError("Unsupported response type: %s" % type(response_body))
 
             await response.render()
         except ex.HTTPException as e:
             await self.handle_http_exception(request, response, e)
-        except Exception:
-            await self.handle_bad_request(request, response)
+        except Exception as e:
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"Internal Server Error: {e}")
+            await self.handle_internal_server_error(request, response)
 
     @staticmethod
     def is_supported_scheme(request: Request) -> bool:

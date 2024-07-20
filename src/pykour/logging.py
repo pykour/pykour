@@ -1,5 +1,6 @@
 import logging
 import re
+import threading
 from datetime import datetime
 from http import HTTPStatus
 
@@ -7,6 +8,8 @@ from colorama import Fore, Style
 
 from pykour.request import Request
 from pykour.response import Response
+
+from pykour.globals import thread_local
 
 LOG_COLORS = {
     "INFO": Fore.GREEN,
@@ -59,6 +62,8 @@ class CustomFormatter(logging.Formatter):
 
     def format(self, record):
         record.levelname = f"{record.levelname:<6}"
+        request_id = getattr(thread_local, "request_id", threading.get_ident())
+        record.request_id = request_id
         return super().format(record)
 
 
@@ -69,6 +74,15 @@ class SpecificLevelsFilter(logging.Filter):
 
     def filter(self, record):
         return record.levelno in self.levels
+
+
+class CustomLogger(logging.Logger):
+    def __init__(self, name):
+        super().__init__(name)
+        self.levels = [ACCESS_LEVEL_NO]
+
+    def isEnabledFor(self, level):
+        return level in self.levels
 
 
 def setup_logging(log_levels=None) -> None:
@@ -84,14 +98,20 @@ def setup_logging(log_levels=None) -> None:
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.NOTSET)
     level_color = LOG_COLORS.get(ACCESS_LEVEL_NAME, Fore.WHITE)
-    formatter = CustomFormatter(f"{level_color}%(levelname)s{Style.RESET_ALL} [%(asctime)s] %(message)s")
+    formatter = CustomFormatter(
+        f"{level_color}%(levelname)s{Style.RESET_ALL} [%(asctime)s] [%(request_id)s] %(message)s"
+    )
     console_handler.setFormatter(formatter)
     levels_filter = SpecificLevelsFilter(levels=log_levels)
     console_handler.addFilter(levels_filter)
 
+    logging.setLoggerClass(CustomLogger)
+
     logger = logging.getLogger("pykour")
     logger.setLevel(logging.NOTSET)
     logger.addHandler(console_handler)
+
+    logger.levels = log_levels  # type: ignore[attr-defined]
 
 
 def write_access_log(request: Request, response: Response, elapsed: float) -> None:
