@@ -113,7 +113,6 @@ class Config:
                 raise ValueError(f"Unknown log level: {level_name}")
 
         level_numbers.append(ACCESS_LEVEL_NO)
-
         return level_numbers
 
     def __del__(self):
