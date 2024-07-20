@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime
 from http import HTTPStatus
 
@@ -104,6 +105,7 @@ def write_access_log(request: Request, response: Response, elapsed: float) -> No
     client = request.client or "-"
     method = request.method or "-"
     path = request.path or "-"
+    path = re.sub(r"/+", "/", path)
     scheme = request.scheme or "-"
     version = request.version or "-"
     status = response.status

@@ -154,7 +154,7 @@ def test_get_allowed_methods():
     assert methods == ["GET"]
 
 
-def test_add_router():
+def test_add_router_without_prefix():
     router = Router()
     router2 = Router()
 
@@ -165,6 +165,20 @@ def test_add_router():
     assert router.exists("/test", "GET")
     assert router.get_allowed_methods("/test") == ["GET"]
     assert str(router) == "GET /test -> handler()"
+    assert repr(router) == "Router(prefix='')"
+
+
+def test_add_router_with_prefix():
+    router = Router()
+    router2 = Router()
+
+    @router2.get("/test")
+    def handler(): ...
+
+    router.add_router(router2, prefix="/api")
+    assert router.exists("/api/test", "GET")
+    assert router.get_allowed_methods("/api/test") == ["GET"]
+    assert str(router) == "GET /api/test -> handler()"
     assert repr(router) == "Router(prefix='')"
 
 

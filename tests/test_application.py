@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from pykour import Pykour, Request, Response
+from pykour import Pykour, Request, Response, Router
 from pykour.middleware import BaseMiddleware
 
 
@@ -350,3 +350,33 @@ async def test_set_unsupported_method():
         @app.route("/test", method="TRACE")
         async def trace_handler(request: Request, response: Response):
             return {"message": "This is TRACE"}
+
+
+@pytest.mark.asyncio
+async def test_add_router_without_prefix():
+    app = Pykour()
+
+    router = Router()
+
+    @router.get("/test")
+    async def test_handler():
+        return {"message": "Hello, world!"}
+
+    app.add_router(router)
+
+    assert app.router.exists("/test", "GET")
+
+
+@pytest.mark.asyncio
+async def test_add_router_with_prefix():
+    app = Pykour()
+
+    router = Router()
+
+    @router.get("/test")
+    async def test_handler():
+        return {"message": "Hello, world!"}
+
+    app.add_router(router, prefix="/api")
+
+    assert app.router.exists("/api/test", "GET")
