@@ -154,13 +154,14 @@ class Pykour:
 
         return decorator
 
-    def add_router(self, router: Router) -> None:
+    def add_router(self, router: Router, prefix: str = "") -> None:
         """Add a router to the application.
 
         Args:
             router: Router object.
+            prefix: URL prefix.
         """
-        self.router.add_router(router)
+        self.router.add_router(router, prefix=prefix)
 
 
 class RootASGIApp:
