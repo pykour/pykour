@@ -188,11 +188,12 @@ class Router:
 
         return decorator
 
-    def add_router(self, router: Router):
+    def add_router(self, router: Router, prefix: str = ""):
         """Add router.
 
         Args:
             router: Router instance.
+            prefix: Prefix for the router.
         """
 
         def traverse(node, prefix=""):
@@ -202,7 +203,7 @@ class Router:
                     self.add_route(new_prefix, method, route.handler)
                 traverse(child, new_prefix)
 
-        traverse(router.root)
+        traverse(router.root, prefix=prefix)
 
     def add_route(self, path: str, method: str, handler: Any):
         """Add route.

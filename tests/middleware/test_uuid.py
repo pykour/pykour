@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 from pykour.middleware.uuid import UUIDMiddleware, uuid_middleware
 
@@ -11,8 +11,10 @@ async def test_request_id_is_added_if_not_present():
     scope = {"type": "http", "headers": []}
     receive = AsyncMock()
     send = AsyncMock()
+    logger = middleware.logger
 
-    await middleware(scope, receive, send)
+    with patch.object(logger, "isEnabledFor", return_value=True):
+        await middleware(scope, receive, send)
 
     assert any(header[0] == b"X-Request-ID" for header in scope["headers"])
     app_mock.assert_awaited_once()

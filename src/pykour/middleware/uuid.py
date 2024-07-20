@@ -4,6 +4,8 @@ from uuid import uuid4
 from pykour.middleware import BaseMiddleware
 from pykour.types import Scope, Receive, Send, Message, ASGIApp
 
+from pykour.globals import thread_local
+
 
 class UUIDMiddleware(BaseMiddleware):
 
@@ -32,7 +34,9 @@ class UUIDMiddleware(BaseMiddleware):
             scope["headers"].append((self.header_name.encode("latin1"), request_id.encode("latin1")))
 
         scope["request_id"] = request_id
-        self.logger.info(f"{self.header_name}: {scope['request_id']}")
+        thread_local.request_id = request_id
+        if self.logger.isEnabledFor(logging.INFO):
+            self.logger.info(f"{self.header_name}: {scope['request_id']}")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         if scope["type"] != "http":
