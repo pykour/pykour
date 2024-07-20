@@ -1,5 +1,7 @@
 import importlib
 
+from pykour import Config
+
 
 class Session:
     def __init__(self, db_type, **kwargs):
@@ -12,6 +14,14 @@ class Session:
             raise ValueError(f"Unsupported session type: {self.db_type}")
 
         self.cursor = self.conn.cursor()
+
+    @classmethod
+    def from_config(cls, config: Config):
+        db_type = config.get_datasource_type()
+        url = config.get_datasource_url()
+        username = config.get_datasource_username()
+        password = config.get_datasource_password()
+        return cls(db_type, url=url, username=username, password=password)
 
     def execute(self, query, params=None):
         if params:
