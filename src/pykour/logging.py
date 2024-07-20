@@ -111,7 +111,7 @@ def setup_logging(log_levels=None) -> None:
     logger.setLevel(logging.NOTSET)
     logger.addHandler(console_handler)
 
-    logger.levels = log_levels
+    logger.levels = log_levels  # type: ignore[attr-defined]
 
 
 def write_access_log(request: Request, response: Response, elapsed: float) -> None:
