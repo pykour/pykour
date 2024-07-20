@@ -62,6 +62,8 @@ class Node:
 
 
 class Router:
+    SUPPORTED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
+
     def __init__(self, prefix: str = ""):
         """Router class.
 
@@ -166,17 +168,6 @@ class Router:
         """
         return self.route(path=path, method="HEAD", status_code=status_code)
 
-    def trace(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        """Decorator for TRACE method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="TRACE", status_code=status_code)
-
     def route(self, path: str, method: str = "GET", status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
         """Decorator for route.
 
@@ -187,6 +178,9 @@ class Router:
         Returns:
             Route decorator.
         """
+
+        if method not in self.SUPPORTED_METHODS:
+            raise ValueError(f"Unsupported HTTP method: {method}")
 
         def decorator(func):
             self.add_route(path, method, (func, status_code))
@@ -247,7 +241,15 @@ class Router:
             List of allowed HTTP methods.
         """
         allowed_methods = []
-        http_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"]
+        http_methods = [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "OPTIONS",
+            "HEAD",
+        ]
 
         for method in http_methods:
             if self.get_route(path, method):

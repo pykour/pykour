@@ -1,6 +1,6 @@
 # Quickstart
 
-This is a quickstart guide for the `myapp` application.
+Let’s learn the basics of using Pykour. Follow the [Installation](installation.md) for project setup and Pykour installation.
 
 ## Hello, World!
 
@@ -12,31 +12,30 @@ from pykour import Pykour
 app = Pykour()
 
 @app.route('/')
-def hello_world():
-    return { "message": "Hello, World!" }
+def hello():
+    return { "message": "Hello, Pykour!" }
 ```
 
-So, what's happening here?
+What is this code doing?
 
-1. First we imported the `Pykour` class from the `pykour` module.
-2. Next we create an instance of the `Pykour` class and assign it to the variable `app`.
-3. We then use the route() decorator to define a route for the root URL `/`.
-4. The `hello_world()` function returns a dictionary with a single key-value pair.
+1.	First, it imports the `Pykour` class from the `pykour` module.
+2.	Next, it creates an instance of the `Pykour` class and assigns it to the app variable.
+3.	It defines the `/` route using the route() decorator.
+4.	The `hello()` function returns a dictionary with a single key-value pair.
 
-Save it as `main.py` or something similar.
+Save this code with a name like `main.py`.
 
-To run the application, use the pykour command or python -m pykour. You need to tell Pykour where your application is 
-located using `main:app`.
+To run the application, you need to tell the `pykour` command where your application is located by specifying `main:app`.
 
 ```bash
-$ pykour run main:app
+$ pykour dev main:app
 ```
 
-Now, open your browser and go to `http://localhost:8000/`. You should see the message "Hello, World!".
+Open your browser and go to [http://localhost:8000/](http://localhost:8000/). You should see the text `{"message": "Hello, Pykour"}`.
 
 ## Routing
 
-Pykour uses the `route()` decorator to define routes. The decorator takes a single argument, the URL path.
+In Pykour, routes are defined using the `route()` decorator, which takes a URL path.
 
 ```python
 @app.route('/')
@@ -48,17 +47,27 @@ def hello():
     return { "message": "Hello, Pykour!" }
 ```
 
-The `route()` method defines a route with the `GET` method. You can also specify the HTTP methods explicitly.
+By default, the `route()` decorator defines routes with the `GET` method. If you want to use HTTP methods other than 
+`GET`, you can explicitly specify the HTTP method.
 
 ```python
-@app.route('/hello', method='POST')
+@app.route('/hello', method="POST")
+def post_hello():
+    return { "message": "Hello, Pykour!" }
+```
+
+The `route()` decorator also defines routes with a default status code of `200 OK`.
+If you want to change the status code, you can specify it using the `status_code` argument.
+
+```python
+@app.route('/hello', method="POST", status_code=201)
 def post_hello():
     return { "message": "Hello, Pykour!" }
 ```
 
 ## Variables in Routes
 
-You can also use variables within a route. 
+You can also use variables within the route path.
 
 ```python
 @app.route('/hello/{name}')
@@ -66,8 +75,8 @@ def hello_name(name):
     return { "message": f"Hello, {name}!" }
 ```
 
-`{name}` or `:name` is mapped to the argument `name`. By default, it is mapped with type str, but it can also be mapped 
-to int or float, depending on the type hint.
+`{name}` or `:name` maps to the name argument. 
+By default, it maps to the str type, but it can also map to `int` or `float` based on the type hint.
 
 ```python
 @app.route('/users/:age')
@@ -75,20 +84,34 @@ def user_age(age: int):
     return { "message": f"User age is {age}" }
 ```
 
-## HTTP Methods
-
-Web applications use different HTTP methods when accessing URLs. You should familiarize yourself with the HTTP methods 
-as you work with Pykour.
+When receiving data with `POST` or `PUT` methods, you can accept data as a dictionary.
 
 ```python
-@app.route('/hello', method='POST')
-def post_hello():
-    return { "message": "Hello, Pykour!" }
+@app.route('/users', method="POST")
+def create_user(data: dict):
+    return { 'message': 'User created', 'name': data['name'] }
 ```
 
-You can also use the `get()`, `post()`, `put()`, `delete()`, `patch()`, `options()`, `head()` and `trace()` decorators,
-which are shortcuts for the `route()` decorator.
+Additionally, you can receive data using a schema.
 
+```python
+from pykour.schema import BaseSchema
+
+class UserSchema(BaseSchema):
+    name: str
+    age: int
+
+
+@app.route('/users', method="POST")
+def create_user(data: UserSchema):
+    return { 'message': 'User created', 'name': data.name }
+```
+
+## HTTP Methods
+
+In a REST API, different HTTP methods are used. Pykour provides decorators corresponding to each HTTP method.
+
+The `get()`, `post()`, `put()`, `delete()`, and `patch()` decorators are shortcuts for the `route()` decorator.
 
 ```python
 @app.get('/')
@@ -112,8 +135,8 @@ def patch():
     ...
 ```
 
-If you want to support `OPTIONS`, `HEAD`, and `TRACE` method, you can use the `options()`, `head()` , and `trace()` decorator. Pykour does the processing to respond to
-the OPTIONS method response, so it only needs to declare an empty method.
+If you want to support the `OPTIONS` and `HEAD` methods, you can use the `options()` and `head()` decorators. 
+Pykour handles the response for the `OPTIONS` and `HEAD` methods, so you only need to declare an empty method.
 
 ```python
 @app.options('/')
@@ -123,8 +146,95 @@ def options():
 @app.head('/')
 def head():
     ...
+```
 
-@app.trace('/')
-def trace():
-    ...
+The `TRACE` method is not supported for security reasons.
+
+Methods other than `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`, and `HEAD` cannot be set with the `route()` 
+decorator, and shortcut decorators are not provided. If an unsupported HTTP method is accessed, 
+Pykour will return a `404 Not Found` status code.
+
+## Schema
+
+In Pykour, you can use schemas to receive request data. A schema is a class that defines the structure of the data.
+
+```python
+from pykour.schema import BaseSchema
+
+class UserSchema(BaseSchema):
+    name: str
+    age: int
+
+@app.route('/users', method="POST")
+def create_user(data: UserSchema):
+    return { 'message': 'User created', 'name': data.name }
+
+```
+
+The `BaseSchema` class is the base class for defining schemas. When defining a schema, inherit from the `BaseSchema` class.
+
+## Middleware
+
+Pykour can use middleware to modify requests and responses. Middleware executes before the request is passed to the route handler.
+
+```python
+from pykour import Pykour
+from pykour.middleware import gzip_middleware
+
+app = Pykour()
+
+app.add_middleware(gzip_middleware())
+
+```
+
+### Gzip Middleware
+
+The `gzip_middleware` compresses the response in gzip format. To enable gzip compression, 
+add `gzip_middleware` as middleware.
+
+```python
+from pykour import Pykour
+from pykour.middleware import gzip_middleware
+
+app = Pykour()
+
+app.add_middleware(gzip_middleware)
+```
+
+`gzip_middleware` compresses only responses larger than the size specified by `minimum_size`. The default `minimum_size` 
+is `1024` bytes.
+
+```python
+from pykour import Pykour
+from pykour.middleware import gzip_middleware
+
+app = Pykour()
+
+app.add_middleware(gzip_middleware(minimum_size=512))
+```
+
+In this example, only responses of `512` bytes or larger will be GZIP compressed.
+
+### UUID Middleware
+
+The `uuid_middleware` adds a UUID to the request. By default, it is added to the `X-Request-ID` header.
+
+```python
+from pykour import Pykour
+from pykour.middleware import uuid_middleware
+
+app = Pykour()
+
+app.add_middleware(uuid_middleware)
+```
+
+The `uuid_middleware` can specify the header name to add using the `header_name` argument.
+
+```python
+from pykour import Pykour
+from pykour.middleware import uuid_middleware
+
+app = Pykour()
+
+app.add_middleware(uuid_middleware(header_name="X-My-Request-ID"))
 ```

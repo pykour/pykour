@@ -15,7 +15,6 @@ Pydantic models are simply classes which inherit from `BaseModel` and define fie
           - patch
           - options
           - head
-          - trace
           - route
           - add_router
           - add_route

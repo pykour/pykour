@@ -8,12 +8,8 @@
           - __init__
           - components
           - scheme
-          - netloc
-          - path
-          - query
-          - fragment
-          - username
-          - password
           - hostname
           - port
+          - path
+          - query
           - is_secure

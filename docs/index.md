@@ -1,23 +1,22 @@
 # Pykour
 
-Pykour is a web application framework for Python, designed to quickly implement REST APIs.
-Its usage is very similar to Flask and FastAPI, making it relatively easy to learn in a short period of time.
+## This version is a beta version
+
+This version is for evaluation purposes only and is not recommended for production use. Please note the following points for the beta version:
+
+- Features may be incomplete.
+- Bugs and unexpected behavior may be present.
+- APIs and internal structures may change in future versions.
 
 ## Features
 
-Pykour is a web application framework specialized for building REST APIs.
+Pykour is a web application framework for Python designed to quickly implement REST APIs. It provides an interface very 
+similar to Flask and FastAPI, allowing those familiar with these frameworks to learn it in a short period.
 
-It is designed to deliver high performance, ensuring efficient handling of requests and responses,
-making your applications run smoothly and quickly.
-
-One of the standout features of Pykour is its low learning curve.
-Developers can master it in a short period of time, making it accessible even for those who are new to web development.
-Pykour's structure and usage are similar to popular frameworks like Flask and FastAPI.
-This familiarity allows developers to transition easily and leverage their existing knowledge,
-speeding up the development process.
-
-Whether you are building simple APIs or complex, data-driven applications,
-Pykour provides the tools and flexibility you need to achieve your goals with ease and efficiency.
+- REST API Specialized: Pykour is a web application framework specifically designed for building REST API servers.
+- Fast: Pykour is engineered to operate at high speeds.
+- Easy: With an interface similar to Flask and FastAPI, Pykour is designed for quick use and learning. The documentation is also concise, enabling rapid reading.
+- Robust: Pykour is a highly robust and reliable framework, achieving high test coverage.
 
 ## Requirements
 
@@ -46,7 +45,7 @@ async def index():
 ### Run the application
 
 ```bash
-$ pykour run main:app
+$ pykour dev main:app
 ```
 
 ## License
