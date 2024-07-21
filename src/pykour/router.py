@@ -77,7 +77,7 @@ class Router:
         self.prefix = prefix.rstrip("/")
 
     def __str__(self):
-        routes = []
+        routes: List[str] = []
 
         def traverse(node, prefix=""):
             for child in node.children:

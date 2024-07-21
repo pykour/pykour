@@ -9,7 +9,7 @@ class ConnectionPool:
     def __init__(self, config: Config):
         self.config = config
         self.max_connections = config.get_datasource_pool_max_connections()
-        self.pool = Queue(maxsize=self.max_connections)
+        self.pool: Queue = Queue(maxsize=self.max_connections)
         self.lock = Lock()
         for _ in range(self.max_connections):
             self.pool.put(self._create_new_connection())
