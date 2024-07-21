@@ -19,7 +19,7 @@ class Node:
         self.part = part
         self.children: list[Node] = []
         self.is_wild = is_wild
-        self.route_map: Dict[str, Route] = {}
+        self.route: Union[Route, None] = None
 
     def insert(self, pattern: str, route: Route):
         parts = pattern.strip("/").split("/")
@@ -35,9 +35,9 @@ class Node:
                 node.children.append(child)
             node = child
 
-        node.route_map[route.method] = route
+        node.route = route
 
-    def search(self, path: str, method: str):
+    def search(self, path: str):
         parts = path.strip("/").split("/")
         path_params = {}
 
@@ -51,12 +51,15 @@ class Node:
                 path_params[var_name] = part
             node = child
 
-        route = node.route_map.get(method)
-        return route, path_params
+        # route = node.route_map.get(method)
+        return node.route, path_params
 
     def match_child(self, part: str):
         for child in self.children:
-            if child.part == part or child.is_wild:
+            if child.part == part and not child.is_wild:
+                return child
+        for child in self.children:
+            if child.is_wild:
                 return child
         return None
 
@@ -70,22 +73,24 @@ class Router:
         Args:
             prefix: Prefix for the router.
         """
-        self.root = Node("")
+        self.roots: dict[str, Node] = {}
         self.prefix = prefix.rstrip("/")
 
     def __str__(self):
-        routes = []
+        routes: List[str] = []
 
         def traverse(node, prefix=""):
             for child in node.children:
                 new_prefix = f"{prefix}/{child.part}".strip("/")
-                for method, route in child.route_map.items():
+                route = child.route
+                if route:
                     handler_name = route.handler[0].__name__
                     route_description = f"{method} /{new_prefix} -> {handler_name}()"
                     routes.append(route_description)
                 traverse(child, new_prefix)
 
-        traverse(self.root)
+        for method, root in self.roots.items():
+            traverse(root)
         return "\n".join(routes)
 
     def __repr__(self):
@@ -199,11 +204,13 @@ class Router:
         def traverse(node, prefix=""):
             for child in node.children:
                 new_prefix = f"{prefix}/{child.part}".strip("/")
-                for method, route in child.route_map.items():
+                route = child.route
+                if route:
                     self.add_route(new_prefix, method, route.handler)
                 traverse(child, new_prefix)
 
-        traverse(router.root, prefix=prefix)
+        for method, root in router.roots.items():
+            traverse(root, prefix=prefix)
 
     def add_route(self, path: str, method: str, handler: Any):
         """Add route.
@@ -218,7 +225,9 @@ class Router:
         else:
             full_path = path
         route = Route(full_path, method, handler)
-        self.root.insert(full_path, route)
+        if method not in self.roots:
+            self.roots[method] = Node("")
+        self.roots[method].insert(full_path, route)
 
     def get_route(self, path: str, method: str) -> Union[Route, None]:
         """Get route.
@@ -227,10 +236,12 @@ class Router:
             path: URL path.
             method: HTTP method.
         """
-        route, path_params = self.root.search(path, method)
-        if route:
-            route.set_path_params(path_params)
-        return route
+        if method in self.roots:
+            route, path_params = self.roots[method].search(path)
+            if route:
+                route.set_path_params(path_params)
+            return route
+        return None
 
     def get_allowed_methods(self, path: str) -> List[str]:
         """Get allowed HTTP methods for the specified path.

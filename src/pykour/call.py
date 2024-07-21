@@ -1,9 +1,11 @@
 import inspect
+import logging
 from datetime import datetime
 from typing import Any, Callable, Dict, get_origin
 from enum import Enum
 
 from pykour.config import Config
+from pykour.db.connection import Connection
 from pykour.request import Request
 from pykour.response import Response
 from pykour.schema import BaseSchema
@@ -29,8 +31,12 @@ def cast_to_type(value: Any, to_type: type) -> Any:
 
 async def call(func: Callable, request: Request, response: Response) -> Any:
     sig = inspect.signature(func)
+    logger = logging.getLogger("pykour")
 
-    path_params = request.scope.get("path_params", {})
+    path_params = request.path_params
+    app = request.scope.get("app")
+    pool = app.pool
+    conn = None
 
     bound_args: Dict[str, Any] = {}
 
@@ -47,10 +53,26 @@ async def call(func: Callable, request: Request, response: Response) -> Any:
             bound_args[param_name] = cast_to_type(path_params[param_name], param.annotation)
         elif request.scope.get("app").config and (param.annotation is Config or param_name == "config"):
             bound_args[param_name] = request.get("app").config
+        elif param.annotation is Connection or param_name == "conn" or param_name == "connection":
+            if pool:
+                if conn:
+                    bound_args[param_name] = conn
+                else:
+                    conn = pool.get_connection()
+                    bound_args[param_name] = conn
+            else:
+                bound_args[param_name] = None
 
-    result = func(**bound_args)
-
-    if inspect.iscoroutine(result):
-        return await result
-    else:
-        return result
+    try:
+        result = func(**bound_args)
+        if inspect.iscoroutine(result):
+            return await result
+        else:
+            return result
+    except Exception as e:
+        if logger.isEnabledFor(logging.ERROR):
+            logger.error(f"Error occurred while calling {func.__name__}: {e}")
+        raise e
+    finally:
+        if conn:
+            pool.release_connection(conn)

@@ -31,6 +31,11 @@ class ConfigFileHandler(FileSystemEventHandler):
 
 class Config:
     KEY_PYKOUR_LOGGING_LEVEL = "pykour.logging.level"
+    KEY_PYKOUR_DATASOURCE_TYPE = "pykour.datasource.type"
+    KEY_PYKOUR_DATASOURCE_URL = "pykour.datasource.url"
+    KEY_PYKOUR_DATASOURCE_USERNAME = "pykour.datasource.username"
+    KEY_PYKOUR_DATASOURCE_PASSWORD = "pykour.datasource.password"
+    KEY_PYKOUR_DATASOURCE_POOL_MAX_CONNECTIONS = "pykour.datasource.pool.max-connections"
 
     def __init__(self, filepath=None):
         self.config = {}
@@ -114,6 +119,21 @@ class Config:
 
         level_numbers.append(ACCESS_LEVEL_NO)
         return level_numbers
+
+    def get_datasource_type(self) -> str:
+        return self.get(self.KEY_PYKOUR_DATASOURCE_TYPE, None)
+
+    def get_datasource_url(self) -> str:
+        return self.get(self.KEY_PYKOUR_DATASOURCE_URL, None)
+
+    def get_datasource_username(self) -> str:
+        return self.get(self.KEY_PYKOUR_DATASOURCE_USERNAME, None)
+
+    def get_datasource_password(self) -> str:
+        return self.get(self.KEY_PYKOUR_DATASOURCE_PASSWORD, None)
+
+    def get_datasource_pool_max_connections(self) -> int:
+        return self.get_int(self.KEY_PYKOUR_DATASOURCE_POOL_MAX_CONNECTIONS, 5)
 
     def __del__(self):
         if hasattr(self, "observer"):

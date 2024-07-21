@@ -1,13 +1,16 @@
 import json
+import logging
 from datetime import datetime
 from enum import Enum
 from typing import Dict, Any
+from unittest import mock
 from unittest.mock import Mock, AsyncMock, MagicMock
 
 import pytest
 
 from pykour import Response, Request, Pykour, Config
 from pykour.call import call
+from pykour.db import Connection
 from pykour.schema import BaseSchema
 
 
@@ -16,7 +19,13 @@ async def test_function_call_with_valid_int_parameter():
     async def func(x: int):
         return x
 
-    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "123"}}), Mock(spec=Response))
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "123"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
     assert result == 123
 
 
@@ -25,7 +34,13 @@ async def test_function_call_with_valid_float_parameter():
     async def func(x: float):
         return x
 
-    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "123.45"}}), Mock(spec=Response))
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "123.45"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
     assert result == 123.45
 
 
@@ -34,7 +49,13 @@ async def test_function_call_with_valid_bool_parameter():
     async def func(x: bool):
         return x
 
-    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "true"}}), Mock(spec=Response))
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "true"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
     assert result is True
 
 
@@ -43,7 +64,13 @@ async def test_function_call_with_valid_datetime_parameter():
     async def func(x: datetime):
         return x
 
-    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "2023-10-01"}}), Mock(spec=Response))
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "2023-10-01"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
     assert result == datetime(2023, 10, 1)
 
 
@@ -52,8 +79,14 @@ async def test_function_call_with_invalid_int_parameter():
     async def func(x: int):
         return x
 
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "invalid"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
     with pytest.raises(ValueError):
-        await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid"}}), Mock(spec=Response))
+        await call(func, request, response)
 
 
 @pytest.mark.asyncio
@@ -61,8 +94,14 @@ async def test_function_call_with_invalid_float_parameter():
     async def func(x: float):
         return x
 
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "invalid"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
     with pytest.raises(ValueError):
-        await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid"}}), Mock(spec=Response))
+        await call(func, request, response)
 
 
 @pytest.mark.asyncio
@@ -70,8 +109,14 @@ async def test_function_call_with_invalid_datetime_parameter():
     async def func(x: datetime):
         return x
 
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "invalid-date"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
     with pytest.raises(ValueError):
-        await call(func, Mock(spec=Request, scope={"path_params": {"x": "invalid-date"}}), Mock(spec=Response))
+        await call(func, request, response)
 
 
 @pytest.mark.asyncio
@@ -79,8 +124,17 @@ async def test_function_call_with_missing_path_param():
     async def func(x: int):
         return x
 
-    with pytest.raises(TypeError):
-        await call(func, Mock(spec=Request, scope={"path_params": {}, "app": Pykour()}), Mock(spec=Response))
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
+    logger = logging.getLogger("pykour")
+
+    with mock.patch.object(logger, "isEnabledFor", return_value=True):
+        with pytest.raises(TypeError):
+            await call(func, request, response)
 
 
 class Color(Enum):
@@ -94,7 +148,13 @@ async def test_function_call_with_valid_enum_parameter():
     async def func(x: Color):
         return x
 
-    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "RED"}}), Mock(spec=Response))
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "RED"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
     assert result == Color.RED
 
 
@@ -103,7 +163,13 @@ async def test_function_call_with_valid_str_parameter():
     async def func(x: str):
         return x
 
-    result = await call(func, Mock(spec=Request, scope={"path_params": {"x": "hello"}}), Mock(spec=Response))
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "hello"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
     assert result == "hello"
 
 
@@ -112,8 +178,14 @@ async def test_function_call_with_invalid_enum_parameter():
     async def func(x: Color):
         return x
 
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "INVALID_COLOR"}
+    request.pool = None
+    response = MagicMock(spec=Response)
+
     with pytest.raises(ValueError):
-        await call(func, Mock(spec=Request, scope={"path_params": {"x": "INVALID_COLOR"}}), Mock(spec=Response))
+        await call(func, request, response)
 
 
 class TestSchema(BaseSchema):
@@ -136,33 +208,32 @@ def scope() -> Dict[str, Any]:
         "method": "POST",
         "headers": [(b"content-type", b"application/json; charset=utf-8")],
         "path_params": {},
+        "app": Pykour(),
     }
 
 
 @pytest.fixture
 def dummy_request(scope) -> Request:
-    send = AsyncMock()
-    send.return_value = {"type": "http.request", "body": b'{"field": "value"}', "more_body": False}
-    return Request(scope, send)
+    receive = AsyncMock()
+    receive.return_value = {"type": "http.request", "body": b'{"field": "value"}', "more_body": False}
+    return Request(scope, receive)
 
 
 @pytest.fixture
 def dummy_response() -> Response:
-    receive = AsyncMock()
-    return Response(receive, 200)
+    send = AsyncMock()
+    return Response(send, 200)
 
 
 # テストケース
 @pytest.mark.asyncio
-async def test_call_with_schema_request_response(dummy_request: Request, dummy_response: Response):
+async def test_call_with_schema_request_response(dummy_request, dummy_response):
     result = await call(sample_function, dummy_request, dummy_response)
-
-    # 検証
     assert result == {"schema": "value", "request": dummy_request.scope, "response": dummy_response.status}
 
 
 @pytest.mark.asyncio
-async def test_call_with_sync_function(dummy_request: Request, dummy_response: Response):
+async def test_call_with_sync_function(dummy_request, dummy_response):
     result = await call(sample_sync_function, dummy_request, dummy_response)
     assert result == {"schema": "value", "request": dummy_request.scope, "response": dummy_response.status}
 
@@ -175,8 +246,11 @@ async def test_config_argument_is_set_correctly(mocker):
     async def func(config: Config):
         return "value"
 
-    request = Mock(spec=Request, scope={"path_params": {}, "app": Pykour("config.yaml")})
-    response = Mock(spec=Response)
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {}
+    request.pool = None
+    response = MagicMock(spec=Response)
     result = await call(func, request, response)
     assert result == "value"
 
@@ -189,17 +263,63 @@ async def dummy_function(data: dict):
 async def test_call_with_dict_annotation():
     # Mock the request and response objects
     request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {}
+    request.pool = None
     response = MagicMock(spec=Response)
 
-    request.scope = {"path_params": {}}
-
-    # Mock the request.json() method to return a specific dict
     request.json = AsyncMock(return_value={"key": "value"})
 
-    # Define the callable to test
     func = dummy_function
 
-    # Call the function and assert the result
     result = await call(func, request, response)
 
     assert result == {"key": "value"}
+
+
+@pytest.mark.asyncio
+async def test_call_with_connection():
+    async def func(conn: Connection):
+        return conn
+
+    app = Pykour()
+    app.pool = MagicMock()
+    request = MagicMock(spec=Request)
+    request.scope = {"app": app}
+    request.path_params = {}
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
+    request.scope["app"].pool.get_connection.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_call_with_connection_twice():
+    async def func(conn: Connection, conn2: Connection):
+        return conn
+
+    app = Pykour()
+    app.pool = MagicMock()
+    request = MagicMock(spec=Request)
+    request.scope = {"app": app}
+    request.path_params = {}
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
+    request.scope["app"].pool.get_connection.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_call_with_connection_no_pool():
+    async def func(conn: Connection):
+        return conn
+
+    app = Pykour()
+    app.pool = None
+    request = MagicMock(spec=Request)
+    request.scope = {"app": app}
+    request.path_params = {}
+    response = MagicMock(spec=Response)
+
+    result = await call(func, request, response)
+    assert result is None
