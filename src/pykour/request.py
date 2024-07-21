@@ -22,6 +22,7 @@ class Request(Mapping[str, Any]):
         self._headers = defaultdict(list)
         self.content_type = None
         self.charset = "utf-8"
+        self.path_params = {}
 
         if "headers" in self.scope:
             for key, value in self.scope["headers"]:

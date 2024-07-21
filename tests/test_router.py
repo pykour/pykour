@@ -14,7 +14,7 @@ def test_node_creation():
     assert node.part == "part"
     assert node.children == []
     assert node.is_wild is False
-    assert node.route_map == {}
+    assert node.route is None
 
 
 def test_node_insertion():

@@ -1,9 +1,10 @@
 import importlib
+from typing import Optional, Dict, Any, List, Union
 
-from pykour import Config
+from pykour.config import Config
 
 
-class Session:
+class Connection:
     def __init__(self, db_type, **kwargs):
         self.db_type = db_type
         self.conn = None
@@ -23,17 +24,29 @@ class Session:
         password = config.get_datasource_password()
         return cls(db_type, url=url, username=username, password=password)
 
-    def execute(self, query, params=None):
+    def fetch_one(self, query: str, params: Optional[Dict[str, Any]] = None) -> Union[List[Dict[str, Any]], None]:
+        self._execute(query, params)
+        row = self.cursor.fetchone()
+        if row:
+            columns = [desc[0] for desc in self.cursor.description]
+            return [dict(zip(columns, row))]
+        return None
+
+    def fetch_all(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        self._execute(query, params)
+        rows = self.cursor.fetchall()
+        columns = [desc[0] for desc in self.cursor.description]
+        return [dict(zip(columns, row)) for row in rows]
+
+    def execute(self, query: str, params: Optional[Dict[str, Any]] = None) -> int:
+        self._execute(query, params)
+        return self.cursor.rowcount
+
+    def _execute(self, query, params=None):
         if params:
             self.cursor.execute(query, params)
         else:
             self.cursor.execute(query)
-
-    def fetchall(self):
-        return self.cursor.fetchall()
-
-    def fetchone(self):
-        return self.cursor.fetchone()
 
     def commit(self):
         self.conn.commit()

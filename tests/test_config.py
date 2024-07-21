@@ -224,3 +224,33 @@ def test_replace_placeholders_with_nested_dict(nested_dict_with_env_vars, monkey
 
     replace_placeholders(nested_dict_with_env_vars)
     assert nested_dict_with_env_vars == expected
+
+
+def test_get_datasource_type():
+    config = Config()
+    config.config = {"pykour": {"datasource": {"type": "sqlite"}}}
+    assert config.get_datasource_type() == "sqlite"
+
+
+def test_get_datasource_url():
+    config = Config()
+    config.config = {"pykour": {"datasource": {"url": "sqlite:///test.db"}}}
+    assert config.get_datasource_url() == "sqlite:///test.db"
+
+
+def test_get_datasource_username():
+    config = Config()
+    config.config = {"pykour": {"datasource": {"username": "testuser"}}}
+    assert config.get_datasource_username() == "testuser"
+
+
+def test_get_datasource_password():
+    config = Config()
+    config.config = {"pykour": {"datasource": {"password": "testpassword"}}}
+    assert config.get_datasource_password() == "testpassword"
+
+
+def test_get_datasource_pool_max_connections():
+    config = Config()
+    config.config = {"pykour": {"datasource": {"pool": {"max-connections": 10}}}}
+    assert config.get_datasource_pool_max_connections() == 10

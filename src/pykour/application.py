@@ -8,6 +8,7 @@ from typing import Callable, Dict, Any
 import pykour.exceptions as ex
 from pykour.config import Config
 from pykour.call import call
+from pykour.db.pool import ConnectionPool
 from pykour.logging import setup_logging, write_access_log
 
 
@@ -36,6 +37,10 @@ class Pykour:
         self.router = Router()
         self.app: ASGIApp = RootASGIApp()
         self.logger = logging.getLogger("pykour")
+        if self._config.get_datasource_type():
+            self.pool = ConnectionPool(self._config)
+        else:
+            self.pool = None
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         scope["app"] = self
@@ -199,6 +204,7 @@ class RootASGIApp:
 
             # Process the request if the route exists
             if self.exists_route(request):
+                self.append_path_params(request)
                 await self.handle_request(self, request, response)
             else:
                 if self.logger.isEnabledFor(logging.DEBUG):
@@ -208,6 +214,17 @@ class RootASGIApp:
         finally:
             end_time = time.perf_counter()
             write_access_log(request, response, (end_time - start_time) * 1000)
+
+    @staticmethod
+    def append_path_params(request: Request) -> None:
+        """Append path parameters to the request."""
+        app = request.app
+        path = request.path
+        method = request.method
+        route = app.router.get_route(path, method)
+
+        path_params = route.path_params
+        request.path_params = path_params
 
     @staticmethod
     async def handle_bad_request(request: Request, response: Response) -> None:
