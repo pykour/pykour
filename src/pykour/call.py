@@ -65,13 +65,20 @@ async def call(func: Callable, request: Request, response: Response) -> Any:
 
     try:
         result = func(**bound_args)
+        ret = None
         if inspect.iscoroutine(result):
-            return await result
+            ret = await result
         else:
-            return result
+            ret = result
+
+        if conn:
+            conn.commit()
+        return ret
     except Exception as e:
         if logger.isEnabledFor(logging.ERROR):
             logger.error(f"Error occurred while calling {func.__name__}: {e}")
+        if conn:
+            conn.rollback()
         raise e
     finally:
         if conn:
