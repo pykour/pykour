@@ -50,14 +50,14 @@ def test_fetch_one_returns_correct_data(mock_config):
     connection = Connection.from_config(mock_config)
     connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
     connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
-    result = connection.fetch_one("SELECT * FROM test WHERE id = 1")
+    result = connection.find("SELECT * FROM test WHERE id = 1")
     assert result == {"id": 1, "name": "John Doe"}
 
 
 def test_fetch_one_with_no_match_returns_none(mock_config):
     connection = Connection.from_config(mock_config)
     connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    result = connection.fetch_one("SELECT * FROM test WHERE id = 99")
+    result = connection.find("SELECT * FROM test WHERE id = 99")
     assert result is None
 
 
@@ -66,7 +66,7 @@ def test_fetch_all_returns_all_matching_records(mock_config):
     connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
     connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
     connection.execute("INSERT INTO test (name) VALUES ('Jane Doe')")
-    result = connection.fetch_all("SELECT * FROM test")
+    result = connection.select("SELECT * FROM test")
     assert len(result) == 2
     assert result[0]["name"] == "John Doe"
     assert result[1]["name"] == "Jane Doe"
@@ -84,7 +84,7 @@ def test_commit_persists_changes(mock_config):
     connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
     connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
     connection.commit()
-    result = connection.fetch_one("SELECT * FROM test WHERE id = 1")
+    result = connection.find("SELECT * FROM test WHERE id = 1")
     assert result == {"id": 1, "name": "John Doe"}
 
 
@@ -93,7 +93,7 @@ def test_rollback_reverts_changes(mock_config):
     connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
     connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
     connection.rollback()
-    result = connection.fetch_one("SELECT * FROM test WHERE id = 1")
+    result = connection.find("SELECT * FROM test WHERE id = 1")
     assert result is None
 
 
@@ -108,5 +108,5 @@ def test_execute_with_params(mock_config):
     connection = Connection.from_config(mock_config)
     connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
     connection.execute("INSERT INTO test (name) VALUES (?)", ("John Doe",))
-    result = connection.fetch_one("SELECT * FROM test WHERE id = 1")
+    result = connection.find("SELECT * FROM test WHERE id = 1")
     assert result == {"id": 1, "name": "John Doe"}

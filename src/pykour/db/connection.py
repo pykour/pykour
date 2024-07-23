@@ -24,7 +24,7 @@ class Connection:
         password = config.get_datasource_password()
         return cls(db_type, url=url, username=username, password=password)
 
-    def fetch_one(self, query: str, params: Optional[Dict[str, Any]] = None) -> Union[Dict[str, Any], None]:
+    def find(self, query: str, params: Optional[Dict[str, Any]] = None) -> Union[Dict[str, Any], None]:
         self._execute(query, params)
         row = self.cursor.fetchone()
         if row:
@@ -32,7 +32,7 @@ class Connection:
             return dict(zip(columns, row))
         return None
 
-    def fetch_all(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def select(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         self._execute(query, params)
         rows = self.cursor.fetchall()
         columns = [desc[0] for desc in self.cursor.description]
@@ -41,12 +41,6 @@ class Connection:
     def execute(self, query: str, params: Optional[Dict[str, Any]] = None) -> int:
         self._execute(query, params)
         return self.cursor.rowcount
-
-    def _execute(self, query, params=None):
-        if params:
-            self.cursor.execute(query, params)
-        else:
-            self.cursor.execute(query)
 
     def commit(self):
         self.conn.commit()
@@ -61,3 +55,9 @@ class Connection:
         if self.conn:
             self.conn.close()
             self.conn = None
+
+    def _execute(self, query, params=None):
+        if params:
+            self.cursor.execute(query, params)
+        else:
+            self.cursor.execute(query)
