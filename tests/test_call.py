@@ -188,6 +188,39 @@ async def test_function_call_with_invalid_enum_parameter():
         await call(func, request, response)
 
 
+@pytest.mark.asyncio
+async def test_function_call_with_invalid_enum_parameter(mocker):
+    async def func(x: Color):
+        return x
+
+    _config = Config("config.yaml")
+    mocker.patch.object(Pykour, "config", _config)
+
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "INVALID_COLOR"}
+    response = MagicMock(spec=Response)
+
+    with pytest.raises(ValueError):
+        await call(func, request, response)
+
+
+@pytest.mark.asyncio
+async def test_function_call_with_config(mocker):
+    async def func(x: Color, config: Config):
+        return x
+
+    _config = Config("config.yaml")
+    mocker.patch.object(Pykour, "config", _config)
+
+    request = MagicMock(spec=Request)
+    request.scope = {"app": Pykour()}
+    request.path_params = {"x": "RED"}
+    response = MagicMock(spec=Response)
+
+    await call(func, request, response)
+
+
 class TestSchema(BaseSchema):
     field: str
 
@@ -238,23 +271,6 @@ async def test_call_with_sync_function(dummy_request, dummy_response):
     assert result == {"schema": "value", "request": dummy_request.scope, "response": dummy_response.status}
 
 
-@pytest.mark.asyncio
-async def test_config_argument_is_set_correctly(mocker):
-    _config = Config("config.yaml")
-    mocker.patch.object(Pykour, "config", _config)
-
-    async def func(config: Config):
-        return "value"
-
-    request = MagicMock(spec=Request)
-    request.scope = {"app": Pykour()}
-    request.path_params = {}
-    request.pool = None
-    response = MagicMock(spec=Response)
-    result = await call(func, request, response)
-    assert result == "value"
-
-
 async def dummy_function(data: dict):
     return data
 
@@ -291,6 +307,23 @@ async def test_call_with_connection():
 
     result = await call(func, request, response)
     request.scope["app"].pool.get_connection.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_call_with_connection_raise_error(mocker):
+    async def func(conn: Connection):
+        raise ValueError("Error")
+
+    app = Pykour()
+    app.pool = MagicMock()
+    mocker.patch.object(app.pool, "get_connection", return_value=MagicMock(spec=Connection))
+    request = MagicMock(spec=Request)
+    request.scope = {"app": app}
+    request.path_params = {}
+    response = MagicMock(spec=Response)
+
+    with pytest.raises(ValueError):
+        await call(func, request, response)
 
 
 @pytest.mark.asyncio
