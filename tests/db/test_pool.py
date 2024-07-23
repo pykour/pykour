@@ -20,7 +20,7 @@ def mock_connection():
 
 def test_connection_pool_with_mocked_connection(mock_config, mock_connection):
     pool = ConnectionPool(mock_config)
-    return pool
+    assert pool is not None
 
 
 def test_getting_connection_returns_connection_from_pool(mock_config, mock_connection):

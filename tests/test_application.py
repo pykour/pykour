@@ -307,7 +307,6 @@ async def test_add_middleware():
     assert second_call_args == {"type": "http.response.body", "body": b'{"message": "Hello, world!"}'}
 
 
-@pytest.mark.asyncio
 def test_get_config():
     app = Pykour()
     app._config = {"key": "value"}
@@ -708,3 +707,17 @@ async def test_unsupported_content_type():
     assert send_mock.call_count == 2
     assert send_mock.call_args_list[0][0][0]["status"] == HTTPStatus.INTERNAL_SERVER_ERROR
     assert send_mock.call_args_list[1][0][0]["body"] == b"Internal Server Error"
+
+
+@pytest.fixture
+def mock_config_correct_type():
+    with (
+        patch("pykour.config.Config.get_datasource_type", return_value="sqlite"),
+        patch("pykour.config.Config.get_datasource_url", return_value=":memory:"),
+    ):
+        yield
+
+
+def test_pykour_init_with_datasource_type_true(mock_config_correct_type):
+    app = Pykour()
+    assert app.pool is not None
