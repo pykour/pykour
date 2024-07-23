@@ -189,23 +189,6 @@ async def test_function_call_with_invalid_enum_parameter():
 
 
 @pytest.mark.asyncio
-async def test_function_call_with_invalid_enum_parameter(mocker):
-    async def func(x: Color):
-        return x
-
-    _config = Config("config.yaml")
-    mocker.patch.object(Pykour, "config", _config)
-
-    request = MagicMock(spec=Request)
-    request.scope = {"app": Pykour()}
-    request.path_params = {"x": "INVALID_COLOR"}
-    response = MagicMock(spec=Response)
-
-    with pytest.raises(ValueError):
-        await call(func, request, response)
-
-
-@pytest.mark.asyncio
 async def test_function_call_with_config(mocker):
     async def func(x: Color, config: Config):
         return x
