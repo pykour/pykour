@@ -3,7 +3,7 @@ import time
 import json
 import os
 from http import HTTPStatus
-from typing import Callable, Dict, Any
+from typing import Callable, Any
 
 import pykour.exceptions as ex
 from pykour.config import Config
@@ -50,7 +50,7 @@ class Pykour:
     def config(self) -> Config:
         return self._config
 
-    def add_middleware(self, middleware: Callable, **kwargs: Dict[str, Any]) -> None:
+    def add_middleware(self, middleware: Callable, **kwargs: Any) -> None:
         """Add middleware to the application.
 
         Args:
