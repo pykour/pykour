@@ -12,6 +12,7 @@ These packages will be installed automatically when installing Pykour.
 - Uvicorn
 - Watchdog
 - PyYaml
+- Colorama
 
 ## Virtual environments
 
