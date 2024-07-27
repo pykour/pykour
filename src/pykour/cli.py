@@ -75,7 +75,6 @@ def main(args=None):
     elif args.command == "dev":
         os.environ["PYKOUR_ENV"] = "development"
 
-        print("Listening on http://" + args.host + ":" + str(args.port))
         uvicorn.run(
             args.app,
             host=args.host,
@@ -83,7 +82,6 @@ def main(args=None):
             reload=args.reload,
             workers=args.workers,
             server_header=False,
-            log_level="critical",
         )
     elif args.command == "run":
         os.environ["PYKOUR_ENV"] = "production"
@@ -109,10 +107,8 @@ def main(args=None):
             "workers": args.workers,
             "worker_class": "uvicorn_worker.UvicornWorker",
             "reload": args.reload,
-            "loglevel": "critical",
         }
 
-        print("Listening on http://" + args.host + ":" + str(args.port))
         StandaloneApplication(
             args.app,
             options,
