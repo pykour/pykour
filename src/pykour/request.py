@@ -50,7 +50,7 @@ class Request(Mapping[str, Any]):
     __hash__ = object.__hash__
 
     @property
-    def app(self):
+    def app(self) -> Any:
         """Returns the ASGI application instance.
 
         Returns:
