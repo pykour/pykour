@@ -1,6 +1,6 @@
 # Quickstart
 
-Let’s learn the basics of using Pykour. Follow the [Installation](installation.md) for project setup and Pykour installation.
+Let’s learn the basics of using Pykour. Follow the [Installation](../installation.md) for project setup and Pykour installation.
 
 ## Hello, World!
 

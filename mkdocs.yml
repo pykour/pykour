@@ -37,13 +37,16 @@ nav:
       - Introduction: routing/introduction.md
       - Router: routing/router.md
       - Schemas: routing/schemas.md
+    - Configuration:
+      - Introduction: configuration/introduction.md
+      - Config: configuration/config.md
     - Database:
       - Introduction: database/introduction.md
       - Connection: database/connection.md
     - Middleware:
       - Introduction: middleware/introduction.md
-      - Generate UUID: middleware/uuid.md
-      - Gzip Compression: middleware/gzip.md
+      - UUID Middleware: middleware/uuid.md
+      - GZIP Middleware: middleware/gzip.md
   - API Docs:
     - core:
       - Pykour: api/pykour.md
@@ -81,4 +84,4 @@ markdown_extensions:
 extra:
   analytics:
     provider: google
-    property:
+    property: G-X9TGYEY0S2

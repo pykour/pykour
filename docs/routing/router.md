@@ -1,16 +1,17 @@
 # Routing
 
-Pykourのルーティングは、Routerクラスを使用して定義されます。
+Routing in Pykour is defined using the Router class.
 
-## `route()`デコレーターを使用したルーティング
+## Routing with the `route()` Decorator
 
-最も簡単な方法は、Pykourクラスの`route()`デコレーターを使用する方法です。
+The simplest way to define routes is to use the `route()` decorator of the Pykour class.
 
-`route()`デコレーターは、デフォルトで`GET`メソッドを使用します。他のHTTPメソッドを使用する場合は、`method`引数を使用して明示的に指定できます。
+The `route()` decorator uses the `GET` method by default. To use other HTTP methods, 
+you can explicitly specify them using the method argument.
 
-### HTTPメソッドに対応してデコレーターを使用する
+### Using Decorators Corresponding to HTTP Methods
 
-PykourではHTTPメソッドに対応したデコレーターを提供しています。
+Pykour provides decorators corresponding to HTTP methods:
 
 - `get()`
 - `post()`
@@ -20,16 +21,16 @@ PykourではHTTPメソッドに対応したデコレーターを提供してい�
 - `options()`
 - `head()`
 
-これらのデコレーターは、`route()`デコレーターのショートカットです。
+These decorators are shortcuts for the `route()` decorator.
 
-### 独自HTTPメソッド
+### Custom HTTP Methods
 
-Pykourでは、独自のHTTPメソッドをサポートしていません。また、TRACEメソッドはセキュリティ上の理由からサポートされていません。
+Pykour does not support custom HTTP methods. Additionally, the TRACE method is not supported for security reasons.
 
-## Routerを使ったルーティング設定
+## Routing Configuration with Router
 
-Routerクラスを使用して、ルーティング設定をモジュール化できます。
+You can modularize your routing configuration using the Router class.
 
-## Routerを使ったルーティングの階層化
+## Hierarchical Routing with Router
 
-Routerクラスを使用して、ルーティングを階層化できます。
+You can create hierarchical routing using the Router class.
