@@ -26,20 +26,38 @@ theme:
 nav:
   - Home: index.md
   - User's Guide:
-      - Installation: installation.md
-      - Quickstart: quickstart.md
-      - Pykour CLI: cli.md
+    - Installation: installation.md
+    - Pykour CLI: cli.md
+    - Quickstart:
+      - Introduction: quickstart/introduction.md
+      - Routes: quickstart/routes.md
+      - Schema: quickstart/schema.md
+      - Middleware: quickstart/middleware.md
+    - Routing:
+      - Introduction: routing/introduction.md
+      - Router: routing/router.md
+      - Schemas: routing/schemas.md
+    - Configuration:
+      - Introduction: configuration/introduction.md
+      - Config: configuration/config.md
+    - Database:
+      - Introduction: database/introduction.md
+      - Connection: database/connection.md
+    - Middleware:
+      - Introduction: middleware/introduction.md
+      - UUID Middleware: middleware/uuid.md
+      - GZIP Middleware: middleware/gzip.md
   - API Docs:
-      - core:
-        - Pykour: api/pykour.md
-        - Router: api/router.md
-        - Request: api/request.md
-        - Response: api/response.md
-        - URL: api/url.md
-        - BaseSchema: api/baseschema.md
-      - exceptions:
-        - HTTPException: api/httpexception.md
-        - ResourceNotFoundException: api/resourcenotfoundexception.md
+    - core:
+      - Pykour: api/pykour.md
+      - Router: api/router.md
+      - Request: api/request.md
+      - Response: api/response.md
+      - URL: api/url.md
+      - BaseSchema: api/baseschema.md
+    - exceptions:
+      - HTTPException: api/httpexception.md
+      - ResourceNotFoundException: api/resourcenotfoundexception.md
   - Release Notes: release-notes.md
 repo_name: pykour/pykour
 repo_url: https://github.com/pykour/pykour
@@ -60,3 +78,10 @@ plugins:
             signature_crossrefs: true
           import:
             - https://docs.python.org/3/objects.inv
+markdown_extensions:
+  toc:
+    permalink: true
+extra:
+  analytics:
+    provider: google
+    property: G-X9TGYEY0S2

@@ -1,10 +1,26 @@
 # Change Log
 
-## Not released yet
+## 0.1.4 - 2024-07-28
+
+### Features
+
+- Implement database access functions
+- Implementation of a Logger within the Framework
 
 ### Enhancements
 
 - Add Codacy badge
+- Fix Gunicorn and Uvicorn logging setting
+- Fix type hint
+- Transaction control implementation
+- Fix Connection class
+- Enhancing the way Router is set up
+- Test case improvement and refactoring
+
+## Fixed
+
+- Remove pysqlite3 from pyproject.toml
+- BAD REQUEST when an exception occurs
 
 ## 0.1.3 - 2024-07-15
 
