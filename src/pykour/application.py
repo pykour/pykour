@@ -15,7 +15,7 @@ from pykour.logging import setup_logging, write_access_log
 from pykour.request import Request
 from pykour.response import Response
 from pykour.router import Router
-from pykour.types import Scope, Receive, Send, ASGIApp, HTTPStatusCode
+from pykour.types import Scope, Receive, Send, ASGIApp
 from colorama import Fore
 
 
@@ -27,14 +27,15 @@ STATUS_COLORS = {
 }
 
 
-class Pykour:
+class Pykour(Router):
     SUPPORTED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
 
-    def __init__(self, config: str = None):
+    def __init__(self, prefix="/", config: str = None):
+        super().__init__(prefix=prefix)
+
         self._config = Config(config) if config else Config()
         setup_logging(self._config.get_log_levels())
         self.production_mode = os.getenv("PYKOUR_ENV") == "production"
-        self.router = Router()
         self.app: ASGIApp = RootASGIApp()
         self.logger = logging.getLogger("pykour")
         if self._config.get_datasource_type():
@@ -61,112 +62,6 @@ class Pykour:
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(f"Add middleware: {middleware.__name__}")
         self.app = middleware(self.app, **kwargs)
-
-    def get(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
-        """Decorator for GET method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="GET", status_code=status_code)
-
-    def post(self, path: str, status_code: HTTPStatusCode = HTTPStatus.CREATED) -> Callable:
-        """Decorator for POST method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="POST", status_code=status_code)
-
-    def put(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
-        """Decorator for PUT method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="PUT", status_code=status_code)
-
-    def delete(self, path: str, status_code: HTTPStatusCode = HTTPStatus.NO_CONTENT) -> Callable:
-        """Decorator for DELETE method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="DELETE", status_code=status_code)
-
-    def patch(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
-        """Decorator for PATCH method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="PATCH", status_code=status_code)
-
-    def options(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
-        """Decorator for OPTIONS method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="OPTIONS", status_code=status_code)
-
-    def head(self, path: str, status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
-        """Decorator for HEAD method.
-
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="HEAD", status_code=status_code)
-
-    def route(self, path: str, method: str = "GET", status_code: HTTPStatusCode = HTTPStatus.OK) -> Callable:
-        """Decorator for route.
-
-        Args:
-            path: URL path.
-            method: HTTP method.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-
-        if method not in self.SUPPORTED_METHODS:
-            raise ValueError(f"Unsupported HTTP Method: {method}")
-
-        def decorator(func):
-            self.router.add_route(path=path, method=method, handler=(func, status_code))
-            return func
-
-        return decorator
-
-    def add_router(self, router: Router, prefix: str = "") -> None:
-        """Add a router to the application.
-
-        Args:
-            router: Router object.
-            prefix: URL prefix.
-        """
-        self.router.add_router(router, prefix=prefix)
 
 
 class RootASGIApp:
@@ -221,7 +116,7 @@ class RootASGIApp:
         app = request.app
         path = request.path
         method = request.method
-        route = app.router.get_route(path, method)
+        route = app.get_route(path, method)
 
         path_params = route.path_params
         request.path_params = path_params
@@ -291,7 +186,7 @@ class RootASGIApp:
         """Handle request for a route."""
 
         app = request.app
-        route = app.router.get_route(request.path, request.method)
+        route = app.get_route(request.path, request.method)
         route_fun, status_code = route.handler
         response.status = status_code
 
@@ -303,7 +198,7 @@ class RootASGIApp:
                 response.content = ""
                 response.content_type = "text/plain"
             elif request.method == "OPTIONS":
-                response.add_header("Allow", ", ".join(app.router.get_allowed_methods(request.path)))
+                response.add_header("Allow", ", ".join(app.get_allowed_methods(request.path)))
                 response.content = ""
             elif request.method == "HEAD":
                 response.add_header("Content-Length", str(len(str(response_body))))
@@ -341,7 +236,7 @@ class RootASGIApp:
         app = request.app
         path = request.path
         method = request.method
-        allowed_methods = app.router.get_allowed_methods(path)
+        allowed_methods = app.get_allowed_methods(path)
         return allowed_methods == [] or method in allowed_methods
 
     @staticmethod
@@ -350,4 +245,4 @@ class RootASGIApp:
         app = request.app
         path = request.path
         method = request.method
-        return app.router.exists(path, method)
+        return app.exists(path, method)

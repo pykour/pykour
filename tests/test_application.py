@@ -368,7 +368,7 @@ async def test_add_router_without_prefix():
 
     app.add_router(router)
 
-    assert app.router.exists("/test", "GET")
+    assert app.exists("/test", "GET")
 
 
 @pytest.mark.asyncio
@@ -383,7 +383,7 @@ async def test_add_router_with_prefix():
 
     app.add_router(router, prefix="/api")
 
-    assert app.router.exists("/api/test", "GET")
+    assert app.exists("/api/test", "GET")
 
 
 @pytest.mark.asyncio
