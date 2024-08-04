@@ -1,6 +1,6 @@
 __version__ = "0.1.4"
 
-from .application import Pykour
+from .pykour import Pykour
 from .config import Config
 from .request import Request
 from .response import Response

@@ -57,7 +57,7 @@ async def test_small_response(app: Pykour):
 
     response_body = send_messages[1]
     assert response_body["type"] == "http.response.body"
-    assert json.loads(response_body["body"]) == {"message": "small response"}
+    assert response_body["body"] == b"{'message': 'small response'}"
 
 
 @pytest.mark.asyncio
@@ -91,7 +91,7 @@ async def test_large_response(app: Pykour):
     with gzip.GzipFile(fileobj=BytesIO(gzip_body)) as f:
         decompressed_body = f.read()
 
-    assert json.loads(decompressed_body) == {"message": "large response" * 100}
+    assert decompressed_body == str({"message": "large response" * 100}).encode()
 
 
 @pytest.mark.asyncio
@@ -120,7 +120,7 @@ async def test_uncompressed_response(app: Pykour):
 
     response_body = send_messages[1]
     assert response_body["type"] == "http.response.body"
-    assert json.loads(response_body["body"]) == {"message": "uncompressed response"}
+    assert response_body["body"] == b"{'message': 'uncompressed response'}"
 
 
 @pytest.mark.asyncio
