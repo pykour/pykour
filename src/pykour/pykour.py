@@ -23,7 +23,6 @@ class Pykour(Router):
         """
 
         super().__init__(prefix=prefix)
-        value = os.getenv("PYKOUR_ENV")
         self.production_mode = os.getenv("PYKOUR_ENV") == "production"
         self.app = ASGIApp()
         self._logger = logging.getLogger("pykour")
