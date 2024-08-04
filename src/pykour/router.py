@@ -203,7 +203,7 @@ class Router:
 
         def traverse(node, prefix=""):
             for child in node.children:
-                new_prefix = f"{prefix}/{child.part}".strip("/")
+                new_prefix = f"{prefix}/{child.part}".rstrip("/")
                 route = child.route
                 if route:
                     self.add_route(new_prefix, method, route.handler)

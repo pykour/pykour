@@ -1,6 +1,4 @@
 import pytest
-from pytest_mock import mocker
-from watchdog.observers import Observer
 
 from pykour.config import Config, ConfigFileHandler, replace_placeholders
 

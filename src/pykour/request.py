@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from pykour.types import Scope, Receive
 from pykour.url import URL
+from urllib.parse import parse_qs
 
 
 class Request(Mapping[str, Any]):
@@ -147,6 +148,20 @@ class Request(Mapping[str, Any]):
             Query string.
         """
         return self.scope["query_string"]
+
+    @property
+    def query_params(self) -> dict[str, Union[str, list[str]]]:
+        """Returns the query parameters.
+
+        Returns:
+            Query parameters.
+        """
+        query_string = self.scope["query_string"].decode("utf-8")
+
+        parsed_dict = parse_qs(query_string)
+
+        result = {k: (v[0] if len(v) == 1 else v) for k, v in parsed_dict.items()}
+        return result
 
     @property
     def accept(self) -> List[str]:
