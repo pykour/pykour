@@ -51,7 +51,7 @@ def test_create_request(receive: Receive):
         "app": "test",
         "method": "GET",
         "path": "/test",
-        "query_string": b"a",
+        "query_string": b"a=1&b=1&b=2&c",
         "client": ("127.0.0.1", 12345),
         "headers": [
             (b"host", b"example.com"),
@@ -62,12 +62,13 @@ def test_create_request(receive: Receive):
     assert request.version == "1.1"
     assert request.app == "test"
     assert request.method == "GET"
-    assert request.query_string == b"a"
+    assert request.query_string == b"a=1&b=1&b=2&c"
+    assert request.query_params == {"a": "1", "b": ["1", "2"]}
     assert request.get_header("host") == ["example.com"]
     assert request.url.scheme == "http"
     assert request.client == "127.0.0.1:12345"
     assert request.path == "/test"
-    assert request.url.query == "a"
+    assert request.url.query == "a=1&b=1&b=2&c"
     assert len(request) == 7
     assert request["http_version"] == "1.1"
     for key, value in request.items():
