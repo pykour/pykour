@@ -3,6 +3,7 @@ import re
 import threading
 from datetime import datetime
 from http import HTTPStatus
+from typing import List
 
 from colorama import Fore, Style
 
@@ -85,7 +86,9 @@ class CustomLogger(logging.Logger):
         return level in self.levels
 
 
-def setup_logging(log_levels=None) -> None:
+def setup_logging(log_levels: List[int] = None) -> None:
+    logging.setLoggerClass(CustomLogger)
+
     if log_levels is None:
         log_levels = [logging.INFO, logging.WARN, logging.ERROR, ACCESS_LEVEL_NO]
 
@@ -104,8 +107,6 @@ def setup_logging(log_levels=None) -> None:
     console_handler.setFormatter(formatter)
     levels_filter = SpecificLevelsFilter(levels=log_levels)
     console_handler.addFilter(levels_filter)
-
-    logging.setLoggerClass(CustomLogger)
 
     logger = logging.getLogger("pykour")
     logger.setLevel(logging.NOTSET)
