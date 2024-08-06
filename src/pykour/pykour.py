@@ -24,11 +24,12 @@ class Pykour(Router):
 
         super().__init__(prefix=prefix)
         self.production_mode = os.getenv("PYKOUR_ENV") == "production"
-        self.app = ASGIApp()
-        self._logger = logging.getLogger("pykour")
         self._config = config
-
         setup_logging(self._config.get_log_levels())
+        self._logger = logging.getLogger("pykour")
+
+        self.app = ASGIApp()
+
         self.pool = None
         if self._config.get_datasource_type():
             self.pool = ConnectionPool(self._config)
