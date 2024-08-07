@@ -10,7 +10,25 @@ class Connection:
         self.conn = None
         if self.db_type == "sqlite":
             sqlite3 = importlib.import_module("sqlite3")
-            self.conn = sqlite3.connect(kwargs["url"])
+            self.conn = sqlite3.connect(kwargs["db"])
+        elif self.db_type == "mysql" or self.db_type == "maria":
+            pymysql = importlib.import_module("pymysql")
+            self.conn = pymysql.connect(
+                host=kwargs["host"],
+                user=kwargs["username"],
+                password=kwargs["password"],
+                db=kwargs["db"],
+                charset="utf8mb4",
+                cursorclass=pymysql.cursors.DictCursor,
+            )
+        elif self.db_type == "postgres":
+            psycopg2 = importlib.import_module("psycopg2")
+            self.conn = psycopg2.connect(
+                host=kwargs["host"],
+                user=kwargs["username"],
+                password=kwargs["password"],
+                dbname=kwargs["db"],
+            )
         else:
             raise ValueError(f"Unsupported session type: {self.db_type}")
 
@@ -19,10 +37,23 @@ class Connection:
     @classmethod
     def from_config(cls, config: Config):
         db_type = config.get_datasource_type()
-        url = config.get_datasource_url()
-        username = config.get_datasource_username()
-        password = config.get_datasource_password()
-        return cls(db_type, url=url, username=username, password=password)
+        if db_type == "sqlite":
+            db = config.get_datasource_db()
+            return cls(db_type, db=db)
+        elif db_type == "mysql" or db_type == "maria":
+            host = config.get_datasource_host()
+            db = config.get_datasource_db()
+            username = config.get_datasource_username()
+            password = config.get_datasource_password()
+            return cls(db_type, host=host, db=db, username=username, password=password)
+        elif db_type == "postgres":
+            host = config.get_datasource_host()
+            db = config.get_datasource_db()
+            username = config.get_datasource_username()
+            password = config.get_datasource_password()
+            return cls(db_type, host=host, db=db, username=username, password=password)
+        else:
+            raise ValueError(f"Unsupported session type: {db_type}")
 
     def find(self, query: str, params: Optional[Dict[str, Any]] = None) -> Union[Dict[str, Any], None]:
         self._execute(query, params)

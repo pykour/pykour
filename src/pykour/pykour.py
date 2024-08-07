@@ -30,6 +30,7 @@ class Pykour(Router):
 
         self.app = ASGIApp()
 
+        print(self._config.get_datasource_type())
         self.pool = None
         if self._config.get_datasource_type():
             self.pool = ConnectionPool(self._config)
