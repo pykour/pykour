@@ -1,7 +1,9 @@
 import importlib
+import logging
 from typing import Optional, Dict, Any, List, Union
 
 from pykour.config import Config
+from pykour.exceptions import DatabaseOperationError
 
 
 class Connection:
@@ -33,6 +35,10 @@ class Connection:
             raise ValueError(f"Unsupported session type: {self.db_type}")
 
         self.cursor = self.conn.cursor()
+        self.is_committed = False
+        self.is_rolled_back = False
+        self.is_closed = False
+        self.logger = logging.getLogger("pykour")
 
     @classmethod
     def from_config(cls, config: Config):
@@ -55,37 +61,82 @@ class Connection:
         else:
             raise ValueError(f"Unsupported session type: {db_type}")
 
-    def find(self, query: str, params: Optional[Dict[str, Any]] = None) -> Union[Dict[str, Any], None]:
-        self._execute(query, params)
-        row = self.cursor.fetchone()
-        if row:
-            columns = [desc[0] for desc in self.cursor.description]
-            return dict(zip(columns, row))
+    def find_one(self, query: str, params: Optional[Dict[str, Any]] = None) -> Union[Dict[str, Any], None]:
+        """Execute a query and return the first row as a dictionary.
+
+        Args:
+            query: The SQL query to execute.
+            params: The parameters to pass to the query.
+        Returns:
+            A dictionary representing the first row, or None if no rows are found
+        """
+
+        try:
+            self._execute(query, params)
+            row = self.cursor.fetchone()
+            if row:
+                columns = [desc[0] for desc in self.cursor.description]
+                return dict(zip(columns, row))
+        except Exception as e:
+            self.logger.error(f"Database operation failed: {e}")
+            raise DatabaseOperationError(caused_by=e)
         return None
 
-    def select(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-        self._execute(query, params)
-        rows = self.cursor.fetchall()
-        columns = [desc[0] for desc in self.cursor.description]
-        return [dict(zip(columns, row)) for row in rows]
+    def find_many(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """Execute a query and return all rows as a list of dictionaries.
+
+        Args:
+            query: The SQL query to execute.
+            params: The parameters to pass to the query.
+        Returns:
+            A list of dictionaries representing the rows.
+        """
+
+        try:
+            self._execute(query, params)
+            rows = self.cursor.fetchall()
+            columns = [desc[0] for desc in self.cursor.description]
+            return [dict(zip(columns, row)) for row in rows]
+        except Exception as e:
+            self.logger.error(f"Database operation failed: {e}")
+            raise DatabaseOperationError(caused_by=e)
 
     def execute(self, query: str, params: Optional[Dict[str, Any]] = None) -> int:
-        self._execute(query, params)
-        return self.cursor.rowcount
+        """Execute a query and return the number of affected rows.
+
+        Args:
+            query: The SQL query to execute.
+            params: The parameters to pass to the query.
+        Returns:
+            The number of affected rows.
+        """
+
+        try:
+            self._execute(query, params)
+            return self.cursor.rowcount
+        except Exception as e:
+            self.logger.error(f"Database operation failed: {e}")
+            raise DatabaseOperationError(caused_by=e)
 
     def commit(self):
+        """Commit the transaction."""
         self.conn.commit()
+        self.is_committed = True
 
     def rollback(self):
+        """Rollback the transaction."""
         self.conn.rollback()
+        self.is_rolled_back = True
 
     def close(self):
+        """Close the connection and cursor."""
         if self.cursor:
             self.cursor.close()
             self.cursor = None
         if self.conn:
             self.conn.close()
             self.conn = None
+        self.is_closed = True
 
     def _execute(self, query, params=None):
         if params:

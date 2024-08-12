@@ -46,3 +46,23 @@ class ValidationError(ValueError):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.message!r})"
+
+
+class DatabaseOperationError(Exception):
+    """DatabaseOperationError is raised when a database operation fails."""
+
+    def __init__(self, message: Union[str, None] = None, caused_by: Exception = None) -> None:
+        if message is None:
+            self.message = "Database operation error"
+        else:
+            self.message = str(message)
+        self.caused_by = caused_by
+
+    def __str__(self) -> str:
+        if self.caused_by:
+            return f"{self.message or ''} caused by {self.caused_by}"
+        else:
+            return self.message or ""
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.message!r})"
