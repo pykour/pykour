@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 from pykour.db.connection import Connection
 from pykour.config import Config
@@ -10,7 +12,41 @@ def mock_config():
         "pykour": {
             "datasource": {
                 "type": "sqlite",
-                "db": ":memory:",
+                "db": "file::memory:",
+            }
+        }
+    }
+    return config
+
+
+@pytest.fixture
+def mock_config_mysql():
+    config = Config()
+    config.config = {
+        "pykour": {
+            "datasource": {
+                "type": "mysql",
+                "host": "localhost",
+                "db": "test",
+                "username": "user",
+                "password": "pass",
+            }
+        }
+    }
+    return config
+
+
+@pytest.fixture
+def mock_config_postgres():
+    config = Config()
+    config.config = {
+        "pykour": {
+            "datasource": {
+                "type": "postgres",
+                "host": "localhost",
+                "db": "test",
+                "username": "user",
+                "password": "pass",
             }
         }
     }
@@ -33,15 +69,33 @@ def mock_config_unsupported_type():
     return config
 
 
-def test_connection_initialization_with_sqlite_succeeds(mock_config):
+def test_connection_initialization_with_sqlite_succeeds(mocker, mock_config):
+    mocker.patch("sqlite3.connect", return_value=MagicMock())
     connection = Connection.from_config(mock_config)
     assert connection.db_type == "sqlite"
+    assert connection.conn is not None
+
+
+def test_connection_initialization_with_mysql_succeeds(mocker, mock_config_mysql):
+    mocker.patch("pymysql.connect", return_value=MagicMock())
+    connection = Connection.from_config(mock_config_mysql)
+    assert connection.db_type == "mysql"
+    assert connection.conn is not None
+
+
+def test_connection_initialization_with_postgres_succeeds(mocker, mock_config_postgres):
+    mocker.patch("psycopg2.connect", return_value=MagicMock())
+    connection = Connection.from_config(mock_config_postgres)
+    assert connection.db_type == "postgres"
     assert connection.conn is not None
 
 
 def test_connection_initialization_with_unsupported_db_type_raises_error(mock_config_unsupported_type):
     with pytest.raises(ValueError):
         Connection.from_config(mock_config_unsupported_type)
+
+    with pytest.raises(ValueError):
+        Connection("unsupported_db")
 
 
 def test_fetch_one_returns_correct_data(mock_config):
