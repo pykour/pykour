@@ -2,8 +2,8 @@ import logging
 import time
 from http import HTTPStatus
 
-import pykour.handler.request as request_handler
-import pykour.handler.response as response_handler
+import pykour.internal.handler.request as request_handler
+import pykour.internal.handler.response as response_handler
 import pykour.exceptions as ex
 from pykour.logging import write_access_log
 
