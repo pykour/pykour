@@ -90,3 +90,42 @@ def test_validation_error_exception_with_caused_by():
     assert e.args == ("Custom message", caused_by)
     assert str(e) == "Custom message caused by Caused by error"
     assert repr(e) == "ValidationError('Custom message')"
+
+
+def test_database_operation_error_exception_without_message():
+    from pykour.exceptions import DatabaseOperationError
+
+    # Act
+    e = DatabaseOperationError()
+
+    # Assert
+    assert e.args == ()
+    assert str(e) == "Database operation error"
+    assert repr(e) == "DatabaseOperationError('Database operation error')"
+
+
+def test_database_operation_error_exception_with_message():
+    from pykour.exceptions import DatabaseOperationError
+
+    # Act
+    e = DatabaseOperationError("Custom message")
+
+    # Assert
+    assert e.args == ("Custom message",)
+    assert str(e) == "Custom message"
+    assert repr(e) == "DatabaseOperationError('Custom message')"
+
+
+def test_database_operation_error_exception_with_caused_by():
+    from pykour.exceptions import DatabaseOperationError
+
+    # Arrange
+    caused_by = ValueError("Caused by error")
+
+    # Act
+    e = DatabaseOperationError("Custom message", caused_by)
+
+    # Assert
+    assert e.args == ("Custom message", caused_by)
+    assert str(e) == "Custom message caused by Caused by error"
+    assert repr(e) == "DatabaseOperationError('Custom message')"
