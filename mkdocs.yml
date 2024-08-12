@@ -48,6 +48,8 @@ nav:
       - Introduction: middleware/introduction.md
       - UUID Middleware: middleware/uuid.md
       - GZIP Middleware: middleware/gzip.md
+    - Testing:
+        - Introduction: testing/introduction.md
   - API Docs:
     - core:
       - Pykour: api/pykour.md
