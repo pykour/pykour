@@ -1,10 +1,10 @@
 # Testing
 
-Pykourでは、テストを支援するツールを提供しています。
+Pykour provides tools to assist in testing.
 
-## ルートのテスト
+## Testing the route handler
 
-`pykour.testing`モジュールは、Pykourのテストを行うためのツールを提供しています。
+The `pykour.testing` module provides tools to help you test Pykour.
 
 ```python
 import pytest
@@ -18,7 +18,7 @@ async def test_hello():
     response.is_ok().expect({ 'message': 'Hello, World!' })
 ```
 
-`perform`関数は、あなたのアプリケーションとリクエストを受け取り、レスポンスを返します。
-`is_ok`メソッドは、レスポンスが成功したかどうかを確認し、`expect`メソッドは、レスポンスの内容を確認します。
+The `perform` function takes your application and request and returns a response.
+The `is_ok` method checks if the response was successful, and the `expect` method checks the content of the response.
 
-リクエストは、`get`、`post`、`put`、`delete`、`patch`、`options`、`head`関数を使用して作成できます。
+Requests can be made using the `get`, `post`, `put`, `delete`, `patch`, `options`, and `head` functions.
