@@ -1,6 +1,6 @@
-from pykour import Pykour
+from pykour import Pykour, Config
 
-app = Pykour()
+app = Pykour(config=Config("config.yaml"))
 
 
 @app.get("/")
