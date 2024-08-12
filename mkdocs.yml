@@ -6,8 +6,18 @@ theme:
   logo: assets/logo.png
   favicon: assets/favicon.ico
   palette:
-    primary: indigo
-    secondary: pink
+    - scheme: default
+      primary: indigo
+      accent: pink
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: pink
+      toggle:
+          icon: material/toggle-switch
+          name: Switch to light mode
   features:
     - content.tabs.link
     - content.code.annotate
@@ -49,17 +59,17 @@ nav:
       - GZIP Middleware: middleware/gzip.md
     - Testing:
         - Introduction: testing/introduction.md
-  - API Docs:
-    - core:
-      - Pykour: api/pykour.md
-      - Router: api/router.md
-      - Request: api/request.md
-      - Response: api/response.md
-      - URL: api/url.md
-      - BaseSchema: api/baseschema.md
-    - exceptions:
-      - HTTPException: api/httpexception.md
-      - ResourceNotFoundException: api/resourcenotfoundexception.md
+#  - API Docs:
+#    - core:
+#      - Pykour: api/pykour.md
+#      - Router: api/router.md
+#      - Request: api/request.md
+#      - Response: api/response.md
+#      - URL: api/url.md
+#      - BaseSchema: api/baseschema.md
+#    - exceptions:
+#      - HTTPException: api/httpexception.md
+#      - ResourceNotFoundException: api/resourcenotfoundexception.md
   - Release Notes: release-notes.md
 repo_name: pykour/pykour
 repo_url: https://github.com/pykour/pykour
