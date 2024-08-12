@@ -33,7 +33,6 @@ nav:
       - Introduction: quickstart/introduction.md
       - Routes: quickstart/routes.md
       - Schema: quickstart/schema.md
-      - Middleware: quickstart/middleware.md
     - Routing:
       - Introduction: routing/introduction.md
       - Router: routing/router.md
