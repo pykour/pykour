@@ -18,6 +18,9 @@ theme:
       toggle:
           icon: material/toggle-switch
           name: Switch to light mode
+  font:
+    text: Roboto
+    code: Inconsolata
   features:
     - content.tabs.link
     - content.code.annotate
