@@ -23,3 +23,12 @@ def test_cast():
 
     with pytest.raises(ValueError):
         cast("1", datetime)
+
+
+def test_convert_to_json_string():
+    from pykour.util import convert_to_json_string
+
+    assert convert_to_json_string("{'a': 1}") == '{"a": 1}'
+    assert convert_to_json_string('{"a": "1"}') == '{"a": "1"}'
+    with pytest.raises(SyntaxError):
+        convert_to_json_string("{'a': 1")

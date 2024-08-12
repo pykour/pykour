@@ -1,16 +1,124 @@
 # Database
 
-Pykour provides functionality for using a database.
+Pykour provides facilities for connecting to and working with databases.
 
-## Connecting to the Database
+## Database connection
 
-To connect to a database, you need to specify the connection information in the configuration file.
+To connect to a database, specify the connection information in the configuration file.
 
 ```yaml
 pykour:
-    database:
+    datasource:
         type: sqlite
-        url: /path/to/database.sqlite
+        db: /path/to/database.sqlite
 ```
 
-The example above shows the configuration for connecting to an SQLite database.
+```python
+from pykour import Pykour, Config
+
+app = Pykour(config=Config("config.yml"))
+
+@app.get("/")
+def index():
+    return {"message": "Hello, World!"}
+```
+
+This example connects to a SQLite database called `database.sqlite` located at `/path/to`.
+
+### Connecting to Sqlite
+
+To connect to a Sqlite database, specify `pykour.datasource.type` as `sqlite`.
+
+```yaml
+pykour:
+    datasource:
+        type: sqlite
+        db: /path/to/database.sqlite
+```
+
+If you want to use an in-memory database, specify `file::memory:` for `db`.
+
+```yaml
+pykour:
+    datasource:
+        type: sqlite
+        db: file::memory:?cache=shared
+```
+
+### Connecting to MySQL
+
+To connect to a MySQL database, specify `mysql` in `pykour.datasource.type`.
+
+```yaml
+pykour:
+    datasource:
+        type: mysql
+        host: localhost
+        db: dbname
+        username: user
+        password: password
+```
+
+If you want to connect to MySQL, you need to install the `pymysql` package separately.
+
+```bash
+$ pip install pymysql
+```
+
+### Connecting to MariaDB
+
+To connect to a MariaDB database, specify `mariadb` for `pykour.datasource.type`.
+
+```yaml
+pykour:
+    datasource:
+        type: maria
+        host: localhost
+        db: dbname
+        username: user
+        password: password
+```
+
+If you want to connect to MariaDB, you need to install the `pymysql` package separately.
+
+```bash
+$ pip install pymysql
+```
+
+###  Connecting to PostgreSQL
+
+To connect to a PostgreSQL database, specify `postgres` in `pykour.datasource.type`.
+
+```yaml
+pykour:
+    datasource:
+        type: postgres
+        host: localhost
+        db: dbname
+        username: user
+        password: password
+```
+
+If you want to connect to PostgreSQL, you need to install the `psycopg2` package separately.
+
+```bash
+$ pip install psycopg2-binary
+```
+
+## Connection Pool
+
+Pykour uses connection pools to manage database connections.
+Connection pools allow for reuse of connections to improve application performance.
+Connection pool pools 5 connections by default, but you can change the number of connections using 
+`pykour.datasource.pool.max_connections`.
+
+```yaml
+pykour:
+    datasource:
+        type: sqlite
+        db: /path/to/database.sqlite
+        pool:
+            max_connections: 10
+```
+
+Use the `Connection` class to connect to and manipulate the database, which uses a connection pool to manage connections.

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
 import json
 from typing import Any
 from unittest.mock import AsyncMock
 
+from pykour.db import Connection
 from pykour.types import Scope
 from pykour import __version__, Pykour
+from pykour.util import convert_to_json_string
 
 
 class Assertion:
@@ -44,8 +47,8 @@ class Assertion:
 
     def expect(self, expected: Any) -> Assertion:
         actual = self.get_body()
-        if isinstance(expected, dict):
-            actual = json.loads(self.get_body())
+        if isinstance(expected, dict) or isinstance(expected, list):
+            actual = json.loads(convert_to_json_string(actual))
         assert actual == expected, f"Expected '{expected}', but got '{actual}'"
         return self
 
@@ -205,3 +208,36 @@ async def perform(app: Pykour, scope: Scope) -> Assertion:
     send = AsyncMock()
     await app(scope, receive, send)
     return Assertion(scope, receive, send)
+
+
+def get_connection(app: Pykour) -> Connection:
+    return app.pool.get_connection()
+
+
+def release_connection(app: Pykour, connection: Connection) -> None:
+    app.pool.release_connection(connection)
+
+
+def load_from_dir(conn: Connection, directory_path: str) -> None:
+    # Get all files in the directory
+    file_names = sorted(os.listdir(directory_path))
+
+    for file_name in file_names:
+        file_path = os.path.join(directory_path, file_name)
+
+        # Check if the file is a SQL file
+        if os.path.isfile(file_path):
+            with open(file_path, "r") as file:
+                # Read the SQL statements from the file
+                sql_statements = file.read().strip().split(";")
+
+                # Execute each SQL statement
+                for sql in sql_statements:
+                    sql = sql.strip()  # Remove leading and trailing whitespace
+                    if sql:  #
+                        try:
+                            conn.execute(sql)
+                            conn.commit()
+                            print(f"Executed: {sql}")
+                        except Exception as e:
+                            print(f"Failed to execute: {sql}. Error: {e}")

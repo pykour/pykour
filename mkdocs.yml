@@ -1,12 +1,26 @@
 site_name: Pykour
-site_description: Pykour is modern, fast, and easy to use web framework for Python.
+site_description: Pykour is modern, fast, and easy to use REST framework for Python.
 site_url: https://pykour.com/
 theme:
   name: material
   logo: assets/logo.png
   favicon: assets/favicon.ico
   palette:
-    primary: indigo
+    - scheme: default
+      primary: indigo
+      accent: pink
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: pink
+      toggle:
+          icon: material/toggle-switch
+          name: Switch to light mode
+  font:
+    text: Roboto
+    code: Inconsolata
   features:
     - content.tabs.link
     - content.code.annotate
@@ -32,7 +46,6 @@ nav:
       - Introduction: quickstart/introduction.md
       - Routes: quickstart/routes.md
       - Schema: quickstart/schema.md
-      - Middleware: quickstart/middleware.md
     - Routing:
       - Introduction: routing/introduction.md
       - Router: routing/router.md
@@ -47,17 +60,19 @@ nav:
       - Introduction: middleware/introduction.md
       - UUID Middleware: middleware/uuid.md
       - GZIP Middleware: middleware/gzip.md
-  - API Docs:
-    - core:
-      - Pykour: api/pykour.md
-      - Router: api/router.md
-      - Request: api/request.md
-      - Response: api/response.md
-      - URL: api/url.md
-      - BaseSchema: api/baseschema.md
-    - exceptions:
-      - HTTPException: api/httpexception.md
-      - ResourceNotFoundException: api/resourcenotfoundexception.md
+    - Testing:
+        - Introduction: testing/introduction.md
+#  - API Docs:
+#    - core:
+#      - Pykour: api/pykour.md
+#      - Router: api/router.md
+#      - Request: api/request.md
+#      - Response: api/response.md
+#      - URL: api/url.md
+#      - BaseSchema: api/baseschema.md
+#    - exceptions:
+#      - HTTPException: api/httpexception.md
+#      - ResourceNotFoundException: api/resourcenotfoundexception.md
   - Release Notes: release-notes.md
 repo_name: pykour/pykour
 repo_url: https://github.com/pykour/pykour

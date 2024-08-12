@@ -1,3 +1,5 @@
+import ast
+import json
 import logging
 from typing import Any
 from enum import Enum
@@ -25,4 +27,14 @@ def cast(value: Any, to_type: type) -> Any:
     except Exception as e:
         if logger.isEnabledFor(logging.ERROR):
             logger.error(f"Error casting value '{value}' to type '{to_type}': {e}")
+        raise e
+
+
+def convert_to_json_string(input_str):
+    try:
+        python_obj = ast.literal_eval(input_str)
+
+        json_str = json.dumps(python_obj)
+        return json_str
+    except (ValueError, SyntaxError) as e:
         raise e

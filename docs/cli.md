@@ -8,12 +8,9 @@ To run a Pykour application, use the `pykour dev` command.
 ```bash
 $ pykour dev main:app
 INFO:     Will watch for changes in these directories: ['/home/user/pykour-demo']
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [59894] using StatReload
-INFO:     Started server process [59896]
-INFO:     Waiting for application startup.
-INFO:     ASGI 'lifespan' protocol appears unsupported.
-INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+INFO:     Started reloader process [7970] using StatReload
+Loading config file: /home/user/pykour-demo/config.yml
 ```
 
 ### `pykour dev`

@@ -1,8 +1,3 @@
-from unittest.mock import MagicMock
-
-import pytest
-
-
 def test_init():
     from pykour.app import ASGIApp
 

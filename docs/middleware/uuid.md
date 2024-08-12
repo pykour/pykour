@@ -6,10 +6,10 @@ The UUID Middleware creates a UUID to uniquely identify requests and adds it to 
 
 ```python
 from pykour import Pykour
-from pykour.middleware import UUIDMiddleware
+from pykour.middleware import uuid_middleware
 
 app = Pykour()
-app.add_middleware(UUIDMiddleware)
+app.add_middleware(uuid_middleware())
 
 @app.get('/')
 def index():
@@ -24,10 +24,10 @@ If you want to use a header other than `x-request-id`, you can specify the heade
 
 ```python
 from pykour import Pykour
-from pykour.middleware import UUIDMiddleware
+from pykour.middleware import uuid_middleware
 
 app = Pykour()
-app.add_middleware(UUIDMiddleware, header_name="X-TEST-ID")
+app.add_middleware(uuid_middleware("X-TEST-ID"))
 
 @app.get('/')
 def index():

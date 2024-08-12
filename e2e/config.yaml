@@ -1,0 +1,6 @@
+pykour:
+  datasource:
+    type: sqlite
+    db: file::memory:?cache=shared
+    pool:
+      max_connections: 10

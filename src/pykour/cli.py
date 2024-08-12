@@ -13,10 +13,12 @@ from pykour import __version__
 usage_text = """usage: pykour [-h] {subcommand} ...
 
 positional arguments:
+    dev                 Run Web Server for Development
     run                 Run Web Server
 
 optional arguments:
   -h, --help            show this help message and exit
+  -v, --version         show Pykour version
 """
 
 sys.path.append(os.getcwd())

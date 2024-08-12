@@ -6,6 +6,8 @@ from pykour.db.connection import Connection
 
 
 class ConnectionPool:
+    """Connection pool for database connections."""
+
     def __init__(self, config: Config):
         self.config = config
         self.max_connections = config.get_datasource_pool_max_connections()
