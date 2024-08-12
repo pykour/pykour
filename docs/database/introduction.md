@@ -59,6 +59,12 @@ pykour:
         password: password
 ```
 
+If you want to connect to MySQL, you need to install the `pymysql` package separately.
+
+```bash
+$ pip install pymysql
+```
+
 ### Connecting to MariaDB
 
 To connect to a MariaDB database, specify `mariadb` for `pykour.datasource.type`.
@@ -73,6 +79,12 @@ pykour:
         password: password
 ```
 
+If you want to connect to MariaDB, you need to install the `pymysql` package separately.
+
+```bash
+$ pip install pymysql
+```
+
 ###  Connecting to PostgreSQL
 
 To connect to a PostgreSQL database, specify `postgres` in `pykour.datasource.type`.
@@ -85,6 +97,12 @@ pykour:
         db: dbname
         username: user
         password: password
+```
+
+If you want to connect to PostgreSQL, you need to install the `psycopg2` package separately.
+
+```bash
+$ pip install psycopg2-binary
 ```
 
 ## Connection Pool
