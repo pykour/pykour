@@ -51,3 +51,42 @@ def test_resource_not_found_exception_with_custom_message():
     assert e.message == "Custom message"
     assert str(e) == "404 Custom message"
     assert repr(e) == "ResourceNotFoundException(status_code=404 message=Custom message)"
+
+
+def test_validation_error_exception_without_message():
+    from pykour.exceptions import ValidationError
+
+    # Act
+    e = ValidationError()
+
+    # Assert
+    assert e.args == ()
+    assert str(e) == "Validation error"
+    assert repr(e) == "ValidationError('Validation error')"
+
+
+def test_validation_error_exception_with_message():
+    from pykour.exceptions import ValidationError
+
+    # Act
+    e = ValidationError("Custom message")
+
+    # Assert
+    assert e.args == ("Custom message",)
+    assert str(e) == "Custom message"
+    assert repr(e) == "ValidationError('Custom message')"
+
+
+def test_validation_error_exception_with_caused_by():
+    from pykour.exceptions import ValidationError
+
+    # Arrange
+    caused_by = ValueError("Caused by error")
+
+    # Act
+    e = ValidationError("Custom message", caused_by)
+
+    # Assert
+    assert e.args == ("Custom message", caused_by)
+    assert str(e) == "Custom message caused by Caused by error"
+    assert repr(e) == "ValidationError('Custom message')"
