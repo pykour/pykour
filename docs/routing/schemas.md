@@ -1,4 +1,4 @@
-# スキーマ
+# Schema
 
 The request body is mapped to a dictionary, but you can use a schema to take advantage of type hints.
 

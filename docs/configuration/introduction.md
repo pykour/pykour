@@ -9,9 +9,9 @@ Settings that begin with `pykour` are used by Pykour. If you create custom setti
 To use a configuration file, specify the path to the configuration file when creating a Pykour instance.
 
 ```python
-from pykour import Pykour
+from pykour import Pykour, Config
 
-app = Pykour('config.yaml')
+app = Pykour(config=Config('config.yaml'))
 
 @app.get('/')
 def index():

@@ -1,4 +1,4 @@
-# ルーティング
+# Routing
 
 Routing is the method of associating application URLs with route functions.
 In Pykour, routes are defined using the `route()` decorator.
