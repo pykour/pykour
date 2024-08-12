@@ -1,4 +1,3 @@
-import json
 import gzip
 from io import BytesIO
 import pytest
