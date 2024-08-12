@@ -5,7 +5,7 @@ import pytest
 
 
 def test_determine_content_type_for_response_body():
-    from pykour.handler.response import determine_content_type_for_response_body
+    from pykour.internal.handler.response import determine_content_type_for_response_body
     from pykour.request import Request
 
     request = MagicMock(spec=Request)
@@ -25,7 +25,7 @@ def test_determine_content_type_for_response_body():
 
 
 def test_determine_content_type_for_error_response():
-    from pykour.handler.response import determine_content_type_for_error_response
+    from pykour.internal.handler.response import determine_content_type_for_error_response
     from pykour.request import Request
 
     request = MagicMock(spec=Request)
@@ -41,7 +41,7 @@ def test_determine_content_type_for_error_response():
 
 
 def test_detect_error_phrase():
-    from pykour.handler.response import detect_error_phrase
+    from pykour.internal.handler.response import detect_error_phrase
     from pykour.response import Response
 
     response = MagicMock(spec=Response)
@@ -57,7 +57,7 @@ def test_detect_error_phrase():
 
 
 def test_detect_response_body_by_no_content():
-    from pykour.handler.response import detect_response_body
+    from pykour.internal.handler.response import detect_response_body
     from pykour.request import Request
     from pykour.response import Response
 
@@ -72,7 +72,7 @@ def test_detect_response_body_by_no_content():
 
 
 def test_detect_response_body_by_options_method():
-    from pykour.handler.response import detect_response_body
+    from pykour.internal.handler.response import detect_response_body
     from pykour.request import Request
     from pykour.response import Response
 
@@ -92,7 +92,7 @@ def test_detect_response_body_by_options_method():
 
 
 def test_detect_response_body_by_head_method():
-    from pykour.handler.response import detect_response_body
+    from pykour.internal.handler.response import detect_response_body
     from pykour.request import Request
     from pykour.response import Response
 
@@ -112,7 +112,7 @@ def test_detect_response_body_by_head_method():
 
 
 def test_detect_response_body_by_content_type():
-    from pykour.handler.response import detect_response_body
+    from pykour.internal.handler.response import detect_response_body
     from pykour.request import Request
     from pykour.response import Response
 
@@ -140,7 +140,7 @@ def test_detect_response_body_by_content_type():
 
 @pytest.mark.asyncio
 async def test_handle_response():
-    from pykour.handler.response import handle_response
+    from pykour.internal.handler.response import handle_response
     from pykour.request import Request
     from pykour.response import Response
 
@@ -158,7 +158,7 @@ async def test_handle_response():
 
 @pytest.mark.asyncio
 async def test_handle_error():
-    from pykour.handler.response import handle_error
+    from pykour.internal.handler.response import handle_error
     from pykour.request import Request
     from pykour.response import Response
     from http import HTTPStatus
@@ -176,7 +176,7 @@ async def test_handle_error():
 
 @pytest.mark.asyncio
 async def test_handle_http_exception():
-    from pykour.handler.response import handle_http_exception
+    from pykour.internal.handler.response import handle_http_exception
     from pykour.request import Request
     from pykour.response import Response
     from http import HTTPStatus

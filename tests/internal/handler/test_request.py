@@ -4,7 +4,7 @@ import pytest
 
 
 def test_is_supported_schema():
-    from pykour.handler.request import is_supported_scheme
+    from pykour.internal.handler.request import is_supported_scheme
     from pykour.request import Request
 
     request = MagicMock(spec=Request)
@@ -17,7 +17,7 @@ def test_is_supported_schema():
 
 
 def test_is_supported_method():
-    from pykour.handler.request import is_supported_method
+    from pykour.internal.handler.request import is_supported_method
     from pykour.request import Request
 
     request = MagicMock(spec=Request)
@@ -48,7 +48,7 @@ def test_is_supported_method():
 
 
 def test_is_method_allowed():
-    from pykour.handler.request import is_method_allowed
+    from pykour.internal.handler.request import is_method_allowed
     from pykour.request import Request
 
     request = MagicMock(spec=Request)
@@ -69,7 +69,7 @@ def test_is_method_allowed():
 
 
 def test_is_valid_route():
-    from pykour.handler.request import is_valid_route
+    from pykour.internal.handler.request import is_valid_route
     from pykour.request import Request
 
     request = MagicMock(spec=Request)
@@ -83,7 +83,7 @@ def test_is_valid_route():
 
 @pytest.mark.asyncio
 async def test_bind_args1():
-    from pykour.handler.request import bind_args
+    from pykour.internal.handler.request import bind_args
     from pykour.request import Request
     from pykour.response import Response
     from pykour.schema import BaseSchema
@@ -153,7 +153,7 @@ async def test_bind_args1():
 
 @pytest.mark.asyncio
 async def test_bind_args2():
-    from pykour.handler.request import bind_args
+    from pykour.internal.handler.request import bind_args
     from pykour.request import Request
     from pykour.response import Response
     from typing import Any
@@ -181,7 +181,7 @@ async def test_bind_args2():
 
 @pytest.mark.asyncio
 async def test_call_sync(mocker):
-    from pykour.handler.request import call
+    from pykour.internal.handler.request import call
 
     def func():
         return "1"
@@ -189,7 +189,7 @@ async def test_call_sync(mocker):
     request = MagicMock()
     response = MagicMock()
 
-    mocker.patch("pykour.handler.request.bind_args", return_value=({}, None))
+    mocker.patch("pykour.internal.handler.request.bind_args", return_value=({}, None))
     result = await call(func, request, response)
 
     assert result == "1"
@@ -197,7 +197,7 @@ async def test_call_sync(mocker):
 
 @pytest.mark.asyncio
 async def test_call_async(mocker):
-    from pykour.handler.request import call
+    from pykour.internal.handler.request import call
 
     async def func():
         return "1"
@@ -205,7 +205,7 @@ async def test_call_async(mocker):
     request = MagicMock()
     response = MagicMock()
 
-    mocker.patch("pykour.handler.request.bind_args", return_value=({}, None))
+    mocker.patch("pykour.internal.handler.request.bind_args", return_value=({}, None))
     result = await call(func, request, response)
 
     assert result == "1"
@@ -213,7 +213,7 @@ async def test_call_async(mocker):
 
 @pytest.mark.asyncio
 async def test_call_with_connection(mocker):
-    from pykour.handler.request import call
+    from pykour.internal.handler.request import call
     from pykour.db.connection import Connection
 
     def func(c: Connection):
@@ -227,7 +227,7 @@ async def test_call_with_connection(mocker):
     request.app = app
     response = MagicMock()
 
-    mocker.patch("pykour.handler.request.bind_args", return_value=({"c": conn}, conn))
+    mocker.patch("pykour.internal.handler.request.bind_args", return_value=({"c": conn}, conn))
     result = await call(func, request, response)
 
     assert result == "1"
@@ -238,7 +238,7 @@ async def test_call_with_connection(mocker):
 
 @pytest.mark.asyncio
 async def test_call_throw_exception(mocker):
-    from pykour.handler.request import call
+    from pykour.internal.handler.request import call
     from pykour.db.connection import Connection
 
     def func(c: Connection):
@@ -252,7 +252,7 @@ async def test_call_throw_exception(mocker):
     request.app = app
     response = MagicMock()
 
-    mocker.patch("pykour.handler.request.bind_args", return_value=({"c": conn}, conn))
+    mocker.patch("pykour.internal.handler.request.bind_args", return_value=({"c": conn}, conn))
     with pytest.raises(ValueError):
         await call(func, request, response)
 
