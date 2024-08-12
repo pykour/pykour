@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pykour"
-version = "0.1.4"
-description = "Pykour is modern, fast, and easy to use web framework for Python."
+version = "0.2.0"
+description = "Pykour is modern, fast, and easy to use REST framework for Python."
 authors = ["Takashi Yamashina <takashi.yamashina@gmail.com>"]
 readme = "README.md"
 
@@ -14,10 +14,10 @@ pykour = "pykour.cli:main"
 
 [tool.poetry.dependencies]
 python = ">=3.9"
-uvicorn = "^0.30.3"
-watchdog = "^4.0.1"
-pyyaml = "^6.0.1"
-gunicorn = "^22.0.0"
+uvicorn = "^0.30"
+watchdog = "^4.0"
+pyyaml = "^6.0"
+gunicorn = "^23.0"
 uvicorn-worker = "^0.2.0"
 colorama = "^0.4.6"
 
