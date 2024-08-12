@@ -232,8 +232,14 @@ def test_get_datasource_type():
 
 def test_get_datasource_url():
     config = Config()
-    config.config = {"pykour": {"datasource": {"url": "sqlite:///test.db"}}}
-    assert config.get_datasource_url() == "sqlite:///test.db"
+    config.config = {"pykour": {"datasource": {"db": "sqlite:///test.db"}}}
+    assert config.get_datasource_db() == "sqlite:///test.db"
+
+
+def test_get_datasource_host():
+    config = Config()
+    config.config = {"pykour": {"datasource": {"host": "localhost"}}}
+    assert config.get_datasource_host() == "localhost"
 
 
 def test_get_datasource_username():

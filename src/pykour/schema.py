@@ -21,6 +21,13 @@ class BaseSchema(metaclass=BaseSchemaMetaclass):
         self._validate(data)
         self._set_attributes(data)
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return all(
+            getattr(self, key) == getattr(other, key) for key in self.__fields__.keys()  # type: ignore[attr-defined]
+        )
+
     def _set_attributes(self, data: Dict[str, Any]) -> None:
         for key, value in data.items():
             setattr(self, key, value)

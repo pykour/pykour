@@ -10,9 +10,7 @@ def mock_config():
         "pykour": {
             "datasource": {
                 "type": "sqlite",
-                "url": ":memory:",
-                "username": "user",
-                "password": "pass",
+                "db": ":memory:",
             }
         }
     }
