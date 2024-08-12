@@ -1,5 +1,5 @@
 site_name: Pykour
-site_description: Pykour is modern, fast, and easy to use web framework for Python.
+site_description: Pykour is modern, fast, and easy to use REST framework for Python.
 site_url: https://pykour.com/
 theme:
   name: material
@@ -7,6 +7,7 @@ theme:
   favicon: assets/favicon.ico
   palette:
     primary: indigo
+    secondary: pink
   features:
     - content.tabs.link
     - content.code.annotate
