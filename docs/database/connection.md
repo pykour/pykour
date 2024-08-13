@@ -71,3 +71,14 @@ The `close` method closes a connection.
 ```python
 conn.close()
 ```
+
+## Parameterized Queries
+
+Parameterization, rather than embedding variables directly in SQL, allows for separation of query and parameters.
+
+```python
+result = conn.find_one("SELECT * FROM users WHERE id = ?", 1)
+```
+
+The above example uses the `?` placeholder to specify the parameter.
+The second argument to the `find_one` method is the parameter value.
