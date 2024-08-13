@@ -6,6 +6,7 @@
 
 - Implement database access functions
 - Implementation of a Logger within the Framework
+- Support SQL Parameters
 
 ### Enhancements
 

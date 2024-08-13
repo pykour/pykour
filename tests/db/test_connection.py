@@ -160,7 +160,7 @@ def test_close_closes_connection_and_cursor(mock_config):
 def test_execute_with_params(mock_config):
     connection = Connection.from_config(mock_config)
     connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    connection.execute("INSERT INTO test (name) VALUES (?)", ("John Doe",))
+    connection.execute("INSERT INTO test (name) VALUES (?)", "John Doe")
     result = connection.find_one("SELECT * FROM test WHERE id = 1")
     assert result == {"id": 1, "name": "John Doe"}
 
@@ -181,3 +181,17 @@ def test_execute_raises_database_operation_error(mock_config):
     connection = Connection.from_config(mock_config)
     with pytest.raises(DatabaseOperationError):
         connection.execute("SELECT * FROM test WHERE id = 1")
+
+
+def test_execute_when_type_is_postgres(mocker):
+    driver = MagicMock()
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value = cursor
+    driver.connect.return_value = conn
+
+    mocker.patch("importlib.import_module", return_value=driver)
+    connection = Connection(db_type="postgres", host="localhost", db="test", username="user", password="pass")
+
+    connection.execute("SELECT * FROM test WHERE id = ?", 1)
+    cursor.execute.assert_called_once_with("SELECT * FROM test WHERE id = %s", (1,))

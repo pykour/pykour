@@ -1,6 +1,6 @@
 import importlib
 import logging
-from typing import Optional, Dict, Any, List, Union
+from typing import Dict, Any, List, Union
 
 from pykour.config import Config
 from pykour.exceptions import DatabaseOperationError
@@ -61,18 +61,18 @@ class Connection:
         else:
             raise ValueError(f"Unsupported session type: {db_type}")
 
-    def find_one(self, query: str, params: Optional[Dict[str, Any]] = None) -> Union[Dict[str, Any], None]:
+    def find_one(self, query: str, *args) -> Union[Dict[str, Any], None]:
         """Execute a query and return the first row as a dictionary.
 
         Args:
             query: The SQL query to execute.
-            params: The parameters to pass to the query.
+            args: The parameters to pass to the query.
         Returns:
             A dictionary representing the first row, or None if no rows are found
         """
 
         try:
-            self._execute(query, params)
+            self._execute(query, args)
             row = self.cursor.fetchone()
             if row:
                 columns = [desc[0] for desc in self.cursor.description]
@@ -82,18 +82,18 @@ class Connection:
             raise DatabaseOperationError(caused_by=e)
         return None
 
-    def find_many(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    def find_many(self, query: str, *args) -> List[Dict[str, Any]]:
         """Execute a query and return all rows as a list of dictionaries.
 
         Args:
             query: The SQL query to execute.
-            params: The parameters to pass to the query.
+            args: The parameters to pass to the query.
         Returns:
             A list of dictionaries representing the rows.
         """
 
         try:
-            self._execute(query, params)
+            self._execute(query, args)
             rows = self.cursor.fetchall()
             columns = [desc[0] for desc in self.cursor.description]
             return [dict(zip(columns, row)) for row in rows]
@@ -101,18 +101,18 @@ class Connection:
             self.logger.error(f"Database operation failed: {e}")
             raise DatabaseOperationError(caused_by=e)
 
-    def execute(self, query: str, params: Optional[Dict[str, Any]] = None) -> int:
+    def execute(self, query: str, *args) -> int:
         """Execute a query and return the number of affected rows.
 
         Args:
             query: The SQL query to execute.
-            params: The parameters to pass to the query.
+            args: The parameters to pass to the query.
         Returns:
             The number of affected rows.
         """
 
         try:
-            self._execute(query, params)
+            self._execute(query, args)
             return self.cursor.rowcount
         except Exception as e:
             self.logger.error(f"Database operation failed: {e}")
@@ -138,8 +138,12 @@ class Connection:
             self.conn = None
         self.is_closed = True
 
-    def _execute(self, query, params=None):
-        if params:
-            self.cursor.execute(query, params)
+    def _execute(self, query, args=None):
+        if self.db_type == "postgres":
+            # Convert ? to %s for PostgreSQL
+            query = query.replace("?", "%s")
+
+        if args:
+            self.cursor.execute(query, args)
         else:
             self.cursor.execute(query)
