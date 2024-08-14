@@ -100,7 +100,7 @@ def test_connection_initialization_with_unsupported_db_type_raises_error(mock_co
 
 
 def test_fetch_one_returns_correct_data(mocker, mock_config):
-    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+    with mocker.patch("pykour.logging.CustomLogger.isEnabledFor", return_value=True):
         connection = Connection.from_config(mock_config)
         connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
@@ -109,7 +109,7 @@ def test_fetch_one_returns_correct_data(mocker, mock_config):
 
 
 def test_fetch_one_with_no_match_returns_none(mocker, mock_config):
-    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+    with mocker.patch("pykour.logging.CustomLogger.isEnabledFor", return_value=True):
         connection = Connection.from_config(mock_config)
         connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         result = connection.find_one("SELECT * FROM test WHERE id = 99")
@@ -117,7 +117,7 @@ def test_fetch_one_with_no_match_returns_none(mocker, mock_config):
 
 
 def test_fetch_all_returns_all_matching_records(mocker, mock_config):
-    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+    with mocker.patch("pykour.logging.CustomLogger.isEnabledFor", return_value=True):
         connection = Connection.from_config(mock_config)
         connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
@@ -129,7 +129,7 @@ def test_fetch_all_returns_all_matching_records(mocker, mock_config):
 
 
 def test_execute_returns_affected_rows(mocker, mock_config):
-    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+    with mocker.patch("pykour.logging.CustomLogger.isEnabledFor", return_value=True):
         connection = Connection.from_config(mock_config)
         connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         affected_rows = connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
@@ -137,7 +137,7 @@ def test_execute_returns_affected_rows(mocker, mock_config):
 
 
 def test_commit_persists_changes(mocker, mock_config):
-    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+    with mocker.patch("pykour.logging.CustomLogger.isEnabledFor", return_value=True):
         connection = Connection.from_config(mock_config)
         connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
@@ -147,7 +147,7 @@ def test_commit_persists_changes(mocker, mock_config):
 
 
 def test_rollback_reverts_changes(mocker, mock_config):
-    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+    with mocker.patch("pykour.logging.CustomLogger.isEnabledFor", return_value=True):
         connection = Connection.from_config(mock_config)
         connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
         connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
