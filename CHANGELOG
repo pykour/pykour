@@ -17,6 +17,7 @@
 - Fix Connection class
 - Enhancing the way Router is set up
 - Test case improvement and refactoring
+- Output SQL logs
 
 ## Fixed
 
