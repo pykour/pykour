@@ -4,7 +4,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from pykour import Request, Response
-from pykour.logging import write_access_log, setup_logging, ACCESS_LEVEL_NO, SpecificLevelsFilter, access
+from pykour.logging import write_access_log, setup_logging, ACCESS_LEVEL_NO, SpecificLevelsFilter, CustomLogger
 
 
 @pytest.fixture
@@ -48,8 +48,8 @@ def test_access():
         args = ()
         kws = {}
 
-        logger = logging.getLogger("test")
-        logger.access = access.__get__(logger, logging.Logger)
+        logging.setLoggerClass(CustomLogger)
+        logger = logging.getLogger("pykour")
 
         logger.access(message, *args, **kws)
 
@@ -98,7 +98,8 @@ def test_setup_logging_default(mock_get_logger):
 
     expected_levels = [logging.INFO, logging.WARN, logging.ERROR, ACCESS_LEVEL_NO]
     mock_logger.setLevel.assert_called_with(logging.NOTSET)
-    added_handler = mock_logger.addHandler.call_args[0][0]
+
+    added_handler = mock_logger.handlers[0]
     assert isinstance(added_handler, logging.StreamHandler)
 
     assert added_handler.level == logging.NOTSET
