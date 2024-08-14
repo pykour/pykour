@@ -9,8 +9,6 @@ from pykour.response import Response
 from pykour.schema import BaseSchema
 from pykour.util import cast
 
-logger = logging.getLogger("pykour")
-
 SUPPORTED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
 
 
@@ -86,6 +84,8 @@ async def bind_args(
 
 
 async def call(func: Callable, request: Request, response: Response) -> Any:
+    logger = logging.getLogger("pykour")
+
     sig = inspect.signature(func)
     app = request.app
     pool = app.pool

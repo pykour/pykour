@@ -5,10 +5,10 @@ from typing import Any
 from enum import Enum
 from datetime import datetime
 
-logger = logging.getLogger("pykour")
-
 
 def cast(value: Any, to_type: type) -> Any:
+    logger = logging.getLogger("pykour")
+
     try:
         if to_type == int:
             return int(value)
