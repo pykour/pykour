@@ -27,22 +27,13 @@ STATUS_COLORS = {
     "5xx": Fore.RED,
 }
 
-
-class InterceptHandler(logging.Handler):
-    def emit(self, record):
-        pass
-
-
 ACCESS_LEVEL_NO = 25
 ACCESS_LEVEL_NAME = "ACCESS"
 
 
-def access(self, message, *args, **kws):
-    self._log(ACCESS_LEVEL_NO, message, args, **kws)
-
-
-logging.addLevelName(ACCESS_LEVEL_NO, ACCESS_LEVEL_NAME)
-logging.Logger.access = access  # type: ignore[attr-defined]
+class InterceptHandler(logging.Handler):
+    def emit(self, record):
+        pass
 
 
 class CustomFormatter(logging.Formatter):
@@ -82,11 +73,15 @@ class CustomLogger(logging.Logger):
         super().__init__(name)
         self.levels = [ACCESS_LEVEL_NO]
 
+    def access(self, message, *args, **kws):
+        self._log(ACCESS_LEVEL_NO, message, args, **kws)
+
     def isEnabledFor(self, level):
         return level in self.levels
 
 
 def setup_logging(log_levels: List[int] = None) -> None:
+    logging.addLevelName(ACCESS_LEVEL_NO, ACCESS_LEVEL_NAME)
     logging.setLoggerClass(CustomLogger)
 
     if log_levels is None:
@@ -110,7 +105,7 @@ def setup_logging(log_levels: List[int] = None) -> None:
 
     logger = logging.getLogger("pykour")
     logger.setLevel(logging.NOTSET)
-    logger.addHandler(console_handler)
+    logger.handlers = [console_handler]
 
     logger.levels = log_levels  # type: ignore[attr-defined]
 
