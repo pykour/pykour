@@ -99,55 +99,61 @@ def test_connection_initialization_with_unsupported_db_type_raises_error(mock_co
         Connection("unsupported_db")
 
 
-def test_fetch_one_returns_correct_data(mock_config):
-    connection = Connection.from_config(mock_config)
-    connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
-    result = connection.find_one("SELECT * FROM test WHERE id = 1")
-    assert result == {"id": 1, "name": "John Doe"}
+def test_fetch_one_returns_correct_data(mocker, mock_config):
+    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+        connection = Connection.from_config(mock_config)
+        connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+        connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
+        result = connection.find_one("SELECT * FROM test WHERE id = 1")
+        assert result == {"id": 1, "name": "John Doe"}
 
 
-def test_fetch_one_with_no_match_returns_none(mock_config):
-    connection = Connection.from_config(mock_config)
-    connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    result = connection.find_one("SELECT * FROM test WHERE id = 99")
-    assert result is None
+def test_fetch_one_with_no_match_returns_none(mocker, mock_config):
+    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+        connection = Connection.from_config(mock_config)
+        connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+        result = connection.find_one("SELECT * FROM test WHERE id = 99")
+        assert result is None
 
 
-def test_fetch_all_returns_all_matching_records(mock_config):
-    connection = Connection.from_config(mock_config)
-    connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
-    connection.execute("INSERT INTO test (name) VALUES ('Jane Doe')")
-    result = connection.find_many("SELECT * FROM test")
-    assert len(result) == 2
-    assert result[0]["name"] == "John Doe"
-    assert result[1]["name"] == "Jane Doe"
+def test_fetch_all_returns_all_matching_records(mocker, mock_config):
+    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+        connection = Connection.from_config(mock_config)
+        connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+        connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
+        connection.execute("INSERT INTO test (name) VALUES ('Jane Doe')")
+        result = connection.find_many("SELECT * FROM test")
+        assert len(result) == 2
+        assert result[0]["name"] == "John Doe"
+        assert result[1]["name"] == "Jane Doe"
 
 
-def test_execute_returns_affected_rows(mock_config):
-    connection = Connection.from_config(mock_config)
-    connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    affected_rows = connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
-    assert affected_rows == 1
+def test_execute_returns_affected_rows(mocker, mock_config):
+    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+        connection = Connection.from_config(mock_config)
+        connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+        affected_rows = connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
+        assert affected_rows == 1
 
 
-def test_commit_persists_changes(mock_config):
-    connection = Connection.from_config(mock_config)
-    connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
-    connection.commit()
-    result = connection.find_one("SELECT * FROM test WHERE id = 1")
-    assert result == {"id": 1, "name": "John Doe"}
+def test_commit_persists_changes(mocker, mock_config):
+    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+        connection = Connection.from_config(mock_config)
+        connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+        connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
+        connection.commit()
+        result = connection.find_one("SELECT * FROM test WHERE id = 1")
+        assert result == {"id": 1, "name": "John Doe"}
 
 
-def test_rollback_reverts_changes(mock_config):
-    connection = Connection.from_config(mock_config)
-    connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
-    connection.rollback()
-    result = connection.find_one("SELECT * FROM test WHERE id = 1")
-    assert result is None
+def test_rollback_reverts_changes(mocker, mock_config):
+    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+        connection = Connection.from_config(mock_config)
+        connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+        connection.execute("INSERT INTO test (name) VALUES ('John Doe')")
+        connection.rollback()
+        result = connection.find_one("SELECT * FROM test WHERE id = 1")
+        assert result is None
 
 
 def test_close_closes_connection_and_cursor(mock_config):
@@ -157,12 +163,13 @@ def test_close_closes_connection_and_cursor(mock_config):
     assert connection.cursor is None
 
 
-def test_execute_with_params(mock_config):
-    connection = Connection.from_config(mock_config)
-    connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
-    connection.execute("INSERT INTO test (name) VALUES (?)", "John Doe")
-    result = connection.find_one("SELECT * FROM test WHERE id = 1")
-    assert result == {"id": 1, "name": "John Doe"}
+def test_execute_with_params(mocker, mock_config):
+    with mocker.patch("logging.Logger.isEnabledFor", return_value=True):
+        connection = Connection.from_config(mock_config)
+        connection.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)")
+        connection.execute("INSERT INTO test (name) VALUES (?)", "John Doe")
+        result = connection.find_one("SELECT * FROM test WHERE id = 1")
+        assert result == {"id": 1, "name": "John Doe"}
 
 
 def test_find_one_raises_database_operation_error(mock_config):

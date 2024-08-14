@@ -1,5 +1,7 @@
 import importlib
 import logging
+import re
+import time
 from typing import Dict, Any, List, Union
 
 from pykour.config import Config
@@ -72,8 +74,17 @@ class Connection:
         """
 
         try:
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"==>  Query: {self.format_sql_string(query)}")
+                self.logger.debug(f"==> Params: {', '.join(map(str, args))}")
+            start_time = time.perf_counter()
             self._execute(query, args)
             row = self.cursor.fetchone()
+            end_time = time.perf_counter()
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(
+                    f"<== Result: {1 if row else 0} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms"
+                )
             if row:
                 columns = [desc[0] for desc in self.cursor.description]
                 return dict(zip(columns, row))
@@ -93,8 +104,17 @@ class Connection:
         """
 
         try:
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"==>  Query: {self.format_sql_string(query)}")
+                self.logger.debug(f"==> Params: {', '.join(map(str, args))}")
+            start_time = time.perf_counter()
             self._execute(query, args)
             rows = self.cursor.fetchall()
+            end_time = time.perf_counter()
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(
+                    f"<== Result: {len(rows)} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms"
+                )
             columns = [desc[0] for desc in self.cursor.description]
             return [dict(zip(columns, row)) for row in rows]
         except Exception as e:
@@ -112,8 +132,20 @@ class Connection:
         """
 
         try:
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(f"==>  Query: {self.format_sql_string(query)}")
+                self.logger.debug(f"==> Params: {', '.join(map(str, args))}")
+            start_time = time.perf_counter()
             self._execute(query, args)
-            return self.cursor.rowcount
+            end_time = time.perf_counter()
+            rowcount = self.cursor.rowcount
+            if rowcount == -1:
+                rowcount = 1
+            if self.logger.isEnabledFor(logging.DEBUG):
+                self.logger.debug(
+                    f"<== Result: {rowcount} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms"
+                )
+            return rowcount
         except Exception as e:
             self.logger.error(f"Database operation failed: {e}")
             raise DatabaseOperationError(caused_by=e)
@@ -147,3 +179,23 @@ class Connection:
             self.cursor.execute(query, args)
         else:
             self.cursor.execute(query)
+
+    @staticmethod
+    def format_sql_string(sql: str) -> str:
+        """
+        Formats an SQL string by replacing newlines and tabs with spaces,
+        then reducing multiple consecutive spaces to a single space.
+
+        Args:
+        sql (str): The input SQL string to format.
+
+        Returns:
+        str: The formatted SQL string.
+        """
+        # Step 1: Replace newlines and tabs with spaces
+        sql = re.sub(r"[\n\t]", " ", sql)
+
+        # Step 2: Replace multiple spaces with a single space
+        sql = re.sub(r"\s+", " ", sql)
+
+        return sql.strip()  # Remove leading/trailing whitespace
