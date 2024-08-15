@@ -80,7 +80,7 @@ async def test_render_no_content():
         {
             "type": "http.response.start",
             "status": HTTPStatus.NO_CONTENT,
-            "headers": [("Content-Type", "application/json; charset=utf-8")],
+            "headers": [(b"Content-Type", b"application/json; charset=utf-8")],
         }
     )
     send_mock.assert_any_await({"type": "http.response.body", "body": b""})
@@ -97,7 +97,7 @@ async def test_render_with_content():
         {
             "type": "http.response.start",
             "status": HTTPStatus.OK,
-            "headers": [("Content-Type", "application/json; charset=utf-8")],
+            "headers": [(b"Content-Type", b"application/json; charset=utf-8")],
         }
     )
     send_mock.assert_any_await({"type": "http.response.body", "body": b"Hello, world!"})
@@ -114,7 +114,7 @@ async def test_render_empty_content():
         {
             "type": "http.response.start",
             "status": HTTPStatus.OK,
-            "headers": [("Content-Type", "application/json; charset=utf-8")],
+            "headers": [(b"Content-Type", b"application/json; charset=utf-8")],
         }
     )
     send_mock.assert_any_await({"type": "http.response.body", "body": b""})
@@ -131,7 +131,7 @@ async def test_render_none_content():
         {
             "type": "http.response.start",
             "status": HTTPStatus.OK,
-            "headers": [("Content-Type", "application/json; charset=utf-8")],
+            "headers": [(b"Content-Type", b"application/json; charset=utf-8")],
         }
     )
     send_mock.assert_any_await({"type": "http.response.body", "body": b""})

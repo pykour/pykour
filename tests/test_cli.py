@@ -33,9 +33,16 @@ def test_dev_command_runs_uvicorn(mocker):
 
 def test_run_command_runs_gunicorn(mocker):
     mocker.patch("sys.argv", ["pykour", "run", "main:app"])
-    mock_run = mocker.patch("gunicorn.app.base.BaseApplication.run")
+    mock_run = mocker.patch("uvicorn.run")
     main()
-    mock_run.assert_called_once()
+    mock_run.assert_called_once_with(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,
+        workers=os.cpu_count() * 2 + 1,
+        server_header=False,
+    )
 
 
 def test_invalid_command_displays_usage(mocker):

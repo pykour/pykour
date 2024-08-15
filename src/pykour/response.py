@@ -107,7 +107,7 @@ class Response:
 
         result = []
         for header in self._headers:
-            if header[0] == key:
+            if header[0] == key.encode("latin-1"):
                 result.append(header[1].decode("latin-1"))
         return result
 
