@@ -1,12 +1,24 @@
 # Change Log
 
+## 0.2.0 - 2024-08-xx
+
+### Features
+
+- Support MySQL, MariaDB, PostgreSQL
+- Support SQL Parameters
+
+### Enhancements
+
+- Output SQL logs
+- Change select methods
+- Add benchmark programs
+
 ## 0.1.4 - 2024-07-28
 
 ### Features
 
 - Implement database access functions
 - Implementation of a Logger within the Framework
-- Support SQL Parameters
 
 ### Enhancements
 
@@ -17,7 +29,6 @@
 - Fix Connection class
 - Enhancing the way Router is set up
 - Test case improvement and refactoring
-- Output SQL logs
 
 ## Fixed
 
