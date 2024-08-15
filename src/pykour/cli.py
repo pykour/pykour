@@ -1,6 +1,4 @@
 import argparse
-
-from gunicorn.app.base import BaseApplication
 import uvicorn
 import signal
 import sys
@@ -88,33 +86,15 @@ def main(args=None):
     elif args.command == "run":
         os.environ["PYKOUR_ENV"] = "production"
 
-        class StandaloneApplication(BaseApplication):
-            def __init__(self, app, opts=None):
-                self.app = app
-                self.options = opts or {}
-                super().__init__()
-
-            def load_config(self):
-                config = {
-                    key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None
-                }
-                for key, value in config.items():
-                    self.cfg.set(key.lower(), value)
-
-            def load(self):
-                return self.app
-
-        options = {
-            "bind": args.host + ":" + str(args.port),
-            "workers": args.workers,
-            "worker_class": "uvicorn_worker.UvicornWorker",
-            "reload": args.reload,
-        }
-
-        StandaloneApplication(
+        uvicorn.run(
             args.app,
-            options,
-        ).run()
+            host=args.host,
+            port=args.port,
+            reload=args.reload,
+            workers=args.workers,
+            server_header=False,
+        )
+
     else:
         print(usage_text)
         sys.exit(1)

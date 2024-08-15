@@ -27,7 +27,7 @@ class Response:
         self._charset = charset
         self._content_type = content_type
         self._headers = []
-        self._headers.append(("Content-Type", f"{content_type}; charset={charset}"))
+        self._headers.append((b"Content-Type", f"{content_type}; charset={charset}".encode("latin-1")))
         self._content = ""
 
     @property
@@ -66,7 +66,7 @@ class Response:
             charset: The charset of the response.
         """
         self._charset = charset
-        self._headers[0] = ("Content-Type", f"{self._content_type}; charset={charset}")
+        self._headers[0] = (b"Content-Type", f"{self._content_type}; charset={charset}".encode("latin-1"))
 
     @property
     def content_type(self) -> str:
@@ -87,7 +87,7 @@ class Response:
         """
 
         self._content_type = content_type
-        self._headers[0] = ("Content-Type", f"{content_type}; charset={self._charset}")
+        self._headers[0] = (b"Content-Type", f"{content_type}; charset={self._charset}".encode("latin-1"))
 
     @property
     def headers(self) -> list[tuple[str, str]]:
@@ -96,7 +96,7 @@ class Response:
         Returns:
             The headers of the response.
         """
-        return self._headers
+        return list(map(lambda header: (header[0].decode("latin-1"), header[1].decode("latin-1")), self._headers))
 
     def get_header(self, key: str) -> list[str]:
         """Get the value of a header.
@@ -107,8 +107,8 @@ class Response:
 
         result = []
         for header in self._headers:
-            if header[0] == key:
-                result.append(header[1])
+            if header[0] == key.encode("latin-1"):
+                result.append(header[1].decode("latin-1"))
         return result
 
     def add_header(self, key: str, value: str) -> None:
@@ -118,7 +118,7 @@ class Response:
             key: The key of the header.
             value: The value of the header.
         """
-        self._headers.append((key, value))
+        self._headers.append((key.encode("latin-1"), value.encode("latin-1")))
 
     @property
     def content(self) -> str:
@@ -140,6 +140,7 @@ class Response:
 
     async def render(self) -> None:
         """Render the response."""
+
         await self.send(
             {
                 "type": "http.response.start",
