@@ -4,5 +4,5 @@ app = Pykour()
 
 
 @app.get("/")
-def index():
+async def index():
     return {"message": "Hello, World!"}
