@@ -63,7 +63,7 @@ class Connection:
         else:
             raise ValueError(f"Unsupported session type: {db_type}")
 
-    def find_one(self, query: str, *args) -> Union[Dict[str, Any], None]:
+    def fetch_one(self, query: str, *args) -> Union[Dict[str, Any], None]:
         """Execute a query and return the first row as a dictionary.
 
         Args:
@@ -93,7 +93,7 @@ class Connection:
             raise DatabaseOperationError(caused_by=e)
         return None
 
-    def find_many(self, query: str, *args) -> List[Dict[str, Any]]:
+    def fetch_many(self, query: str, *args) -> List[Dict[str, Any]]:
         """Execute a query and return all rows as a list of dictionaries.
 
         Args:

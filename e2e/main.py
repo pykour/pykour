@@ -9,6 +9,6 @@ def index(conn: Connection):
     return list(
         map(
             lambda user: {"username": user["username"], "email": user["email"]},
-            conn.find_many("SELECT * FROM users"),
+            conn.fetch_many("SELECT * FROM users"),
         )
     )

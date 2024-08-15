@@ -14,7 +14,7 @@ app = Pykour(config=Config("config.yml"))
 
 @app.get("/")
 def index(conn: Connection):
-    return conn.find_one("SELECT * FROM users")
+    return conn.fetch_one("SELECT * FROM users")
 ```
 
 The above example creates an `index` function with the `Connection` class as an argument.
@@ -24,20 +24,20 @@ This function uses the `Connection` class to retrieve user information from the 
 
 The `Connection` class provides a low-level API.
 
-### `fine_one` method
+### `fetch_one` method
 
-The `find_one` method executes the specified SQL query and returns the first row of results.
+The `fetch_one` method executes the specified SQL query and returns the first row of results.
 
 ```python
-result = conn.find_one("SELECT * FROM users")
+result = conn.fetch_one("SELECT * FROM users")
 ```
 
-### `find_all` method
+### `fetch_all` method
 
-The ``find_all`` method executes the given SQL query and returns all rows of the result.
+The `fetch_all` method executes the given SQL query and returns all rows of the result.
 
 ```python
-results = conn.find_all("SELECT * FROM users")
+results = conn.fetch_all("SELECT * FROM users")
 ```
 
 ### `execute` method
@@ -77,8 +77,8 @@ conn.close()
 Parameterization, rather than embedding variables directly in SQL, allows for separation of query and parameters.
 
 ```python
-result = conn.find_one("SELECT * FROM users WHERE id = ?", 1)
+result = conn.fetch_one("SELECT * FROM users WHERE id = ?", 1)
 ```
 
 The above example uses the `?` placeholder to specify the parameter.
-The second argument to the `find_one` method is the parameter value.
+The second argument to the `fetch_one` method is the parameter value.
