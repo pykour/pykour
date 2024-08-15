@@ -12,6 +12,7 @@
 - Output SQL logs
 - Change select methods
 - Add benchmark programs
+- Add SECURITY.md
 
 ## 0.1.4 - 2024-07-28
 

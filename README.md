@@ -55,6 +55,10 @@ async def index():
 $ pykour dev main:app
 ```
 
+## Maintainers
+
+The original author of Pykour is [Takashi Yamashina](mailto:takashi.yamashina@gmail.com).
+
 ## License
 
 This project is licensed under the terms of the [MIT license](https://raw.githubusercontent.com/pykour/pykour/main/LICENSE).
