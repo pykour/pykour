@@ -31,7 +31,7 @@ def test_dev_command_runs_uvicorn(mocker):
     )
 
 
-def test_run_command_runs_gunicorn(mocker):
+def test_run_command_runs_uvicorn(mocker):
     mocker.patch("sys.argv", ["pykour", "run", "main:app"])
     mock_run = mocker.patch("uvicorn.run")
     main()
