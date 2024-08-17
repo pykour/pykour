@@ -9,7 +9,7 @@ You can retrieve the contents of the configuration file by receiving `config` as
 ```python
 from pykour import Pykour, Config
 
-app = Pykour('config.yaml')
+app = Pykour(config=Config('config.yaml'))
 
 @app.get('/')
 def index(config: Config):

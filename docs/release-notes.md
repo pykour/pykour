@@ -1,6 +1,6 @@
 # Release Notes
 
-## 0.2.0 - 2024-08-xx
+## 0.2.0 - 2024-08-17
 
 ### Features
 
@@ -9,10 +9,19 @@
 
 ### Enhancements
 
+- Improved testing and documentation
+- Refactor the code
 - Output SQL logs
 - Change select methods
 - Add benchmark programs
 - Add SECURITY.md
+- Performance tuning
+- Modify the string "gunicorn"
+
+### Fixed
+
+- Fixed logging settings
+
 
 ## 0.1.4 - 2024-07-28
 
