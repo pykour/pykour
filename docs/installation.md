@@ -8,7 +8,6 @@ We recommend using the latest version of Python. Pykour supports Python 3.9 and 
 
 These packages will be installed automatically when installing Pykour.
 
-- Guvicorn
 - Uvicorn
 - Watchdog
 - PyYaml
