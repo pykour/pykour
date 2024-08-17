@@ -87,8 +87,8 @@ def setup_logging(log_levels: List[int] = None) -> None:
     if log_levels is None:
         log_levels = [logging.INFO, logging.WARN, logging.ERROR, ACCESS_LEVEL_NO]
 
-    # Suppress logging from Uvicorn and Gunicorn
-    for _logger in ("uvicorn", "uvicorn.error", "uvicorn.access", "gunicorn.error"):
+    # Suppress logging from Uvicorn
+    for _logger in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         logging_logger = logging.getLogger(_logger)
         logging_logger.handlers = [InterceptHandler()]
         logging_logger.propagate = False
