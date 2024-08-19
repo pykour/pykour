@@ -78,7 +78,7 @@ def test_connection_initialization_with_sqlite_succeeds(mocker, mock_config):
 
 
 def test_connection_initialization_with_mysql_succeeds(mocker, mock_config_mysql):
-    mocker.patch("mysql.connector.connect", return_value=MagicMock())
+    mocker.patch("pymysql.connect", return_value=MagicMock())
     connection = Connection.from_config(mock_config_mysql)
     assert connection.db_type == "mysql"
     assert connection.conn is not None

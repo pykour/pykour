@@ -1,5 +1,5 @@
 import logging
-import asyncio
+import time
 from http import HTTPStatus
 
 import pykour.internal.handler.request as request_handler
@@ -22,7 +22,7 @@ class ASGIApp:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         request = Request(scope, receive)
         response = Response(send)
-        start_time = asyncio.get_event_loop().time()
+        start_time = time.perf_counter()
         try:
             # Check if the scheme is supported
             if not request_handler.is_supported_scheme(request):
@@ -53,8 +53,8 @@ class ASGIApp:
                 await response_handler.handle_error(request, response, HTTPStatus.NOT_FOUND)
 
         finally:
-            end_time = asyncio.get_event_loop().time()
-            write_access_log(request, response, (end_time - start_time))
+            end_time = time.perf_counter()
+            write_access_log(request, response, (end_time - start_time) * 1000)
 
     @staticmethod
     def append_path_params(request: Request) -> None:

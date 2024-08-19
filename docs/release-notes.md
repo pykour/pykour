@@ -1,12 +1,5 @@
 # Release Notes
 
-## 0.3.0 - 2024-xx-xx
-
-### Enhancements
-
-- Change measurement time function to async.get_event_loop().time()
-- Change MySQL drive from PyMySQL to mysql-connector-python
-
 ## 0.2.0 - 2024-08-17
 
 ### Features

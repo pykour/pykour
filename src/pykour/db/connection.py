@@ -16,13 +16,14 @@ class Connection:
             sqlite3 = importlib.import_module("sqlite3")
             self.conn = sqlite3.connect(kwargs["db"])
         elif self.db_type == "mysql" or self.db_type == "maria":
-            mysql = importlib.import_module("mysql.connector")
-            self.conn = mysql.connect(
+            pymysql = importlib.import_module("pymysql")
+            self.conn = pymysql.connect(
                 host=kwargs["host"],
                 user=kwargs["username"],
                 password=kwargs["password"],
-                database=kwargs["db"],
+                db=kwargs["db"],
                 charset="utf8mb4",
+                cursorclass=pymysql.cursors.DictCursor,
             )
         elif self.db_type == "postgres":
             psycopg2 = importlib.import_module("psycopg2")

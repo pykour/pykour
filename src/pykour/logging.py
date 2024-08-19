@@ -130,5 +130,5 @@ def write_access_log(request: Request, response: Response, elapsed: float) -> No
 
     logger.access(  # type: ignore[attr-defined]
         f"{client} - - {method} {path} {scheme}/{version} {category_color}{status} {phrase}{Style.RESET_ALL}"
-        + f" {len(str(content))} {elapsed:.3f}",
+        + f" {len(str(content))} {elapsed:.6f}",
     )
