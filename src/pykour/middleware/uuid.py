@@ -2,6 +2,7 @@ import logging
 from typing import Callable
 from uuid import uuid4
 
+from pykour.logging import write_info_log
 from pykour.middleware import BaseMiddleware
 from pykour.types import Scope, Receive, Send, Message, ASGIApp
 
@@ -56,7 +57,6 @@ class UUIDMiddleware(BaseMiddleware):
         """
         super().__init__(app)
         self.header_name = header_name
-        self.logger = logging.getLogger("pykour")
 
     async def process_request(
         self,
@@ -88,8 +88,7 @@ class UUIDMiddleware(BaseMiddleware):
 
         scope["request_id"] = request_id
         thread_local.request_id = request_id
-        if self.logger.isEnabledFor(logging.INFO):
-            self.logger.info(f"{self.header_name}: {scope['request_id']}")
+        write_info_log(f"{self.header_name}: {scope['request_id']}")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send):
         """

@@ -3,4 +3,4 @@ def test_init():
 
     app = ASGIApp()
 
-    assert app._logger.name == "pykour"
+    assert app is not None

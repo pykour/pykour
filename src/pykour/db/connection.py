@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Union
 
 from pykour.config import Config
 from pykour.exceptions import DatabaseOperationError
+from pykour.logging import write_debug_log, write_error_log
 
 
 class Connection:
@@ -39,7 +40,6 @@ class Connection:
         self.is_committed = False
         self.is_rolled_back = False
         self.is_closed = False
-        self.logger = logging.getLogger("pykour")
 
     @classmethod
     def from_config(cls, config: Config):
@@ -73,22 +73,20 @@ class Connection:
         """
 
         try:
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug(f"==>  Query: {self.format_sql_string(query)}")
-                self.logger.debug(f"==> Params: {', '.join(map(str, args))}")
+            write_debug_log(f"==>  Query: {self.format_sql_string(query)}")
+            write_debug_log(f"==> Params: {', '.join(map(str, args))}")
             start_time = time.perf_counter()
             self._execute(query, args)
             row = self.cursor.fetchone()
             end_time = time.perf_counter()
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug(
-                    f"<== Result: {1 if row else 0} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms"
-                )
+            write_debug_log(
+                f"<== Result: {1 if row else 0} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms"
+            )
             if row:
                 columns = [desc[0] for desc in self.cursor.description]
                 return dict(zip(columns, row))
         except Exception as e:
-            self.logger.error(f"Database operation failed: {e}")
+            write_error_log(f"Database operation failed: {e}")
             raise DatabaseOperationError(caused_by=e)
         return None
 
@@ -103,21 +101,17 @@ class Connection:
         """
 
         try:
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug(f"==>  Query: {self.format_sql_string(query)}")
-                self.logger.debug(f"==> Params: {', '.join(map(str, args))}")
+            write_debug_log(f"==>  Query: {self.format_sql_string(query)}")
+            write_debug_log(f"==> Params: {', '.join(map(str, args))}")
             start_time = time.perf_counter()
             self._execute(query, args)
             rows = self.cursor.fetchall()
             end_time = time.perf_counter()
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug(
-                    f"<== Result: {len(rows)} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms"
-                )
+            write_debug_log(f"<== Result: {len(rows)} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms")
             columns = [desc[0] for desc in self.cursor.description]
             return [dict(zip(columns, row)) for row in rows]
         except Exception as e:
-            self.logger.error(f"Database operation failed: {e}")
+            write_error_log(f"Database operation failed: {e}")
             raise DatabaseOperationError(caused_by=e)
 
     def execute(self, query: str, *args) -> int:
@@ -131,22 +125,18 @@ class Connection:
         """
 
         try:
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug(f"==>  Query: {self.format_sql_string(query)}")
-                self.logger.debug(f"==> Params: {', '.join(map(str, args))}")
+            write_debug_log(f"==>  Query: {self.format_sql_string(query)}")
+            write_debug_log(f"==> Params: {', '.join(map(str, args))}")
             start_time = time.perf_counter()
             self._execute(query, args)
             end_time = time.perf_counter()
             rowcount = self.cursor.rowcount
             if rowcount == -1:
                 rowcount = 1
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug(
-                    f"<== Result: {rowcount} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms"
-                )
+            write_debug_log(f"<== Result: {rowcount} row(s) affected, took {(end_time - start_time) * 1000:.2f} ms")
             return rowcount
         except Exception as e:
-            self.logger.error(f"Database operation failed: {e}")
+            write_error_log(f"Database operation failed: {e}")
             raise DatabaseOperationError(caused_by=e)
 
     def commit(self):

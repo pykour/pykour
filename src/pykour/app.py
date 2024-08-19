@@ -5,7 +5,7 @@ from http import HTTPStatus
 import pykour.internal.handler.request as request_handler
 import pykour.internal.handler.response as response_handler
 import pykour.exceptions as ex
-from pykour.logging import write_access_log
+from pykour.logging import write_access_log, write_error_log, write_debug_log
 
 from pykour.request import Request
 from pykour.response import Response
@@ -17,7 +17,7 @@ class ASGIApp:
 
     def __init__(self):
         """Initialize Pykour application."""
-        self._logger = logging.getLogger("pykour")
+        ...
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         request = Request(scope, receive)
@@ -31,15 +31,13 @@ class ASGIApp:
 
             # Check if the method is supported
             if not request_handler.is_supported_method(request):
-                if self._logger.isEnabledFor(logging.DEBUG):
-                    self._logger.debug(f"Unsupported HTTP Method: {request.method}")
+                write_debug_log(f"Unsupported HTTP Method: {request.method}")
                 await response_handler.handle_error(request, response, HTTPStatus.NOT_FOUND)
                 return
 
             # Check if the method is allowed
             if not request_handler.is_method_allowed(request):
-                if self._logger.isEnabledFor(logging.DEBUG):
-                    self._logger.debug(f"Method not allowed: {request.method}")
+                write_debug_log(f"Method not allowed: {request.method}")
                 await response_handler.handle_error(request, response, HTTPStatus.METHOD_NOT_ALLOWED)
                 return
 
@@ -48,8 +46,7 @@ class ASGIApp:
                 self.append_path_params(request)
                 await self.handle_request(request, response)
             else:
-                if self._logger.isEnabledFor(logging.DEBUG):
-                    self._logger.debug(f"No valid route found: {request.method} {request.path}")
+                write_debug_log(f"No valid route found: {request.method} {request.path}")
                 await response_handler.handle_error(request, response, HTTPStatus.NOT_FOUND)
 
         finally:
@@ -67,7 +64,8 @@ class ASGIApp:
         path_params = route.path_params
         request.path_params = path_params
 
-    async def handle_request(self, request: Request, response: Response):
+    @staticmethod
+    async def handle_request(request: Request, response: Response):
         """Handle request for a route."""
 
         app = request.app
@@ -83,6 +81,5 @@ class ASGIApp:
         except ex.HTTPException as e:
             await response_handler.handle_http_exception(request, response, e)
         except Exception as e:
-            if self._logger.isEnabledFor(logging.DEBUG):
-                self._logger.debug(f"Internal Server Error: {e}")
+            write_error_log(f"Internal Server Error: {e}")
             await response_handler.handle_error(request, response, HTTPStatus.INTERNAL_SERVER_ERROR)

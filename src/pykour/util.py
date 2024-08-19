@@ -5,10 +5,10 @@ from typing import Any
 from enum import Enum
 from datetime import datetime
 
+from pykour.logging import write_error_log
+
 
 def cast(value: Any, to_type: type) -> Any:
-    logger = logging.getLogger("pykour")
-
     try:
         if to_type == int:
             return int(value)
@@ -25,8 +25,7 @@ def cast(value: Any, to_type: type) -> Any:
                 raise ValueError(f"{value} is not a valid {to_type.__name__}")
         return value
     except Exception as e:
-        if logger.isEnabledFor(logging.ERROR):
-            logger.error(f"Error casting value '{value}' to type '{to_type}': {e}")
+        write_error_log(f"Error casting value '{value}' to type '{to_type}': {e}")
         raise e
 
 
