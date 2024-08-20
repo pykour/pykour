@@ -1,4 +1,3 @@
-import logging
 import asyncio
 from http import HTTPStatus
 

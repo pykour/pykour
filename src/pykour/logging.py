@@ -167,6 +167,6 @@ def write_access_log(request: Request, response: Response, elapsed: float) -> No
 
     executor.submit(
         access_logger.access,  # type: ignore[attr-defined]
-        f"[{request_id}] {client} - - {method} {path} {scheme}/{version} {category_color}{status} {phrase}{Style.RESET_ALL}"
-        + f" {len(str(content))} {elapsed:.3f}",
+        f"[{request_id}] {client} - - {method} {path} {scheme}/{version} {category_color}{status}"
+        + f" {phrase}{Style.RESET_ALL} {len(str(content))} {elapsed:.3f}",
     )
