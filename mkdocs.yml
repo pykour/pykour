@@ -60,6 +60,8 @@ nav:
       - Introduction: middleware/introduction.md
       - UUID Middleware: middleware/uuid.md
       - GZIP Middleware: middleware/gzip.md
+    - Logging:
+      - Introduction: logging/introduction.md
     - Testing:
         - Introduction: testing/introduction.md
 #  - API Docs:

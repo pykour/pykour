@@ -4,7 +4,17 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from pykour import Request, Response
-from pykour.logging import write_access_log, setup_logging, ACCESS_LEVEL_NO, SpecificLevelsFilter, CustomLogger
+from pykour.logging import (
+    write_access_log,
+    setup_logging,
+    ACCESS_LEVEL_NO,
+    SpecificLevelsFilter,
+    CustomLogger,
+    write_info_log,
+    write_warn_log,
+    write_error_log,
+    write_debug_log,
+)
 
 
 @pytest.fixture
@@ -13,6 +23,12 @@ def mock_get_logger():
         mock_logger = MagicMock()
         mock_get_logger.return_value = mock_logger
         yield mock_get_logger, mock_logger
+
+
+@pytest.fixture
+def mock_executor():
+    with patch("concurrent.futures.ThreadPoolExecutor") as mock_executor:
+        yield mock_executor
 
 
 @pytest.fixture
@@ -109,20 +125,76 @@ def test_setup_logging_default(mock_get_logger):
     assert levels_filter.levels == expected_levels
 
 
-def test_write_access_log(mock_get_logger, mock_request, mock_response):
-    mock_get_logger, mock_logger = mock_get_logger
-    elapsed_time = 0.123456
-    write_access_log(mock_request, mock_response, elapsed_time)
-    mock_logger.access.assert_called_once()
-    log_message = mock_logger.access.call_args[0][0]
+def test_write_info_log():
+    with patch("pykour.logging.executor") as mock_executor:
+        with patch("pykour.logging.logger") as mock_logger:
+            mock_logger.info = MagicMock()
+            mock_logger.isEnabledFor.return_value = True
+            mock_executor.submit.return_value.result.return_value = None
+            write_info_log("Test info log")
+            mock_executor.submit.assert_called_once()
+            log_message = mock_executor.submit.call_args.args[1]
 
-    assert "127.0.0.1" in log_message
-    assert "GET" in log_message
-    assert "/test" in log_message
-    assert "http/1.1" in log_message
-    assert "200 OK" in log_message
-    assert "16" in log_message
-    assert "0.123" in log_message
+            assert "Test info log" in log_message
+
+
+def test_write_warn_log():
+    with patch("pykour.logging.executor") as mock_executor:
+        with patch("pykour.logging.logger") as mock_logger:
+            mock_logger.warn = MagicMock()
+            mock_logger.isEnabledFor.return_value = True
+            mock_executor.submit.return_value.result.return_value = None
+            write_warn_log("Test warn log")
+            mock_executor.submit.assert_called_once()
+            log_message = mock_executor.submit.call_args.args[1]
+
+            assert "Test warn log" in log_message
+
+
+def test_write_error_log():
+    with patch("pykour.logging.executor") as mock_executor:
+        with patch("pykour.logging.logger") as mock_logger:
+            mock_logger.error = MagicMock()
+            mock_logger.isEnabledFor.return_value = True
+            mock_executor.submit.return_value.result.return_value = None
+            write_error_log("Test error log")
+            mock_executor.submit.assert_called_once()
+            log_message = mock_executor.submit.call_args.args[1]
+
+            assert "Test error log" in log_message
+
+
+def test_write_debug_log():
+    with patch("pykour.logging.executor") as mock_executor:
+        with patch("pykour.logging.logger") as mock_logger:
+            mock_logger.debug = MagicMock()
+            mock_logger.isEnabledFor.return_value = True
+            mock_executor.submit.return_value.result.return_value = None
+            write_debug_log("Test debug log")
+            mock_executor.submit.assert_called_once()
+            log_message = mock_executor.submit.call_args.args[1]
+
+            assert "Test debug log" in log_message
+
+
+def test_write_access_log(mock_request, mock_response):
+    elapsed_time = 0.123456
+
+    with patch("pykour.logging.executor") as mock_executor:
+        with patch("pykour.logging.access_logger") as mock_access_logger:
+            mock_access_logger.access = MagicMock()
+            mock_executor.submit.return_value.result.return_value = None
+            write_access_log(mock_request, mock_response, elapsed_time)
+            mock_executor.submit.assert_called_once()
+            log_message = mock_executor.submit.call_args.args[1]
+
+            assert "127.0.0.1" in log_message
+            assert "GET" in log_message
+            assert "/test" in log_message
+            assert "http/1.1" in log_message
+            assert "200 OK" in log_message
+            assert "16" in log_message
+            assert "0.123" in log_message
 
 
 def test_intercept_handler():

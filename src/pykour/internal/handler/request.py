@@ -1,9 +1,9 @@
 import inspect
-import logging
 from typing import Any, Dict, get_origin, Tuple, ItemsView, Callable
 
 from pykour.config import Config
 from pykour.db.connection import Connection
+from pykour.logging import write_error_log
 from pykour.request import Request
 from pykour.response import Response
 from pykour.schema import BaseSchema
@@ -84,8 +84,6 @@ async def bind_args(
 
 
 async def call(func: Callable, request: Request, response: Response) -> Any:
-    logger = logging.getLogger("pykour")
-
     sig = inspect.signature(func)
     app = request.app
     pool = app.pool
@@ -103,8 +101,7 @@ async def call(func: Callable, request: Request, response: Response) -> Any:
             conn.commit()
         return ret
     except Exception as e:
-        if logger.isEnabledFor(logging.ERROR):
-            logger.error(f"Error occurred while calling {func.__name__}: {e}")
+        write_error_log(f"Error occurred while calling {func.__name__}: {e}")
         if conn:
             conn.rollback()
         raise e

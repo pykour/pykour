@@ -6,6 +6,8 @@
 
 - Change measurement time function to async.get_event_loop().time()
 - Change MySQL drive from PyMySQL to mysql-connector-python
+- Restrict PR Merge Targets
+- Asynchronous logging
 
 ## 0.2.0 - 2024-08-17
 

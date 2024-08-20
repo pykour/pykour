@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import re
 import threading
@@ -30,6 +31,10 @@ STATUS_COLORS = {
 ACCESS_LEVEL_NO = 25
 ACCESS_LEVEL_NAME = "ACCESS"
 
+logger = None
+access_logger = None
+executor = ThreadPoolExecutor(max_workers=1)
+
 
 class InterceptHandler(logging.Handler):
     def emit(self, record):
@@ -54,8 +59,8 @@ class CustomFormatter(logging.Formatter):
 
     def format(self, record):
         record.levelname = f"{record.levelname:<6}"
-        request_id = getattr(thread_local, "request_id", threading.get_ident())
-        record.request_id = request_id
+        # request_id = getattr(thread_local, "request_id", threading.get_ident())
+        # record.request_id = request_id
         return super().format(record)
 
 
@@ -96,28 +101,60 @@ def setup_logging(log_levels: List[int] = None) -> None:
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.NOTSET)
     level_color = LOG_COLORS.get(ACCESS_LEVEL_NAME, Fore.WHITE)
-    formatter = CustomFormatter(
-        f"{level_color}%(levelname)s{Style.RESET_ALL} [%(asctime)s] [%(request_id)s] %(message)s"
-    )
+    formatter = CustomFormatter(f"{level_color}%(levelname)s{Style.RESET_ALL} [%(asctime)s] %(message)s")
     console_handler.setFormatter(formatter)
     levels_filter = SpecificLevelsFilter(levels=log_levels)
     console_handler.addFilter(levels_filter)
 
+    global logger
     logger = logging.getLogger("pykour")
     logger.setLevel(logging.NOTSET)
     logger.handlers = [console_handler]
-
     logger.levels = log_levels  # type: ignore[attr-defined]
+
+    global access_logger
+    access_logger = logging.getLogger("pykour.access")
+
+
+def write_info_log(message: str) -> None:
+    """Write info log."""
+
+    if logger is not None and logger.isEnabledFor(logging.INFO):
+        request_id = getattr(thread_local, "request_id", threading.get_ident())
+        executor.submit(logger.info, f"[{request_id}] {message}")  # type: ignore[attr-defined]
+
+
+def write_warn_log(message: str) -> None:
+    """Write warn log."""
+
+    if logger is not None and logger.isEnabledFor(logging.WARN):
+        request_id = getattr(thread_local, "request_id", threading.get_ident())
+        executor.submit(logger.warn, f"[{request_id}] {message}")  # type: ignore[attr-defined]
+
+
+def write_error_log(message: str) -> None:
+    """Write error log."""
+
+    if logger is not None and logger.isEnabledFor(logging.ERROR):
+        request_id = getattr(thread_local, "request_id", threading.get_ident())
+        executor.submit(logger.error, f"[{request_id}] {message}")  # type: ignore[attr-defined]
+
+
+def write_debug_log(message: str) -> None:
+    """Write debug log."""
+
+    if logger is not None and logger.isEnabledFor(logging.DEBUG):
+        request_id = getattr(thread_local, "request_id", threading.get_ident())
+        executor.submit(logger.debug, f"[{request_id}] {message}")  # type: ignore[attr-defined]
 
 
 def write_access_log(request: Request, response: Response, elapsed: float) -> None:
     """Write access log."""
 
-    logger = logging.getLogger("pykour.access")
-
     category = f"{response.status // 100}xx"
     category_color = STATUS_COLORS.get(category, Fore.WHITE)
 
+    request_id = getattr(thread_local, "request_id", threading.get_ident())
     client = request.client or "-"
     method = request.method or "-"
     path = request.path or "-"
@@ -128,7 +165,8 @@ def write_access_log(request: Request, response: Response, elapsed: float) -> No
     phrase = HTTPStatus(response.status).phrase
     content = response.content or ""
 
-    logger.access(  # type: ignore[attr-defined]
-        f"{client} - - {method} {path} {scheme}/{version} {category_color}{status} {phrase}{Style.RESET_ALL}"
-        + f" {len(str(content))} {elapsed:.3f}",
+    executor.submit(
+        access_logger.access,  # type: ignore[attr-defined]
+        f"[{request_id}] {client} - - {method} {path} {scheme}/{version} {category_color}{status}"
+        + f" {phrase}{Style.RESET_ALL} {len(str(content))} {elapsed:.3f}",
     )
