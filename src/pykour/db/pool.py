@@ -2,7 +2,7 @@ from queue import Queue, Empty, Full
 from threading import Lock
 
 from pykour.config import Config
-from pykour.db.connection import Connection
+from pykour.db.connection import Connection, ConnectionFactory
 
 
 class ConnectionPool:
@@ -34,8 +34,8 @@ class ConnectionPool:
             conn = self.pool.get_nowait()
             conn.close()
 
-    def _create_new_connection(self):
-        return Connection.from_config(self.config)
+    def _create_new_connection(self) -> Connection:
+        return ConnectionFactory.create_connection(self.config)
 
     def __del__(self):
         self.close_all_connections()

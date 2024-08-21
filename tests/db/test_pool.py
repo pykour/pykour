@@ -8,6 +8,8 @@ from pykour.config import Config
 @pytest.fixture
 def mock_config():
     config = MagicMock(spec=Config)
+    config.get_datasource_type.return_value = "sqlite"
+    config.get_datasource_db.return_value = "file::memory:"
     config.get_datasource_pool_max_connections.return_value = 2
     return config
 
@@ -15,6 +17,12 @@ def mock_config():
 @pytest.fixture
 def mock_connection():
     with patch("pykour.db.pool.Connection") as mock:
+        yield mock
+
+
+@pytest.fixture
+def mock_connection_factory():
+    with patch("pykour.db.pool.ConnectionFactory") as mock:
         yield mock
 
 
@@ -50,17 +58,17 @@ def test_getting_connection_creates_new_if_pool_is_empty_and_max_not_reached(moc
     assert pool.pool.qsize() == 1
 
 
-def test_closing_all_connections_closes_each_connection(mock_config, mock_connection):
+def test_closing_all_connections_closes_each_connection(mock_config, mock_connection, mock_connection_factory):
     pool = ConnectionPool(mock_config)
     pool.close_all_connections()
     for _ in range(mock_config.get_datasource_pool_max_connections.return_value):
-        mock_connection.from_config.assert_called_with(mock_config)
-        mock_connection.from_config.return_value.close.assert_called()
+        mock_connection_factory.create_connection.assert_called_with(mock_config)
+        mock_connection_factory.create_connection.return_value.close.assert_called()
 
 
-def test_create_connection_when_pool_is_empty(mock_config, mock_connection):
+def test_create_connection_when_pool_is_empty(mock_config, mock_connection, mock_connection_factory):
     pool = ConnectionPool(mock_config)
     pool.get_connection()
     pool.get_connection()
     pool.get_connection()
-    mock_connection.from_config.assert_called_with(mock_config)
+    mock_connection_factory.create_connection.assert_called_with(mock_config)
