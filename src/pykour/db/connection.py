@@ -202,7 +202,7 @@ class ConnectionFactory:
     @staticmethod
     def create_connection(config: Config) -> Connection:
         db_type = config.get_datasource_type()
-        conn = None
+        conn: Connection
         if db_type == "sqlite":
             conn = SQLiteConnection()
         elif db_type == "mysql" or db_type == "maria":
