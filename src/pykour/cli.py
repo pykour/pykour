@@ -25,11 +25,11 @@ sys.path.append(os.getcwd())
 class PykourArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         """Ignore unknown arguments."""
-        ...
+        ...  # pragma: no cover
 
 
 def signal_handler(_signal, _frame):
-    sys.exit(0)
+    sys.exit(0)  # pragma: no cover
 
 
 def parse_args(args):
@@ -100,5 +100,5 @@ def main(args=None):
         sys.exit(1)
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    main()  # pragma: no cover
