@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 from uuid import uuid4
 
 from pykour.app import ASGIApp
@@ -15,16 +15,28 @@ from pykour.types import Scope, Receive, Send
 class Pykour(Router):
     """Pykour application."""
 
-    def __init__(self, prefix="/", config: Config = Config()) -> None:
+    def __init__(
+        self,
+        title: str = "Pykour",
+        summary: Optional[str] = None,
+        description: str = "",
+        version: str = "0.1.0",
+        prefix="/",
+        config: Config = Config(),
+    ) -> None:
         """Initialize Pykour application.
 
         Args:
             prefix: URL prefix. Default is "/".
             config: Configuration instance.
         """
+        self.production_mode = os.getenv("PYKOUR_ENV") == "production"
+        self.title = title
+        self.summary = summary
+        self.description = description
+        self.version = version
 
         super().__init__(prefix=prefix)
-        self.production_mode = os.getenv("PYKOUR_ENV") == "production"
         self._config = config
         setup_logging(self._config.get_log_levels())
 
