@@ -1,6 +1,6 @@
 from __future__ import annotations
 from http import HTTPStatus
-from typing import Any, Callable, Dict, Union, List
+from typing import Any, Callable, Dict, Union, List, Tuple
 
 
 class Route:
@@ -242,6 +242,26 @@ class Router:
                 route.set_path_params(path_params)
             return route
         return None
+
+    def get_openapi_routes(self) -> List[Tuple[str, Tuple[str, Any]]]:
+        routes = []
+
+        for method in self.roots:
+            root = self.roots[method]
+
+            def traverse(node, prefix=""):
+                for child in node.children:
+                    new_prefix = f"{prefix}/{child.part}".rstrip("/")
+                    if new_prefix == "":
+                        new_prefix = "/"
+                    route = child.route
+                    if route:
+                        routes.append((new_prefix, (method, route.handler)))
+                    traverse(child, new_prefix)
+
+            traverse(root)
+
+        return routes
 
     def get_allowed_methods(self, path: str) -> List[str]:
         """Get allowed HTTP methods for the specified path.

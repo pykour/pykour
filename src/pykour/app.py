@@ -41,6 +41,14 @@ class ASGIApp:
                 return
 
             # Process the request if the route valid
+            if request.path == "/openapi.json":
+                await response_handler.handle_openapi(request, response)
+                return
+
+            if request.path == "/docs":
+                await response_handler.handle_docs(request, response)
+                return
+
             if request_handler.is_valid_route(request):
                 self.append_path_params(request)
                 await self.handle_request(request, response)
