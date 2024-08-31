@@ -46,7 +46,7 @@ def generate_openapi(app, scheme: str, hostname, port):
 
 
 def generate_openapi_paths(app):
-    paths = {}
+    paths: dict = {}
 
     try:
         for path, endpoint in app.get_openapi_routes():
@@ -101,7 +101,7 @@ def generate_openapi_request_body(handler):
 
 
 def generate_openapi_request_body_parameters(annotation):
-    schema = {
+    schema: dict = {
         "type": "object",
         "properties": {},
     }
