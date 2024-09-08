@@ -8,6 +8,8 @@
 - Change MySQL drive from PyMySQL to mysql-connector-python
 - Restrict PR Merge Targets
 - Asynchronous logging
+- Connection class Abstraction
+- Initial Implementation of OpenAPI
 
 ## 0.2.0 - 2024-08-17
 
