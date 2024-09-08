@@ -10,7 +10,6 @@ from pykour.middleware import BaseMiddleware
 def test_init():
     app = Pykour()
     assert app.app is not None
-    assert app._logger is not None
     assert app._config is not None
     assert app.pool is None
 
@@ -37,7 +36,6 @@ def test_add_middleware(mocker):
             self.app = app
             self.kwargs = kwargs
 
-    mocker.patch.object(app._logger, "isEnabledFor", return_value=True)
     app.add_middleware(MockMiddleware, option="value")
 
     assert app.app.kwargs == {"option": "value"}
