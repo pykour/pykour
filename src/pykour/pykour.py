@@ -45,11 +45,11 @@ class Pykour(Router):
         self.version = version
 
         super().__init__(prefix=prefix)
-        self._config = None
+        self._config: Optional[Config] = None
 
         self.app = ASGIApp()
 
-        self.pool = None
+        self.pool: Optional[ConnectionPool] = None
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         scope["app"] = self

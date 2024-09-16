@@ -1,4 +1,5 @@
-from unittest.mock import AsyncMock, patch, MagicMock
+import os
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -8,6 +9,7 @@ from pykour.middleware import BaseMiddleware
 
 
 def test_init():
+    os.environ["PYKOUR_ENV"] = "development"
     app = Pykour()
     assert app.production_mode is False
     assert app.title == "Pykour"
