@@ -6,7 +6,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/pykour/pykour/actions/workflows/ci.yml/badge.svg)](https://github.com/pykour/pykour/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pykour/pykour/graph/badge.svg?token=VJR4NSJ5FZ)](https://codecov.io/gh/pykour/pykour)
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/1195c94493854e9fb06fb8c3844e36ef)](https://app.codacy.com/gh/pykour/pykour/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
 **Documentation**: https://pykour.com  
 **Source Code**: https://github.com/pykour/pykour
