@@ -116,6 +116,13 @@ def setup_logging(log_levels: List[int] = None) -> None:
     access_logger = logging.getLogger("pykour.access")
 
 
+def set_log_levels(levels: List[int]) -> None:
+    """Set log levels."""
+
+    if logger is not None:
+        logger.levels = levels  # type: ignore[attr-defined]
+
+
 def write_info_log(message: str) -> None:
     """Write info log."""
 
