@@ -1,6 +1,12 @@
 # Release Notes
 
-## 0.3.0 - 2024-xx-xx
+## 0.4.0 - 2024-XX-XX
+
+### Enhancements
+
+- Remove Codacy badge
+
+## 0.3.0 - 2024-09-08
 
 ### Enhancements
 
