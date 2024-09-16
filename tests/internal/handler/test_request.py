@@ -259,3 +259,24 @@ async def test_call_throw_exception(mocker):
     conn.commit.assert_not_called()
     conn.rollback.assert_called_once()
     pool.release_connection.assert_called_once()
+
+
+def test_append_path_params():
+    from pykour.internal.handler.request import append_path_params
+    from pykour.request import Request
+
+    route = MagicMock()
+    route.path_params = {"id": "1"}
+
+    app = MagicMock()
+    app.get_route.return_value = route
+
+    request = MagicMock(spec=Request)
+    request.app = app
+    request.path = "/users/1"
+    request.method = "GET"
+    request.path_params = {}
+
+    append_path_params(request)
+
+    assert request.path_params == {"id": "1"}

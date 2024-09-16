@@ -1,6 +1,6 @@
 import pytest
 
-from pykour.testing import perform, get, post
+from pykour.testing import perform, get
 
 
 @pytest.mark.asyncio

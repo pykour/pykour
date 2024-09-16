@@ -50,7 +50,7 @@ class ASGIApp:
                 return
 
             if request_handler.is_valid_route(request):
-                self.append_path_params(request)
+                request_handler.append_path_params(request)
                 await self.handle_request(request, response)
             else:
                 write_debug_log(f"No valid route found: {request.method} {request.path}")
@@ -59,17 +59,6 @@ class ASGIApp:
         finally:
             end_time = asyncio.get_event_loop().time()
             write_access_log(request, response, (end_time - start_time))
-
-    @staticmethod
-    def append_path_params(request: Request) -> None:
-        """Append path parameters to the request."""
-        app = request.app
-        path = request.path
-        method = request.method
-        route = app.get_route(path, method)
-
-        path_params = route.path_params
-        request.path_params = path_params
 
     @staticmethod
     async def handle_request(request: Request, response: Response):
