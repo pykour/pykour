@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Dict, get_origin, Tuple, ItemsView, Callable, TypedDict, _TypedDictMeta
+from typing import Any, Dict, get_origin, Tuple, ItemsView, Callable
 
 from pykour.config import Config
 from pykour.db.connection import Connection
@@ -52,9 +52,6 @@ async def bind_args(
             bound_args[param_name] = param.annotation.from_dict(await request.json())
         elif param.annotation is dict or get_origin(param.annotation) is dict:
             # Bind dictionary
-            bound_args[param_name] = await request.json()
-        elif isinstance(param.annotation, _TypedDictMeta):
-            # Bind TypedDict
             bound_args[param_name] = await request.json()
         elif param.annotation is Request or param_name == "request" or param_name == "req":
             # Bind request

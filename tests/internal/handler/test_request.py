@@ -1,4 +1,4 @@
-from typing import TypedDict, get_origin
+from typing import TypedDict
 from unittest.mock import MagicMock
 
 import pytest
@@ -142,8 +142,6 @@ async def test_bind_args1():
 
     assert bound_args["user"].name == "John"
     assert bound_args["user"].age == 30
-    assert bound_args["dummy"]["name"] == "John"
-    assert bound_args["dummy"]["age"] == 30
     assert bound_args["body1"] == {"name": "John", "age": 30}
     assert bound_args["body2"] == {"name": "John", "age": 30}
     assert bound_args["r1"] == request
