@@ -1,3 +1,4 @@
+from typing import TypedDict, get_origin
 from unittest.mock import MagicMock
 
 import pytest
@@ -96,6 +97,31 @@ async def test_bind_args1():
         name: str
         age: int
 
+    class DummySchema(TypedDict):
+        name: str
+        age: int
+
+    def test_func(
+        user: UserSchema,
+        dummy: DummySchema,
+        body1: dict,
+        body2: Dict,
+        r1: Request,
+        req: Any,
+        request: Any,
+        r2: Response,
+        res: Any,
+        resp: Any,
+        response: Any,
+        value1: int,
+        c1: Config,
+        config: Any,
+        con1: Connection,
+        conn: Any,
+        connection: Any,
+    ):
+        pass
+
     config = MagicMock()
     conn = MagicMock()
     pool = MagicMock()
@@ -110,29 +136,14 @@ async def test_bind_args1():
     response = MagicMock(spec=Response)
     items = MagicMock()
 
-    items.__iter__.return_value = [
-        ("user", inspect.Parameter("user", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=UserSchema)),
-        ("body1", inspect.Parameter("body1", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=dict)),
-        ("body2", inspect.Parameter("body2", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Dict)),
-        ("r1", inspect.Parameter("r1", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Request)),
-        ("req", inspect.Parameter("req", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any)),
-        ("request", inspect.Parameter("request", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any)),
-        ("r2", inspect.Parameter("r2", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Response)),
-        ("res", inspect.Parameter("res", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any)),
-        ("resp", inspect.Parameter("resp", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any)),
-        ("response", inspect.Parameter("response", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any)),
-        ("value1", inspect.Parameter("value1", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=int)),
-        ("c1", inspect.Parameter("c1", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Config)),
-        ("config", inspect.Parameter("config", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any)),
-        ("con1", inspect.Parameter("conn", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Connection)),
-        ("conn", inspect.Parameter("conn", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any)),
-        ("connection", inspect.Parameter("conn", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Any)),
-    ]
+    sig = inspect.signature(test_func)
 
-    bound_args, c = await bind_args(request, response, items)
+    bound_args, c = await bind_args(request, response, sig.parameters.items())
 
     assert bound_args["user"].name == "John"
     assert bound_args["user"].age == 30
+    assert bound_args["dummy"]["name"] == "John"
+    assert bound_args["dummy"]["age"] == 30
     assert bound_args["body1"] == {"name": "John", "age": 30}
     assert bound_args["body2"] == {"name": "John", "age": 30}
     assert bound_args["r1"] == request
