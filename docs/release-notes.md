@@ -6,6 +6,7 @@
 
 - Remove Codacy badge
 - Refactoring the code base
+- Improvement e2e test
 
 ## 0.3.0 - 2024-09-08
 

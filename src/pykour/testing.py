@@ -6,13 +6,13 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 from pykour.db import Connection
-from pykour.types import Scope
+from pykour.types import Scope, Message, Receive
 from pykour import __version__, Pykour
 from pykour.util import convert_to_json_string
 
 
 class Assertion:
-    def __init__(self, scope: Scope, receive: AsyncMock, send: AsyncMock):
+    def __init__(self, scope: Scope, receive: Receive, send: AsyncMock):
         self.scope = scope
         self.receive = receive
         self.send = send
@@ -204,7 +204,9 @@ def trace(url: str, scheme: str = "http", version: str = "1.1") -> Scope:
 
 
 async def perform(app: Pykour, scope: Scope) -> Assertion:
-    receive = AsyncMock()
+    async def receive() -> Message:
+        return scope
+
     send = AsyncMock()
     await app(scope, receive, send)
     return Assertion(scope, receive, send)
@@ -241,3 +243,7 @@ def load_from_dir(conn: Connection, directory_path: str) -> None:
                             print(f"Executed: {sql}")
                         except Exception as e:
                             print(f"Failed to execute: {sql}. Error: {e}")
+
+
+def json_to_string(json_obj: Any) -> str:
+    return json.dumps(json_obj)
