@@ -5,6 +5,7 @@
 ### Enhancements
 
 - Remove Codacy badge
+- Refactoring the code base
 
 ## 0.3.0 - 2024-09-08
 

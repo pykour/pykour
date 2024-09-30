@@ -1,7 +1,8 @@
 from pykour import Pykour, Config
 from pykour.db import Connection
 
-app = Pykour(config=Config("./e2e/config.yaml"))
+app = Pykour()
+app.config = Config("./e2e/config.yaml")
 
 
 @app.get("/")

@@ -108,3 +108,14 @@ async def call(func: Callable, request: Request, response: Response) -> Any:
     finally:
         if conn:
             pool.release_connection(conn)
+
+
+def append_path_params(request: Request) -> None:
+    """Append path parameters to the request."""
+    app = request.app
+    path = request.path
+    method = request.method
+    route = app.get_route(path, method)
+
+    path_params = route.path_params
+    request.path_params = path_params

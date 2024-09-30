@@ -1,4 +1,5 @@
-from unittest.mock import AsyncMock, patch, MagicMock
+import os
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -8,23 +9,36 @@ from pykour.middleware import BaseMiddleware
 
 
 def test_init():
+    os.environ["PYKOUR_ENV"] = "development"
     app = Pykour()
+    assert app.production_mode is False
+    assert app.title == "Pykour"
+    assert app.summary is None
+    assert app.description == ""
+    assert app.version == "0.1.0"
+
     assert app.app is not None
-    assert app._config is not None
+    assert app._config is None
     assert app.pool is None
 
 
-def test_init_with_prefix():
-    app = Pykour(prefix="/api")
+def test_init_with_arguments():
+    app = Pykour(title="Test", summary="Test Summary", description="Test Description", version="1.0.0", prefix="/api")
+    assert app.title == "Test"
+    assert app.summary == "Test Summary"
+    assert app.description == "Test Description"
+    assert app.version == "1.0.0"
     assert app.prefix == "/api"
 
 
-def test_init_with_config(mocker):
-    config = Config()
-    mocker.patch.object(config, "get_datasource_type", return_value="sqlite")
-    with patch("pykour.pykour.ConnectionPool") as mock_pool:
-        app = Pykour(config=config)
-        assert app.config == config
+def test_set_config_and_get_config():
+    app = Pykour()
+    config = MagicMock(spec=Config)
+    config.get_datasource_type.return_value = "sqlite"
+    config.get_datasource_pool_max_connections.return_value = 10
+    config.get_datasource_db.return_value = "file::memory:"
+    app.config = config
+    assert app.config == config
 
 
 def test_add_middleware(mocker):
