@@ -1,301 +1,411 @@
-from __future__ import annotations
-from http import HTTPStatus
-from typing import Any, Callable, Dict, Union, List, Tuple
+import re
+from typing import Callable, Dict, List, Tuple
+
+from .http import HttpMethod, HttpStatus
 
 
-class Route:
-    def __init__(self, path: str, method: str, handler: Any):
-        self.path = path
-        self.method = method
-        self.handler = handler
-        self.path_params: Dict[str, str] = {}
+class RouteRegistry:
+    routes: Dict[str, List[Tuple[HttpMethod, str, Callable]]] = {}
 
-    def set_path_params(self, path_params: Dict[str, str]):
-        self.path_params = path_params
+    @classmethod
+    def add_route(cls, method: HttpMethod, path: str, handler: Callable):
+        regex_path = "^" + re.sub(r"{(\w+)}", r"(?P<\1>[^/]+)", path) + "$"
+        base_path = cls._extract_base_path(path)
 
+        if base_path not in cls.routes:
+            cls.routes[base_path] = []
 
-class Node:
-    def __init__(self, part: str, is_wild: bool = False):
-        self.part = part
-        self.children: list[Node] = []
-        self.is_wild = is_wild
-        self.route: Union[Route, None] = None
+        cls.routes[base_path].append((method, regex_path, handler))
 
-    def insert(self, pattern: str, route: Route):
-        parts = pattern.strip("/").split("/")
+    @classmethod
+    def match(cls, method: HttpMethod, path: str) -> Tuple[Callable, dict]:
+        base_path = cls._extract_base_path(path)
 
-        node = self
-        for part in parts:
-            child = node.match_child(part)
-            if not child:
-                child = Node(
-                    part,
-                    part.startswith(":") or part.startswith("*") or part.startswith("{"),
-                )
-                node.children.append(child)
-            node = child
+        if base_path not in cls.routes:
+            return None, {}
 
-        node.route = route
+        for route_method, route_pattern, handler in cls.routes[base_path]:
+            match = re.match(route_pattern, path)
+            if route_method == method and match:
+                return handler, match.groupdict()
+        return None, {}
 
-    def search(self, path: str):
-        parts = path.strip("/").split("/")
-        path_params = {}
-
-        node = self
-        for part in parts:
-            child = node.match_child(part)
-            if not child:
-                return None, {}
-            if child.is_wild:
-                var_name = child.part.lstrip(":*{").rstrip("}")
-                path_params[var_name] = part
-            node = child
-
-        # route = node.route_map.get(method)
-        return node.route, path_params
-
-    def match_child(self, part: str):
-        for child in self.children:
-            if child.part == part and not child.is_wild:
-                return child
-        for child in self.children:
-            if child.is_wild:
-                return child
-        return None
+    @staticmethod
+    def _extract_base_path(path: str) -> str:
+        return "/".join(segment for segment in path.split("/") if not re.match(r"{(\w+)}", segment))
 
 
-class Router:
-    SUPPORTED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
+# class RouteRegistry:
+#     routes: List[Tuple[HttpMethod, str, Callable]] = []
 
-    def __init__(self, prefix: str = ""):
-        """Router class.
+#     @classmethod
+#     def add_route(cls, method: HttpMethod, path: str, handler: Callable):
+#         regex_path = "^" + re.sub(r"{(\w+)}", r"(?P<\1>[^/]+)", path) + "$"
+#         cls.routes.append((method, regex_path, handler))
 
-        Args:
-            prefix: Prefix for the router.
-        """
-        self.roots: dict[str, Node] = {}
-        self.prefix = prefix.rstrip("/")
+#     @classmethod
+#     def match(cls, method: HttpMethod, path: str) -> Tuple[Callable, dict]:
+#         for route_method, route_pattern, handler in cls.routes:
+#             match = re.match(route_pattern, path)
+#             if route_method == method and match:
+#                 return handler, match.groupdict()
+#         return None, None
 
-    def __str__(self):
-        routes: List[str] = []
 
-        def traverse(node, prefix=""):
-            for child in node.children:
-                new_prefix = f"{prefix}/{child.part}".strip("/")
-                route = child.route
-                if route:
-                    handler_name = route.handler[0].__name__
-                    route_description = f"{method} /{new_prefix} -> {handler_name}()"
-                    routes.append(route_description)
-                traverse(child, new_prefix)
+def route_decorator(method: HttpMethod, path: str) -> Callable:
+    def decorator(func: Callable):
+        func._route_info = (method, path)
+        return func
 
-        for method, root in self.roots.items():
-            traverse(root)
-        return "\n".join(routes)
+    return decorator
 
-    def __repr__(self):
-        return "Router(prefix='{}')".format(self.prefix)
 
-    def get(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        """Decorator for GET method.
+def get(path: str):
+    return route_decorator(HttpMethod.GET, path)
 
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="GET", status_code=status_code)
 
-    def post(self, path: str, status_code: HTTPStatus = HTTPStatus.CREATED) -> Callable:
-        """Decorator for POST method.
+def post(path: str):
+    return route_decorator(HttpMethod.POST, path)
 
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="POST", status_code=status_code)
 
-    def put(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        """Decorator for PUT method.
+def put(path: str):
+    return route_decorator(HttpMethod.PUT, path)
 
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="PUT", status_code=status_code)
 
-    def delete(self, path: str, status_code: HTTPStatus = HTTPStatus.NO_CONTENT) -> Callable:
-        """Decorator for DELETE method.
+def patch(path: str):
+    return route_decorator(HttpMethod.PATCH, path)
 
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="DELETE", status_code=status_code)
 
-    def patch(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        """Decorator for PATCH method.
+def delete(path: str):
+    return route_decorator(HttpMethod.DELETE, path)
 
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="PATCH", status_code=status_code)
 
-    def options(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        """Decorator for OPTIONS method.
+def options(path: str):
+    return route_decorator(HttpMethod.OPTIONS, path)
 
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="OPTIONS", status_code=status_code)
 
-    def head(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
-        """Decorator for HEAD method.
+def head(path: str):
+    return route_decorator(HttpMethod.HEAD, path)
 
-        Args:
-            path: URL path.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
-        return self.route(path=path, method="HEAD", status_code=status_code)
 
-    def route(self, path: str, method: str = "GET", status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
-        """Decorator for route.
+def router(prefix: str = ""):
+    def decorator(cls):
+        for attr_name in dir(cls):
+            attr = getattr(cls, attr_name)
+            if callable(attr) and hasattr(attr, "_route_info"):
+                method, path = attr._route_info
+                full_path = f"{prefix}{path}"
+                RouteRegistry.add_route(method, full_path, attr)
+        return cls
 
-        Args:
-            path: URL path.
-            method: HTTP method.
-            status_code: HTTP status code.
-        Returns:
-            Route decorator.
-        """
+    return decorator
 
-        if method not in self.SUPPORTED_METHODS:
-            raise ValueError(f"Unsupported HTTP method: {method}")
 
-        def decorator(func):
-            self.add_route(path, method, (func, status_code))
-            return func
+def dispatch_request(method: HttpMethod, path: str):
+    handler, path_params = RouteRegistry.match(method, path)
+    if handler:
+        return handler(**path_params)
+    return {"error": "Not Found"}, HttpStatus.NOT_FOUND
 
-        return decorator
 
-    def add_router(self, router: Router, prefix: str = ""):
-        """Add router.
+# from __future__ import annotations
+# from http import HTTPStatus
+# from typing import Any, Callable, Dict, Union, List, Tuple
 
-        Args:
-            router: Router instance.
-            prefix: Prefix for the router.
-        """
 
-        def traverse(node, prefix=""):
-            for child in node.children:
-                new_prefix = f"{prefix}/{child.part}".rstrip("/")
-                route = child.route
-                if route:
-                    self.add_route(new_prefix, method, route.handler)
-                traverse(child, new_prefix)
+# class Route:
+#     def __init__(self, path: str, method: str, handler: Any):
+#         self.path = path
+#         self.method = method
+#         self.handler = handler
+#         self.path_params: Dict[str, str] = {}
 
-        for method, root in router.roots.items():
-            traverse(root, prefix=prefix)
+#     def set_path_params(self, path_params: Dict[str, str]):
+#         self.path_params = path_params
 
-    def add_route(self, path: str, method: str, handler: Any):
-        """Add route.
 
-        Args:
-            path: URL path.
-            method: HTTP method.
-            handler: Route handler.
-        """
-        if self.prefix:
-            full_path = f"/{self.prefix}{path}"
-        else:
-            full_path = path
-        route = Route(full_path, method, handler)
-        if method not in self.roots:
-            self.roots[method] = Node("")
-        self.roots[method].insert(full_path, route)
+# class Node:
+#     def __init__(self, part: str, is_wild: bool = False):
+#         self.part = part
+#         self.children: list[Node] = []
+#         self.is_wild = is_wild
+#         self.route: Union[Route, None] = None
 
-    def get_route(self, path: str, method: str) -> Union[Route, None]:
-        """Get route.
+#     def insert(self, pattern: str, route: Route):
+#         parts = pattern.strip("/").split("/")
 
-        Args:
-            path: URL path.
-            method: HTTP method.
-        """
-        if method in self.roots:
-            route, path_params = self.roots[method].search(path)
-            if route:
-                route.set_path_params(path_params)
-            return route
-        return None
+#         node = self
+#         for part in parts:
+#             child = node.match_child(part)
+#             if not child:
+#                 child = Node(
+#                     part,
+#                     part.startswith(":") or part.startswith("*") or part.startswith("{"),
+#                 )
+#                 node.children.append(child)
+#             node = child
 
-    def get_openapi_routes(self) -> List[Tuple[str, Tuple[str, Any]]]:
-        routes = []
+#         node.route = route
 
-        for method in self.roots:
-            root = self.roots[method]
+#     def search(self, path: str):
+#         parts = path.strip("/").split("/")
+#         path_params = {}
 
-            def traverse(node, prefix=""):
-                for child in node.children:
-                    new_prefix = f"{prefix}/{child.part}".rstrip("/")
-                    if new_prefix == "":
-                        new_prefix = "/"
-                    route = child.route
-                    if route:
-                        routes.append((new_prefix, (method, route.handler)))
-                    traverse(child, new_prefix)
+#         node = self
+#         for part in parts:
+#             child = node.match_child(part)
+#             if not child:
+#                 return None, {}
+#             if child.is_wild:
+#                 var_name = child.part.lstrip(":*{").rstrip("}")
+#                 path_params[var_name] = part
+#             node = child
 
-            traverse(root)
+#         # route = node.route_map.get(method)
+#         return node.route, path_params
 
-        return routes
+#     def match_child(self, part: str):
+#         for child in self.children:
+#             if child.part == part and not child.is_wild:
+#                 return child
+#         for child in self.children:
+#             if child.is_wild:
+#                 return child
+#         return None
 
-    def get_allowed_methods(self, path: str) -> List[str]:
-        """Get allowed HTTP methods for the specified path.
 
-        Args:
-            path: URL path.
+# class Router:
+#     SUPPORTED_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
 
-        Returns:
-            List of allowed HTTP methods.
-        """
-        allowed_methods = []
-        http_methods = [
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "PATCH",
-            "OPTIONS",
-            "HEAD",
-        ]
+#     def __init__(self, prefix: str = ""):
+#         """Router class.
 
-        for method in http_methods:
-            if self.get_route(path, method):
-                allowed_methods.append(method)
+#         Args:
+#             prefix: Prefix for the router.
+#         """
+#         self.roots: dict[str, Node] = {}
+#         self.prefix = prefix.rstrip("/")
 
-        return allowed_methods
+#     def __str__(self):
+#         routes: List[str] = []
 
-    def exists(self, path: str, method: str) -> bool:
-        """Check if route exists.
+#         def traverse(node, prefix=""):
+#             for child in node.children:
+#                 new_prefix = f"{prefix}/{child.part}".strip("/")
+#                 route = child.route
+#                 if route:
+#                     handler_name = route.handler[0].__name__
+#                     route_description = f"{method} /{new_prefix} -> {handler_name}()"
+#                     routes.append(route_description)
+#                 traverse(child, new_prefix)
 
-        Args:
-            path: URL path.
-            method: HTTP method.
-        Returns:
-            True if route exists, False otherwise.
-        """
-        return self.get_route(path, method) is not None
+#         for method, root in self.roots.items():
+#             traverse(root)
+#         return "\n".join(routes)
+
+#     def __repr__(self):
+#         return "Router(prefix='{}')".format(self.prefix)
+
+#     def get(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
+#         """Decorator for GET method.
+
+#         Args:
+#             path: URL path.
+#             status_code: HTTP status code.
+#         Returns:
+#             Route decorator.
+#         """
+#         return self.route(path=path, method="GET", status_code=status_code)
+
+#     def post(self, path: str, status_code: HTTPStatus = HTTPStatus.CREATED) -> Callable:
+#         """Decorator for POST method.
+
+#         Args:
+#             path: URL path.
+#             status_code: HTTP status code.
+#         Returns:
+#             Route decorator.
+#         """
+#         return self.route(path=path, method="POST", status_code=status_code)
+
+#     def put(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
+#         """Decorator for PUT method.
+
+#         Args:
+#             path: URL path.
+#             status_code: HTTP status code.
+#         Returns:
+#             Route decorator.
+#         """
+#         return self.route(path=path, method="PUT", status_code=status_code)
+
+#     def delete(self, path: str, status_code: HTTPStatus = HTTPStatus.NO_CONTENT) -> Callable:
+#         """Decorator for DELETE method.
+
+#         Args:
+#             path: URL path.
+#             status_code: HTTP status code.
+#         Returns:
+#             Route decorator.
+#         """
+#         return self.route(path=path, method="DELETE", status_code=status_code)
+
+#     def patch(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
+#         """Decorator for PATCH method.
+
+#         Args:
+#             path: URL path.
+#             status_code: HTTP status code.
+#         Returns:
+#             Route decorator.
+#         """
+#         return self.route(path=path, method="PATCH", status_code=status_code)
+
+#     def options(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
+#         """Decorator for OPTIONS method.
+
+#         Args:
+#             path: URL path.
+#             status_code: HTTP status code.
+#         Returns:
+#             Route decorator.
+#         """
+#         return self.route(path=path, method="OPTIONS", status_code=status_code)
+
+#     def head(self, path: str, status_code: HTTPStatus = HTTPStatus.OK) -> Callable:
+#         """Decorator for HEAD method.
+
+#         Args:
+#             path: URL path.
+#             status_code: HTTP status code.
+#         Returns:
+#             Route decorator.
+#         """
+#         return self.route(path=path, method="HEAD", status_code=status_code)
+
+#     def route(self, path: str, method: str = "GET", status_code: Union[HTTPStatus, int] = HTTPStatus.OK) -> Callable:
+#         """Decorator for route.
+
+#         Args:
+#             path: URL path.
+#             method: HTTP method.
+#             status_code: HTTP status code.
+#         Returns:
+#             Route decorator.
+#         """
+
+#         if method not in self.SUPPORTED_METHODS:
+#             raise ValueError(f"Unsupported HTTP method: {method}")
+
+#         def decorator(func):
+#             self.add_route(path, method, (func, status_code))
+#             return func
+
+#         return decorator
+
+#     def add_router(self, router: Router, prefix: str = ""):
+#         """Add router.
+
+#         Args:
+#             router: Router instance.
+#             prefix: Prefix for the router.
+#         """
+
+#         def traverse(node, prefix=""):
+#             for child in node.children:
+#                 new_prefix = f"{prefix}/{child.part}".rstrip("/")
+#                 route = child.route
+#                 if route:
+#                     self.add_route(new_prefix, method, route.handler)
+#                 traverse(child, new_prefix)
+
+#         for method, root in router.roots.items():
+#             traverse(root, prefix=prefix)
+
+#     def add_route(self, path: str, method: str, handler: Any):
+#         """Add route.
+
+#         Args:
+#             path: URL path.
+#             method: HTTP method.
+#             handler: Route handler.
+#         """
+#         if self.prefix:
+#             full_path = f"/{self.prefix}{path}"
+#         else:
+#             full_path = path
+#         route = Route(full_path, method, handler)
+#         if method not in self.roots:
+#             self.roots[method] = Node("")
+#         self.roots[method].insert(full_path, route)
+
+#     def get_route(self, path: str, method: str) -> Union[Route, None]:
+#         """Get route.
+
+#         Args:
+#             path: URL path.
+#             method: HTTP method.
+#         """
+#         if method in self.roots:
+#             route, path_params = self.roots[method].search(path)
+#             if route:
+#                 route.set_path_params(path_params)
+#             return route
+#         return None
+
+#     def get_openapi_routes(self) -> List[Tuple[str, Tuple[str, Any]]]:
+#         routes = []
+
+#         for method in self.roots:
+#             root = self.roots[method]
+
+#             def traverse(node, prefix=""):
+#                 for child in node.children:
+#                     new_prefix = f"{prefix}/{child.part}".rstrip("/")
+#                     if new_prefix == "":
+#                         new_prefix = "/"
+#                     route = child.route
+#                     if route:
+#                         routes.append((new_prefix, (method, route.handler)))
+#                     traverse(child, new_prefix)
+
+#             traverse(root)
+
+#         return routes
+
+#     def get_allowed_methods(self, path: str) -> List[str]:
+#         """Get allowed HTTP methods for the specified path.
+
+#         Args:
+#             path: URL path.
+
+#         Returns:
+#             List of allowed HTTP methods.
+#         """
+#         allowed_methods = []
+#         http_methods = [
+#             "GET",
+#             "POST",
+#             "PUT",
+#             "DELETE",
+#             "PATCH",
+#             "OPTIONS",
+#             "HEAD",
+#         ]
+
+#         for method in http_methods:
+#             if self.get_route(path, method):
+#                 allowed_methods.append(method)
+
+#         return allowed_methods
+
+#     def exists(self, path: str, method: str) -> bool:
+#         """Check if route exists.
+
+#         Args:
+#             path: URL path.
+#             method: HTTP method.
+#         Returns:
+#             True if route exists, False otherwise.
+#         """
+#         return self.get_route(path, method) is not None
