@@ -1,248 +1,172 @@
-import json
-from typing import Mapping, Any, Iterator, cast, List, Tuple, Union
-from collections import defaultdict
+import typing
+from urllib.parse import parse_qs, unquote
 
-from pykour.types import Scope, Receive
-from pykour.url import URL
-from urllib.parse import parse_qs
+from .types import Scope, Receive
+from .headers import Headers
 
 
-class Request(Mapping[str, Any]):
-    """Request is a class that represents a request from a client."""
-
+class Request:
     def __init__(self, scope: Scope, receive: Receive):
-        """Initializes a new instance of the Request class.
-
-        Args:
-            scope: The ASGI scope.
-            receive: The ASGI receive function.
-        """
-
-        self.scope = scope
-        self.receive = receive
-        self._headers = defaultdict(list)
-        self.content_type = None
-        self.charset = "utf-8"
-        self.path_params: dict[str, str] = {}
-
-        if "headers" in self.scope:
-            for key, value in self.scope["headers"]:
-                decoded_key = key.decode("latin1").lower()
-                decoded_value = value.decode("latin1")
-                self._headers[decoded_key].append(decoded_value)
-
-                if decoded_key == "content-type":
-                    self.content_type = decoded_value
-                    if "charset=" in decoded_value:
-                        self.charset = decoded_value.split("charset=")[-1]
-
-        self._stream_consumed = False
-
-    def __getitem__(self, key: str) -> Any:
-        return self.scope[key]
-
-    def __iter__(self) -> Iterator[Any]:
-        return iter(self.scope)
-
-    def __len__(self) -> int:
-        return len(self.scope)
-
-    __eq__ = object.__eq__
-    __hash__ = object.__hash__
+        self._scope = scope
+        self._receive = receive
+        self._request: dict[str, typing.Any] = {}
+        self._headers: Headers | None = None
+        self._body: bytes | None = None
+        self._query_params: dict[str, list[str]] | None = None
 
     @property
-    def app(self) -> Any:
-        """Returns the ASGI application instance.
-
-        Returns:
-            Application name.
-        """
-        return self.scope["app"]
-
-    @property
-    def url(self) -> URL:
-        """Returns the URL instance.
-
-        Returns:
-            URL instance.
-        """
-        return URL(scope=self.scope)
-
-    @property
-    def headers(self) -> dict[str, list[str]]:
-        """Returns the headers.
-
-        Returns:
-            Headers.
-        """
-        return self._headers
-
-    def get_header(self, name: str) -> list[str]:
-        """Returns the header value.
-
-        Args:
-            name: The header name.
-        """
-        return self._headers.get(name)
-
-    @property
-    def method(self) -> Union[str, None]:
-        """Returns the HTTP method.
-
-        Returns:
-            HTTP method.
-        """
-        if "method" not in self.scope:
-            return None
-        else:
-            return cast(str, self.scope["method"])
-
-    @property
-    def scheme(self) -> Union[str, None]:
-        """Returns the URL scheme."""
-
-        if "scheme" not in self.scope:
-            return None
-        else:
-            return cast(str, self.scope["scheme"]).upper()
-
-    @property
-    def version(self) -> Union[str, None]:
-        """Returns the HTTP version.
-
-        Returns:
-            HTTP version.
-        """
-        if "http_version" not in self.scope:
-            return None
-        else:
-            return self.scope["http_version"]
-
-    @property
-    def client(self) -> Union[str, None]:
-        """Returns the client address.
-
-        Returns:
-            Client address.
-        """
-        if "client" not in self.scope:
-            return None
-        else:
-            client = self.scope["client"]
-            return f"{client[0]}:{client[1]}"
+    def method(self) -> str:
+        return self._scope["method"]
 
     @property
     def path(self) -> str:
-        """Returns the request path.
-
-        Returns:
-            Request path.
-        """
-        return self.scope["path"]
+        return self._scope["path"]
 
     @property
-    def query_string(self) -> str:
-        """Returns the query string.
-
-        Returns:
-            Query string.
-        """
-        return self.scope["query_string"]
+    def raw_path(self) -> bytes:
+        return self._scope.get("raw_path", self.path.encode("utf-8"))
 
     @property
-    def query_params(self) -> dict[str, Union[str, list[str]]]:
-        """Returns the query parameters.
-
-        Returns:
-            Query parameters.
-        """
-        query_string = self.scope["query_string"].decode("utf-8")
-
-        parsed_dict = parse_qs(query_string)
-
-        result = {k: (v[0] if len(v) == 1 else v) for k, v in parsed_dict.items()}
-        return result
+    def root_path(self) -> str:
+        return self._scope.get("root_path", "")
 
     @property
-    def accept(self) -> List[str]:
-        """Returns the accept header.
+    def scheme(self) -> str:
+        return self._scope.get("scheme", "http")
 
-        Returns:
-            Accept header.
-        """
-        return self.get_sorted_accept_list(self.scope)
+    @property
+    def query_string(self) -> bytes:
+        return self._scope.get("query_string", b"")
+
+    @property
+    def query_params(self) -> dict[str, list[str]]:
+        if self._query_params is None:
+            self._query_params = parse_qs(self.query_string.decode("utf-8"))
+        return self._query_params
+
+    @property
+    def headers(self) -> Headers:
+        if self._headers is None:
+            raw_headers = self._scope.get("headers", [])
+            self._headers = Headers(raw_headers)
+        return self._headers
+
+    @property
+    def server(self) -> tuple[str, int] | None:
+        return self._scope.get("server")
+
+    @property
+    def client(self) -> tuple[str, int] | None:
+        return self._scope.get("client")
+
+    @property
+    def asgi(self) -> dict[str, typing.Any]:
+        return self._scope.get("asgi", {})
+
+    @property
+    def http_version(self) -> str:
+        return self._scope.get("http_version", "1.1")
+
+    @property
+    def url(self) -> str:
+        host = self.headers.get_first("host", "localhost")
+        return f"{self.scheme}://{host}{self.path}"
+
+    @property
+    def full_url(self) -> str:
+        url = self.url
+        if self.query_string:
+            url += f"?{self.query_string.decode('utf-8')}"
+        return url
 
     async def body(self) -> bytes:
-        """Reads the request body.
-
-        Returns:
-            The request body.
-        """
-        try:
+        if self._body is None:
             body = b""
-            more_body = True
-
-            while more_body:
-                message = await self.receive()
+            while True:
+                message = await self._receive()
                 body += message.get("body", b"")
-                more_body = message.get("more_body", False)
+                if not message.get("more_body", False):
+                    break
+            self._body = body
+        return self._body
 
-            return body
-        except Exception as e:
-            print(f"Error occurred while receiving body: {e}")
-            raise e
+    async def json(self) -> typing.Any:
+        import json
+        body = await self.body()
+        return json.loads(body.decode("utf-8"))
 
-    async def json(self) -> Any:
-        """Parses the request body as JSON.
+    async def form(self) -> dict[str, str | list[str]]:
+        body = await self.body()
+        content_type = self.headers.get_first("content-type", "")
+        
+        if "application/x-www-form-urlencoded" in content_type:
+            form_data = parse_qs(body.decode("utf-8"))
+            return {k: v[0] if len(v) == 1 else v for k, v in form_data.items()}
+        
+        return {}
 
-        Returns:
-            The parsed JSON object.
-        """
+    def get(self, key: str, default: str | None = None) -> str | None:
         try:
-            body = await self.body()
-            return json.loads(body)
-        except Exception as e:
-            print(f"Error occurred while parsing JSON: {e}")
-            raise e
+            return getattr(self, key)
+        except AttributeError:
+            if key in self._request:
+                value = self._request[key]
+                setattr(self, key, value)
+                return value
+            return default
 
-    @staticmethod
-    def parse_accept_header(accept_header: str) -> List[Tuple[str, float]]:
-        """
-        Parse the accept header and return a sorted list of MIME types.
-        """
-        accept_values = accept_header.split(",")
-        result = []
+    def copy(self) -> typing.Self:
+        new = type(self)(self._scope, self._receive)
+        new._request = self._request.copy()
+        new._headers = self._headers.copy() if self._headers else None
+        return new
 
-        for value in accept_values:
-            parts = value.split(";")
-            mime_type = parts[0].strip()
-            q_value = 1.0
+    def keys(self) -> list[str]:
+        return list(self._request.keys())
 
-            if len(parts) > 1 and parts[1].strip().startswith("q="):
-                try:
-                    q_value = float(parts[1].strip()[2:])
-                except ValueError:
-                    pass
+    def values(self) -> list[typing.Any]:
+        return [self[k] for k in self.keys()]
 
-            result.append((mime_type, q_value))
+    def items(self) -> list[tuple[str, typing.Any]]:
+        return [(k, self[k]) for k in self.keys()]
 
-        result.sort(key=lambda x: x[1], reverse=True)
-        return result
+    def __getitem__(self, key: str) -> typing.Any:
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            try:
+                value = self._request[key]
+                setattr(self, key, value)
+                return value
+            except KeyError:
+                raise KeyError(f"Key '{key}' not found in request scope.")
 
-    def get_sorted_accept_list(self, scope: Scope) -> List[str]:
-        """
-        Parse the accept header and return a sorted list of MIME types.
-        """
-        headers = scope.get("headers", [])
-        accept_header = ""
+    def __contains__(self, key: str) -> bool:
+        return hasattr(self, key) or key in self._request
 
-        for header in headers:
-            if header[0].decode("latin-1") == "accept":
-                accept_header = header[1].decode("latin-1")
-                break
+    def __iter__(self) -> typing.Iterator[str]:
+        attr_keys = (k for k in self.__dict__ if not k.startswith("_"))
+        request_keys = self._request.keys()
+        return iter(set(attr_keys) | set(request_keys))
 
-        if not accept_header:
-            return []
+    def __len__(self) -> int:
+        return len(self._request)
 
-        parsed_accept = self.parse_accept_header(accept_header)
-        return [mime_type for mime_type, q_value in parsed_accept]
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Request):
+            return NotImplemented
+        if set(self._request.keys()) != set(other._request.keys()):
+            return False
+        for key in self._request:
+            if self._request[key] != other._request.get(key):
+                return False
+        return True
+
+    def __bool__(self) -> bool:
+        return bool(self._request)
+
+    def __str__(self) -> str:
+        return f"<{self.__class__.__name__} {self._request!r}>"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._request!r})"

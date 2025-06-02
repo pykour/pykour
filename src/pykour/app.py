@@ -1,92 +1,85 @@
-import asyncio
-from http import HTTPStatus
-
-import pykour.internal.handler.request as request_handler
-import pykour.internal.handler.response as response_handler
-import pykour.exceptions as ex
-from pykour.logging import write_access_log, write_error_log, write_debug_log
-
-from pykour.request import Request
-from pykour.response import Response
-from pykour.types import Scope, Receive, Send
+import os
+import importlib.util
+from pathlib import Path
+from .types import Scope, Receive, Send
+from .request import Request
+from .response import Response
 
 
 class ASGIApp:
-    """ASGI application class."""
+    def __init__(self, prefix: str = "", base_path: str = "./routers") -> None:
+        self.prefix = prefix
+        self.base_path = Path(base_path)
 
-    def __init__(self):
-        """Initialize Pykour application."""
-        ...
+    def resolve_handler_path(self, method: str, path: str) -> Path | None:
+        """Resolve request path to handler file path."""
+        # Remove prefix from path
+        if path.startswith(self.prefix):
+            path = path[len(self.prefix):]
+        
+        # Remove leading slash and split path
+        path_parts = path.strip("/").split("/") if path.strip("/") else []
+        
+        # Convert HTTP method to lowercase for file name
+        method_lower = method.lower()
+        
+        # Build file path
+        if path_parts:
+            # e.g., /users -> ./routers/users/get.py
+            handler_path = self.base_path / "/".join(path_parts) / f"{method_lower}.py"
+        else:
+            # Root path -> ./routers/get.py
+            handler_path = self.base_path / f"{method_lower}.py"
+        
+        return handler_path if handler_path.exists() else None
+
+    def load_handler(self, handler_path: Path):
+        """Dynamically load handler module from file path."""
+        spec = importlib.util.spec_from_file_location("handler", handler_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Cannot load module from {handler_path}")
+        
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        
+        # Look for a handler function in the module
+        if hasattr(module, "handler"):
+            return module.handler
+        elif hasattr(module, "handle"):
+            return module.handle
+        else:
+            raise AttributeError(f"No handler function found in {handler_path}")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            return
+        
         request = Request(scope, receive)
-        response = Response(send)
-        start_time = asyncio.get_event_loop().time()
+        
+        # Resolve handler path
+        handler_path = self.resolve_handler_path(request.method, request.path)
+        
+        if handler_path is None:
+            # Send 404 response
+            response = Response("Not Found", status=404)
+            await response.send(send)
+            return
+        
         try:
-            # Check if the scheme is supported
-            if not request_handler.is_supported_scheme(request):
-                await response_handler.handle_error(request, response, HTTPStatus.BAD_REQUEST)
-                return
-
-            # Check if the method is supported
-            if not request_handler.is_supported_method(request):
-                write_debug_log(f"Unsupported HTTP Method: {request.method}")
-                await response_handler.handle_error(request, response, HTTPStatus.NOT_FOUND)
-                return
-
-            # Check if the method is allowed
-            if not request_handler.is_method_allowed(request):
-                write_debug_log(f"Method not allowed: {request.method}")
-                await response_handler.handle_error(request, response, HTTPStatus.METHOD_NOT_ALLOWED)
-                return
-
-            # Process the request if the route valid
-            if request.path == "/openapi.json":
-                await response_handler.handle_openapi(request, response)
-                return
-
-            if request.path == "/docs":
-                await response_handler.handle_docs(request, response)
-                return
-
-            if request_handler.is_valid_route(request):
-                self.append_path_params(request)
-                await self.handle_request(request, response)
-            else:
-                write_debug_log(f"No valid route found: {request.method} {request.path}")
-                await response_handler.handle_error(request, response, HTTPStatus.NOT_FOUND)
-
-        finally:
-            end_time = asyncio.get_event_loop().time()
-            write_access_log(request, response, (end_time - start_time))
-
-    @staticmethod
-    def append_path_params(request: Request) -> None:
-        """Append path parameters to the request."""
-        app = request.app
-        path = request.path
-        method = request.method
-        route = app.get_route(path, method)
-
-        path_params = route.path_params
-        request.path_params = path_params
-
-    @staticmethod
-    async def handle_request(request: Request, response: Response):
-        """Handle request for a route."""
-
-        app = request.app
-        route = app.get_route(request.path, request.method)
-        route_fun, status_code = route.handler
-        response.status = status_code
-
-        # noinspection PyBroadException
-        try:
-            response_body = await request_handler.call(route_fun, request, response)
-
-            await response_handler.handle_response(request, response, response_body)
-        except ex.HTTPException as e:
-            await response_handler.handle_http_exception(request, response, e)
+            # Create response object with method-based default status
+            response = Response(method=request.method)
+            
+            # Load and execute handler
+            handler = self.load_handler(handler_path)
+            result = await handler(request, response)
+            
+            # If handler returns a value, use it as the response body
+            if result is not None:
+                response._body = result
+            
+            # Send response
+            await response.send(send)
         except Exception as e:
-            write_error_log(f"Internal Server Error: {e}")
-            await response_handler.handle_error(request, response, HTTPStatus.INTERNAL_SERVER_ERROR)
+            # Send 500 response on error
+            response = Response(f"Internal Server Error: {str(e)}", status=500)
+            await response.send(send)

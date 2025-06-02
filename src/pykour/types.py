@@ -1,10 +1,8 @@
-from http import HTTPStatus
-from typing import Callable, Union, MutableMapping, Any, Awaitable
-
+from collections.abc import Awaitable, MutableMapping
+from typing import Any, Callable
 
 Scope = MutableMapping[str, Any]
 Message = MutableMapping[str, Any]
+
 Receive = Callable[[], Awaitable[Message]]
 Send = Callable[[Message], Awaitable[None]]
-ASGIApp = Callable[[Scope, Receive, Send], Awaitable[None]]
-HTTPStatusCode = Union[int, HTTPStatus]
