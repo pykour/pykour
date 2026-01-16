@@ -129,13 +129,13 @@ class TestTrieRouting:
         router._routes_cache = None
 
         # Register /api/users/[id] (dynamic)
-        async def dynamic_handler(request):  # type: ignore[no-untyped-def]
+        async def dynamic_handler(request):
             return None
 
         router._insert("/api/users/[id]", {"GET": dynamic_handler})
 
         # Register /api/users/me (static)
-        async def static_handler(request):  # type: ignore[no-untyped-def]
+        async def static_handler(request):
             return None
 
         router._insert("/api/users/me", {"GET": static_handler})
@@ -159,7 +159,7 @@ class TestTrieRouting:
         router._routes_cache = None
 
         # Register /api/[category]/items
-        async def category_handler(request):  # type: ignore[no-untyped-def]
+        async def category_handler(request):
             return None
 
         router._insert("/api/[category]/items", {"GET": category_handler})
@@ -178,13 +178,13 @@ class TestTrieRouting:
         router._routes_cache = None
 
         # Register catch-all
-        async def catch_all_handler(request):  # type: ignore[no-untyped-def]
+        async def catch_all_handler(request):
             return None
 
         router._insert("/docs/[...slug]", {"GET": catch_all_handler})
 
         # Register specific static route
-        async def specific_handler(request):  # type: ignore[no-untyped-def]
+        async def specific_handler(request):
             return None
 
         router._insert("/docs/intro", {"GET": specific_handler})
@@ -207,7 +207,7 @@ class TestTrieRouting:
         router._root = TrieNode()
         router._routes_cache = None
 
-        async def handler(request):  # type: ignore[no-untyped-def]
+        async def handler(request):
             return None
 
         router._insert(
@@ -228,7 +228,7 @@ class TestTrieRouting:
         router._root = TrieNode()
         router._routes_cache = None
 
-        async def handler(request):  # type: ignore[no-untyped-def]
+        async def handler(request):
             return None
 
         router._insert("/[org]/[repo]/tree/[branch]", {"GET": handler})
@@ -245,7 +245,7 @@ class TestTrieRouting:
         router._root = TrieNode()
         router._routes_cache = None
 
-        async def handler(request):  # type: ignore[no-untyped-def]
+        async def handler(request):
             return None
 
         router._insert("/api/users", {"GET": handler})
@@ -264,7 +264,7 @@ class TestTrieRouting:
         router._root = TrieNode()
         router._routes_cache = None
 
-        async def handler(request):  # type: ignore[no-untyped-def]
+        async def handler(request):
             return None
 
         router._insert("/api/users", {"GET": handler})

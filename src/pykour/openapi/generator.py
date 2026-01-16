@@ -349,7 +349,9 @@ class OpenAPIGenerator:
     def _generate_responses(
         self, handler: Callable[..., Any]
     ) -> dict[str, dict[str, Any]]:
-        """Generate responses from handler return type."""
+        """Generate responses from handler return type and @status_code decorators."""
+        from pykour.status_code import get_status_code_info
+
         responses: dict[str, dict[str, Any]] = {}
 
         # Try to get return type hint
@@ -359,62 +361,89 @@ class OpenAPIGenerator:
         except Exception:
             return_type = Response
 
-        # Handle JSONResponse or dict
+        # Get declared status codes from @status_code decorator
+        status_infos = get_status_code_info(handler)
+
+        # Determine content schema based on return type
+        content_schema = self._get_response_content(return_type)
+
+        if status_infos:
+            # Use declared status codes
+            for info in status_infos:
+                response_obj: dict[str, Any] = {
+                    "description": info.description
+                    or self._get_default_description(info.code)
+                }
+                # Only add content for success responses (2xx)
+                if 200 <= info.code < 300 and content_schema:
+                    response_obj["content"] = content_schema
+                responses[str(info.code)] = response_obj
+        else:
+            # Fall back to default 200 response
+            if content_schema:
+                responses["200"] = {
+                    "description": "Successful response",
+                    "content": content_schema,
+                }
+            else:
+                responses["200"] = {"description": "Successful response"}
+
+        # Add common error responses (if not already declared)
+        if "422" not in responses:
+            responses["422"] = {
+                "description": "Validation Error",
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": "#/components/schemas/ValidationError"}
+                    }
+                },
+            }
+
+        return responses
+
+    def _get_response_content(self, return_type: type) -> dict[str, Any] | None:
+        """Get content schema for a return type."""
         from pykour.response import JSONResponse
 
         if return_type is JSONResponse or return_type is dict:
-            responses["200"] = {
-                "description": "Successful response",
-                "content": {"application/json": {"schema": {"type": "object"}}},
-            }
+            return {"application/json": {"schema": {"type": "object"}}}
         elif return_type is HTMLResponse:
-            responses["200"] = {
-                "description": "Successful response",
-                "content": {"text/html": {"schema": {"type": "string"}}},
-            }
+            return {"text/html": {"schema": {"type": "string"}}}
         elif return_type is PlainTextResponse:
-            responses["200"] = {
-                "description": "Successful response",
-                "content": {"text/plain": {"schema": {"type": "string"}}},
-            }
+            return {"text/plain": {"schema": {"type": "string"}}}
         elif return_type is FileResponse:
-            responses["200"] = {
-                "description": "File download",
-                "content": {
-                    "application/octet-stream": {
-                        "schema": {"type": "string", "format": "binary"}
-                    }
-                },
+            return {
+                "application/octet-stream": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
             }
         elif return_type is StreamingResponse:
-            responses["200"] = {
-                "description": "Streaming response",
-                "content": {
-                    "application/octet-stream": {
-                        "schema": {"type": "string", "format": "binary"}
-                    }
-                },
+            return {
+                "application/octet-stream": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
             }
         elif return_type is EventSourceResponse:
-            responses["200"] = {
-                "description": "Server-Sent Events stream",
-                "content": {"text/event-stream": {"schema": {"type": "string"}}},
-            }
-        else:
-            # Default response
-            responses["200"] = {"description": "Successful response"}
+            return {"text/event-stream": {"schema": {"type": "string"}}}
+        return None
 
-        # Add common error responses
-        responses["422"] = {
-            "description": "Validation Error",
-            "content": {
-                "application/json": {
-                    "schema": {"$ref": "#/components/schemas/ValidationError"}
-                }
-            },
+    def _get_default_description(self, code: int) -> str:
+        """Get default description for HTTP status code."""
+        descriptions = {
+            200: "Successful response",
+            201: "Created",
+            202: "Accepted",
+            204: "No Content",
+            400: "Bad Request",
+            401: "Unauthorized",
+            403: "Forbidden",
+            404: "Not Found",
+            405: "Method Not Allowed",
+            409: "Conflict",
+            422: "Validation Error",
+            500: "Internal Server Error",
         }
-
-        return responses
+        return descriptions.get(code, f"Response {code}")
 
     def _generate_components(self) -> dict[str, Any]:
         """Generate components object."""
@@ -515,7 +544,13 @@ class OpenAPIGenerator:
         """Generate unique operation ID."""
         # Use handler name if available
         handler_name = getattr(handler, "__name__", "")
-        if handler_name and handler_name not in ("get", "post", "put", "delete", "patch"):
+        if handler_name and handler_name not in (
+            "get",
+            "post",
+            "put",
+            "delete",
+            "patch",
+        ):
             return handler_name
 
         # Generate from path

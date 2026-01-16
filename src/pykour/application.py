@@ -417,6 +417,80 @@ class Pykour:
 
         return re.sub(r"\{(\w+)\}", replace, template)
 
+    def _interpolate_header_value(
+        self,
+        template: str,
+        kwargs: dict[str, Any],
+        response: Response,
+    ) -> str | None:
+        """Interpolate {param} placeholders in header value template.
+
+        Args:
+            template: Value template with {param} or {param.field} placeholders.
+            kwargs: Handler kwargs for interpolation.
+            response: Response object for response body interpolation.
+
+        Returns:
+            Interpolated value, or None if interpolation failed.
+
+        Example:
+            template = "/users/{id}"
+            kwargs = {"id": 123}
+            result = "/users/123"
+
+            # With response body
+            template = "/users/{id}"
+            kwargs = {}
+            response.body = b'{"id": 456}'
+            result = "/users/456"
+        """
+        import re
+
+        def get_value(param_path: str) -> str | None:
+            """Get value for a parameter path (supports dot notation)."""
+            parts = param_path.split(".")
+
+            # First, try to resolve from kwargs
+            if parts[0] in kwargs:
+                value = kwargs[parts[0]]
+                for part in parts[1:]:
+                    if isinstance(value, dict) and part in value:
+                        value = value[part]
+                    elif hasattr(value, part):
+                        value = getattr(value, part)
+                    else:
+                        return None
+                return str(value)
+
+            # Then, try to resolve from response body
+            if hasattr(response, "body") and response.body:
+                try:
+                    data = pykour_json.loads(response.body)
+                    for part in parts:
+                        if isinstance(data, dict) and part in data:
+                            data = data[part]
+                        else:
+                            return None
+                    return str(data)
+                except Exception:
+                    pass
+
+            return None
+
+        def replace(match: re.Match[str]) -> str:
+            param_path = match.group(1)
+            value = get_value(param_path)
+            if value is not None:
+                return value
+            # If value not found, keep the original placeholder
+            return match.group(0)
+
+        result = re.sub(r"\{([^}]+)\}", replace, template)
+        # Return None if any placeholder was not resolved
+        if "{" in result:
+            return None
+        return result
+
     def _serialize_response(self, response: Response) -> bytes:
         """Serialize a Response object for caching.
 
@@ -489,6 +563,37 @@ class Pykour:
                     response = cast(Response, await result)
                 else:
                     response = cast(Response, result)
+
+                # Apply declarative status code if response uses default (200)
+                from pykour.status_code import (
+                    get_default_status_code,
+                    get_method_default_status_code,
+                )
+
+                declared_status = get_default_status_code(handler)
+                if declared_status is not None and response.status_code == 200:
+                    response.status_code = declared_status
+                elif response.status_code == 200:
+                    # Apply method-based default when no decorator
+                    response.status_code = get_method_default_status_code(method)
+
+                # Apply declarative headers from @header decorator
+                from pykour.header import get_header_info
+
+                header_infos = get_header_info(handler)
+                for header_info in header_infos:
+                    # Check condition (e.g., on_status)
+                    if header_info.condition is not None and not header_info.condition(
+                        response.status_code
+                    ):
+                        continue
+
+                    # Interpolate header value
+                    header_value = self._interpolate_header_value(
+                        header_info.value_template, kwargs, response
+                    )
+                    if header_value is not None:
+                        response.add_header(header_info.name, header_value)
 
                 # Cache response if @cache decorator is present
                 if cache_infos and self._cache is not None and cache_key is not None:

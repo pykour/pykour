@@ -125,6 +125,73 @@ class Response:
             samesite=None,
         )
 
+    def add_header(self, name: str, value: str) -> None:
+        """Add a header to the response.
+
+        Allows duplicate headers (important for Set-Cookie, etc.).
+
+        Args:
+            name: Header name (e.g., "X-Custom-Header", "Cache-Control").
+            value: Header value.
+
+        Example:
+            response.add_header("X-Request-Id", request_id)
+            response.add_header("Cache-Control", "max-age=3600")
+        """
+        self._headers.append((name, value))
+
+    def set_header(self, name: str, value: str) -> None:
+        """Set a header, replacing any existing header with the same name.
+
+        Use this when you want only one header with this name.
+        For headers that can have multiple values (Set-Cookie), use add_header().
+
+        Args:
+            name: Header name.
+            value: Header value.
+
+        Example:
+            response.set_header("X-Version", "2.0")  # Replaces any existing X-Version
+        """
+        # Remove existing headers with same name (case-insensitive)
+        self._headers = [(k, v) for k, v in self._headers if k.lower() != name.lower()]
+        self._headers.append((name, value))
+
+    def get_header(self, name: str) -> str | None:
+        """Get first header value by name (case-insensitive).
+
+        Args:
+            name: Header name to look up.
+
+        Returns:
+            Header value or None if not found.
+
+        Example:
+            content_type = response.get_header("Content-Type")
+        """
+        name_lower = name.lower()
+        for k, v in self._headers:
+            if k.lower() == name_lower:
+                return v
+        return None
+
+    def remove_header(self, name: str) -> bool:
+        """Remove all headers with the given name.
+
+        Args:
+            name: Header name to remove.
+
+        Returns:
+            True if any headers were removed, False otherwise.
+
+        Example:
+            response.remove_header("X-Debug")
+        """
+        name_lower = name.lower()
+        original_len = len(self._headers)
+        self._headers = [(k, v) for k, v in self._headers if k.lower() != name_lower]
+        return len(self._headers) < original_len
+
     def _build_headers(self) -> list[tuple[bytes, bytes]]:
         """Build ASGI-compatible headers list.
 

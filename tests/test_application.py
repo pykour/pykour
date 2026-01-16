@@ -86,7 +86,7 @@ class TestPykourRouting:
         assert data["updated"] is True
 
     async def test_dynamic_route_delete(self) -> None:
-        """DELETE /api/users/789 should delete user."""
+        """DELETE /api/users/789 should delete user with 204 status."""
         app = Pykour(routes_dir=ROUTES_DIR)
 
         scope = create_scope(method="DELETE", path="/api/users/789")
@@ -95,7 +95,7 @@ class TestPykourRouting:
 
         await app(scope, receive, send)
 
-        assert send.status == 200
+        assert send.status == 204
         data = json.loads(send.body)
         assert data["id"] == "789"
         assert data["deleted"] is True

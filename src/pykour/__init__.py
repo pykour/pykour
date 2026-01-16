@@ -68,6 +68,8 @@ from pykour.schema import (
     ValidationError,
 )
 from pykour.openapi import OpenAPIConfig
+from pykour.status_code import StatusCodeInfo, status_code
+from pykour.header import HeaderInfo, header
 
 __all__ = [
     "Pykour",
@@ -97,6 +99,12 @@ __all__ = [
     "ValidationError",
     # OpenAPI
     "OpenAPIConfig",
+    # Status Code
+    "status_code",
+    "StatusCodeInfo",
+    # Header
+    "header",
+    "HeaderInfo",
     # Exception handling
     "ExceptionHandler",
     "ExceptionHandlerRegistry",

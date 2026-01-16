@@ -1,7 +1,10 @@
 """Tests for WebSocket support."""
 
+from typing import cast
+
 import pytest
 
+from pykour.types import Receive, Send
 from pykour.websocket import WebSocket, WebSocketDisconnect, WebSocketState
 
 
@@ -59,7 +62,7 @@ class TestWebSocketBasic:
         """WebSocket.accept() should send accept message."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
 
         assert ws.state == WebSocketState.CONNECTING
 
@@ -73,7 +76,7 @@ class TestWebSocketBasic:
         """WebSocket.accept() should include subprotocol."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
 
         await ws.accept(subprotocol="graphql")
 
@@ -84,7 +87,7 @@ class TestWebSocketBasic:
         """WebSocket.accept() should include custom headers."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
 
         await ws.accept(headers={"X-Custom": "value"})
 
@@ -95,7 +98,7 @@ class TestWebSocketBasic:
         """WebSocket.send_text() should send text message."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         await ws.send_text("hello")
@@ -110,7 +113,7 @@ class TestWebSocketBasic:
         """WebSocket.send_bytes() should send binary message."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         await ws.send_bytes(b"\x00\x01\x02")
@@ -125,7 +128,7 @@ class TestWebSocketBasic:
         """WebSocket.send_json() should send JSON message."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         await ws.send_json({"key": "value"})
@@ -146,7 +149,7 @@ class TestWebSocketBasic:
         )
 
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         text = await ws.receive_text()
@@ -164,7 +167,7 @@ class TestWebSocketBasic:
         )
 
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         data = await ws.receive_bytes()
@@ -182,7 +185,7 @@ class TestWebSocketBasic:
         )
 
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         data = await ws.receive_json()
@@ -200,7 +203,7 @@ class TestWebSocketBasic:
         )
 
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         with pytest.raises(WebSocketDisconnect) as exc_info:
@@ -213,7 +216,7 @@ class TestWebSocketBasic:
         """WebSocket.close() should send close message."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         await ws.close(code=1000, reason="bye")
@@ -230,7 +233,7 @@ class TestWebSocketBasic:
         """WebSocket.close() should be idempotent."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         await ws.close()
@@ -248,7 +251,9 @@ class TestWebSocketProperties:
         """WebSocket.path should return the path."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(path="/ws/chat"), receive, send)
+        ws = WebSocket(
+            create_ws_scope(path="/ws/chat"), cast(Receive, receive), cast(Send, send)
+        )
 
         assert ws.path == "/ws/chat"
 
@@ -256,7 +261,12 @@ class TestWebSocketProperties:
         """WebSocket.path_params should return path parameters."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send, {"room": "general"})
+        ws = WebSocket(
+            create_ws_scope(),
+            cast(Receive, receive),
+            cast(Send, send),
+            {"room": "general"},
+        )
 
         assert ws.path_params == {"room": "general"}
 
@@ -266,8 +276,8 @@ class TestWebSocketProperties:
         send = MockSend()
         ws = WebSocket(
             create_ws_scope(query_string=b"token=abc&page=1"),
-            receive,
-            send,
+            cast(Receive, receive),
+            cast(Send, send),
         )
 
         assert ws.query_params == {"token": "abc", "page": "1"}
@@ -278,8 +288,8 @@ class TestWebSocketProperties:
         send = MockSend()
         ws = WebSocket(
             create_ws_scope(headers=[(b"host", b"example.com"), (b"x-custom", b"val")]),
-            receive,
-            send,
+            cast(Receive, receive),
+            cast(Send, send),
         )
 
         assert ws.headers["host"] == "example.com"
@@ -289,7 +299,7 @@ class TestWebSocketProperties:
         """WebSocket.client should return client address."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
 
         assert ws.client == ("127.0.0.1", 50000)
 
@@ -306,7 +316,7 @@ class TestWebSocketIterators:
         # Disconnect will be returned automatically
 
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         messages = []
@@ -323,7 +333,7 @@ class TestWebSocketIterators:
         receive.add_message({"type": "websocket.receive", "bytes": b"data2"})
 
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         messages = []
@@ -340,7 +350,7 @@ class TestWebSocketIterators:
         receive.add_message({"type": "websocket.receive", "text": '{"n": 2}'})
 
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
 
         messages = []
@@ -358,7 +368,7 @@ class TestWebSocketErrors:
         """WebSocket.accept() should raise if already connected."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
 
         await ws.accept()
 
@@ -370,7 +380,7 @@ class TestWebSocketErrors:
         """WebSocket.send_text() should raise if not connected."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
 
         with pytest.raises(RuntimeError, match="Cannot send"):
             await ws.send_text("hello")
@@ -380,7 +390,7 @@ class TestWebSocketErrors:
         """WebSocket.receive_text() should raise if disconnected."""
         receive = MockReceive()
         send = MockSend()
-        ws = WebSocket(create_ws_scope(), receive, send)
+        ws = WebSocket(create_ws_scope(), cast(Receive, receive), cast(Send, send))
         await ws.accept()
         await ws.close()
 

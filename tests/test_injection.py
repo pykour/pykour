@@ -452,7 +452,7 @@ class TestParameterInjectorInject:
     async def test_inject_path_params(self, injector: ParameterInjector) -> None:
         """Path params should be injected with correct types."""
 
-        async def handler(user_id: int = Path()) -> dict:
+        async def handler(user_id: int = Path()) -> dict:  # type: ignore[invalid-parameter-default]
             return {"user_id": user_id}
 
         request = create_request(path="/users/42")
@@ -464,7 +464,7 @@ class TestParameterInjectorInject:
     async def test_inject_query_params(self, injector: ParameterInjector) -> None:
         """Query params should be injected with correct types."""
 
-        async def handler(page: int = Query(default=1)) -> dict:
+        async def handler(page: int = Query(default=1)) -> dict:  # type: ignore[invalid-parameter-default]
             return {"page": page}
 
         request = create_request(query_string="page=5")
@@ -476,7 +476,7 @@ class TestParameterInjectorInject:
     async def test_inject_body_param(self, injector: ParameterInjector) -> None:
         """Body params should be injected."""
 
-        async def handler(user: CreateUserSchema = Body()) -> dict:
+        async def handler(user: CreateUserSchema = Body()) -> dict:  # type: ignore[invalid-parameter-default]
             return {"name": user.name}
 
         request = create_request(method="POST", body=b'{"name": "Alice"}')
@@ -547,9 +547,9 @@ class TestParameterInjectorInject:
 
         async def handler(
             request: Request,
-            org_id: int = Path(),
-            user: CreateUserSchema = Body(),
-            limit: int = Query(default=10),
+            org_id: int = Path(),  # type: ignore[invalid-parameter-default]
+            user: CreateUserSchema = Body(),  # type: ignore[invalid-parameter-default]
+            limit: int = Query(default=10),  # type: ignore[invalid-parameter-default]
         ) -> dict:
             return {
                 "org_id": org_id,

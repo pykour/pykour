@@ -79,7 +79,7 @@ class TestStreamingResponseBasic:
 
         async def generate():
             return
-            yield  # type: ignore[misc]
+            yield
 
         response = StreamingResponse(generate(), media_type="text/plain")
         send = MockSend()

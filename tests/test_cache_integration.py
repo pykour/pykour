@@ -109,7 +109,7 @@ class TestCacheIntegration:
 
         client = TestClient(app)
         response = await client.delete("/users")
-        assert response.status_code == 200
+        assert response.status_code == 204  # DELETE returns 204 by default
 
         # User entries should be deleted
         assert await storage.exists("user:1") is False

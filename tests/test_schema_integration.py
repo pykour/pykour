@@ -130,7 +130,7 @@ class TestBodyValidation:
         assert len(data["detail"]) >= 1
 
     async def test_valid_schema_body(self) -> None:
-        """Valid schema body should return 200."""
+        """Valid schema body should return 201 (POST default)."""
         app = Pykour(routes_dir=ROUTES_DIR)
 
         scope = create_scope(method="POST", path="/api/body")
@@ -141,7 +141,7 @@ class TestBodyValidation:
 
         await app(scope, receive, send)
 
-        assert send.status == 200
+        assert send.status == 201
         data = json.loads(send.body)
         assert data["user"]["name"] == "Alice"
         assert data["user"]["email"] == "alice@example.com"
