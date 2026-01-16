@@ -17,6 +17,9 @@ dependencies = [
 [project.scripts]
 pykour = "pykour.cli.main:main"
 
+[project.optional-dependencies]
+cli = ["questionary>=2.0.0"]
+
 [dependency-groups]
 dev = [
     "aiofiles>=24.1.0",
@@ -25,6 +28,7 @@ dev = [
     "asyncpg>=0.30.0",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
+    "pytest-cov>=4.1.0",
     "ruff>=0.14.11",
     "ty>=0.0.11",
 ]
@@ -33,7 +37,27 @@ dev = [
 asyncio_mode = "auto"
 testpaths = ["tests"]
 asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore:Routes directory .* does not exist:UserWarning",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.24,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.coverage.run]
+source = ["src/pykour"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+show_missing = true

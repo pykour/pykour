@@ -27,10 +27,12 @@ def main(args: list[str] | None = None) -> int:
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
+    from pykour.cli.commands.generate import register_command as register_generate
     from pykour.cli.commands.migrate import register_command as register_migrate
     from pykour.cli.commands.routes import register_command as register_routes
     from pykour.cli.commands.run import register_command as register_run
 
+    register_generate(subparsers)
     register_migrate(subparsers)
     register_routes(subparsers)
     register_run(subparsers)

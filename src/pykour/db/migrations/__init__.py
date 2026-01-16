@@ -39,6 +39,7 @@ Example usage:
 
 from pykour.db.migrations import op
 from pykour.db.migrations.exceptions import (
+    ArchiveBoundaryError,
     InvalidMigrationError,
     MigrationAlreadyAppliedError,
     MigrationError,
@@ -46,6 +47,8 @@ from pykour.db.migrations.exceptions import (
     MigrationNotFoundError,
     OperationError,
     SchemaIntrospectionError,
+    SquashError,
+    SquashRangeError,
 )
 from pykour.db.migrations.operations import (
     AddColumn,
@@ -96,6 +99,9 @@ from pykour.db.migrations.introspector import (
     MySQLIntrospector,
     get_introspector,
 )
+from pykour.db.migrations.squasher import MigrationSquasher, SquashResult
+from pykour.db.migrations.analyzer import MigrationAnalyzer
+from pykour.db.migrations.optimizer import OperationOptimizer
 
 __all__ = [
     # op module
@@ -144,6 +150,9 @@ __all__ = [
     "InvalidMigrationError",
     "OperationError",
     "SchemaIntrospectionError",
+    "SquashError",
+    "SquashRangeError",
+    "ArchiveBoundaryError",
     # Runner
     "Migration",
     "MigrationRunner",
@@ -158,4 +167,9 @@ __all__ = [
     "PostgreSQLIntrospector",
     "MySQLIntrospector",
     "get_introspector",
+    # Squash
+    "MigrationSquasher",
+    "SquashResult",
+    "MigrationAnalyzer",
+    "OperationOptimizer",
 ]

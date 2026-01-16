@@ -2,9 +2,34 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from pykour import Pykour, Schema, Field
+from pykour.openapi.models import (
+    ContactObject,
+    LicenseObject,
+    InfoObject,
+    ServerVariableObject,
+    ServerObject,
+    ExternalDocumentationObject,
+    TagObject,
+    ReferenceObject,
+    SchemaObject,
+    ExampleObject,
+    EncodingObject,
+    MediaTypeObject,
+    ParameterObject,
+    RequestBodyObject,
+    HeaderObject,
+    LinkObject,
+    ResponseObject,
+    OperationObject,
+    PathItemObject,
+    ComponentsObject,
+    OpenAPIDocument,
+)
 from pykour.openapi.config import OpenAPIConfig
 from pykour.openapi.generator import OpenAPIGenerator
 from pykour.openapi.schema_converter import SchemaConverter
@@ -327,3 +352,341 @@ class TestOpenAPIConfig:
         assert config.docs_url == "/swagger"
         assert config.openapi_url == "/schema.json"
         assert config.redoc_url is None
+
+
+# ---------------------------------------------------------------------------
+# OpenAPI Models (TypedDict) Tests
+# ---------------------------------------------------------------------------
+
+
+class TestOpenAPIModels:
+    """Tests for OpenAPI TypedDict models."""
+
+    def test_contact_object_instantiation(self) -> None:
+        """Test ContactObject can be instantiated."""
+        contact: ContactObject = {
+            "name": "API Support",
+            "url": "https://example.com/support",
+            "email": "support@example.com",
+        }
+        assert contact["name"] == "API Support"
+        assert contact["url"] == "https://example.com/support"
+        assert contact["email"] == "support@example.com"
+
+    def test_license_object_instantiation(self) -> None:
+        """Test LicenseObject can be instantiated."""
+        license_obj: LicenseObject = {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT",
+        }
+        assert license_obj["name"] == "MIT"
+
+    def test_info_object_with_nested_objects(self) -> None:
+        """Test InfoObject with nested ContactObject and LicenseObject."""
+        info: InfoObject = {
+            "title": "Test API",
+            "version": "1.0.0",
+            "description": "A test API",
+            "contact": {"name": "Test", "email": "test@example.com"},
+            "license": {"name": "MIT"},
+        }
+        assert info["title"] == "Test API"
+        assert info["contact"]["name"] == "Test"
+        assert info["license"]["name"] == "MIT"
+
+    def test_server_object_with_variables(self) -> None:
+        """Test ServerObject with ServerVariableObject."""
+        server: ServerObject = {
+            "url": "https://{environment}.api.example.com",
+            "description": "API Server",
+            "variables": {
+                "environment": {
+                    "default": "production",
+                    "enum": ["production", "staging", "development"],
+                    "description": "Server environment",
+                }
+            },
+        }
+        assert server["url"] == "https://{environment}.api.example.com"
+        assert server["variables"]["environment"]["default"] == "production"
+
+    def test_schema_object_with_constraints(self) -> None:
+        """Test SchemaObject with various constraints."""
+        schema: SchemaObject = {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer", "minimum": 1},
+                "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100,
+                    "pattern": "^[a-zA-Z]+$",
+                },
+                "tags": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["id", "name"],
+        }
+        assert schema["type"] == "object"
+        assert schema["properties"]["id"]["minimum"] == 1
+        assert schema["properties"]["name"]["maxLength"] == 100
+        assert schema["required"] == ["id", "name"]
+
+    def test_parameter_object_instantiation(self) -> None:
+        """Test ParameterObject for various parameter types."""
+        path_param: ParameterObject = {
+            "name": "id",
+            "required": True,
+            "schema": {"type": "integer"},
+            "description": "User ID",
+        }
+        query_param: ParameterObject = {
+            "name": "filter",
+            "required": False,
+            "schema": {"type": "string"},
+        }
+        assert path_param["name"] == "id"
+        assert path_param["required"] is True
+        assert query_param["required"] is False
+
+    def test_request_body_object_instantiation(self) -> None:
+        """Test RequestBodyObject with content."""
+        request_body: RequestBodyObject = {
+            "description": "User data",
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
+                    }
+                }
+            },
+        }
+        assert request_body["required"] is True
+        assert "application/json" in request_body["content"]
+
+    def test_response_object_instantiation(self) -> None:
+        """Test ResponseObject with headers and content."""
+        response: ResponseObject = {
+            "description": "Successful response",
+            "headers": {
+                "X-Rate-Limit": {"schema": {"type": "integer"}, "description": "Rate limit"}
+            },
+            "content": {
+                "application/json": {
+                    "schema": {"type": "object", "properties": {"data": {"type": "array"}}}
+                }
+            },
+        }
+        assert response["description"] == "Successful response"
+        assert "X-Rate-Limit" in response["headers"]
+
+    def test_operation_object_instantiation(self) -> None:
+        """Test OperationObject with full structure."""
+        operation: OperationObject = {
+            "tags": ["users"],
+            "summary": "Get user by ID",
+            "description": "Returns a single user",
+            "operationId": "getUserById",
+            "parameters": [
+                {"name": "id", "required": True, "schema": {"type": "integer"}}
+            ],
+            "responses": {
+                "200": {
+                    "description": "Successful response",
+                    "content": {"application/json": {"schema": {"type": "object"}}},
+                },
+                "404": {"description": "User not found"},
+            },
+            "deprecated": False,
+        }
+        assert operation["tags"] == ["users"]
+        assert operation["operationId"] == "getUserById"
+        assert "200" in operation["responses"]
+
+    def test_path_item_object_with_operations(self) -> None:
+        """Test PathItemObject with multiple HTTP methods."""
+        path_item: PathItemObject = {
+            "summary": "User operations",
+            "get": {
+                "summary": "List users",
+                "responses": {"200": {"description": "OK"}},
+            },
+            "post": {
+                "summary": "Create user",
+                "requestBody": {"content": {"application/json": {"schema": {}}}},
+                "responses": {"201": {"description": "Created"}},
+            },
+        }
+        assert path_item["get"]["summary"] == "List users"
+        assert path_item["post"]["summary"] == "Create user"
+
+    def test_components_object_instantiation(self) -> None:
+        """Test ComponentsObject with schemas and security schemes."""
+        components: ComponentsObject = {
+            "schemas": {
+                "User": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "name": {"type": "string"},
+                    },
+                },
+                "Error": {
+                    "type": "object",
+                    "properties": {"message": {"type": "string"}},
+                },
+            },
+            "securitySchemes": {
+                "bearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "bearerFormat": "JWT",
+                }
+            },
+        }
+        assert "User" in components["schemas"]
+        assert "bearerAuth" in components["securitySchemes"]
+
+    def test_openapi_document_full_structure(self) -> None:
+        """Test complete OpenAPIDocument structure."""
+        doc: OpenAPIDocument = {
+            "openapi": "3.1.0",
+            "info": {
+                "title": "Test API",
+                "version": "1.0.0",
+                "description": "A comprehensive test API",
+                "contact": {"name": "Support", "email": "support@test.com"},
+            },
+            "servers": [
+                {"url": "https://api.example.com", "description": "Production"}
+            ],
+            "paths": {
+                "/users": {
+                    "get": {
+                        "summary": "List users",
+                        "responses": {"200": {"description": "OK"}},
+                    }
+                }
+            },
+            "components": {
+                "schemas": {
+                    "User": {"type": "object", "properties": {"id": {"type": "integer"}}}
+                }
+            },
+            "tags": [{"name": "users", "description": "User operations"}],
+        }
+        assert doc["openapi"] == "3.1.0"
+        assert doc["info"]["title"] == "Test API"
+        assert "/users" in doc["paths"]
+
+    def test_openapi_document_json_serialization(self) -> None:
+        """Test OpenAPIDocument can be serialized to JSON and back."""
+        doc: OpenAPIDocument = {
+            "openapi": "3.1.0",
+            "info": {"title": "Serialization Test", "version": "1.0.0"},
+            "paths": {
+                "/test": {
+                    "get": {"responses": {"200": {"description": "Success"}}}
+                }
+            },
+        }
+        json_str = json.dumps(doc)
+        parsed = json.loads(json_str)
+
+        assert parsed["openapi"] == "3.1.0"
+        assert parsed["info"]["title"] == "Serialization Test"
+        assert "/test" in parsed["paths"]
+
+    def test_external_documentation_object(self) -> None:
+        """Test ExternalDocumentationObject."""
+        ext_doc: ExternalDocumentationObject = {
+            "description": "Find more info here",
+            "url": "https://docs.example.com",
+        }
+        assert ext_doc["url"] == "https://docs.example.com"
+
+    def test_tag_object_with_external_docs(self) -> None:
+        """Test TagObject with ExternalDocumentationObject."""
+        tag: TagObject = {
+            "name": "users",
+            "description": "User management operations",
+            "externalDocs": {
+                "description": "User API documentation",
+                "url": "https://docs.example.com/users",
+            },
+        }
+        assert tag["name"] == "users"
+        assert tag["externalDocs"]["url"] == "https://docs.example.com/users"
+
+    def test_example_object_instantiation(self) -> None:
+        """Test ExampleObject."""
+        example: ExampleObject = {
+            "summary": "A sample user",
+            "value": {"id": 1, "name": "John Doe"},
+        }
+        assert example["summary"] == "A sample user"
+        assert example["value"]["id"] == 1
+
+    def test_header_object_instantiation(self) -> None:
+        """Test HeaderObject."""
+        header: HeaderObject = {
+            "description": "Rate limit header",
+            "required": False,
+            "schema": {"type": "integer"},
+        }
+        assert header["description"] == "Rate limit header"
+
+    def test_link_object_instantiation(self) -> None:
+        """Test LinkObject."""
+        link: LinkObject = {
+            "operationId": "getUser",
+            "parameters": {"userId": "$response.body#/id"},
+            "description": "Link to get user details",
+        }
+        assert link["operationId"] == "getUser"
+
+    def test_encoding_object_instantiation(self) -> None:
+        """Test EncodingObject for multipart."""
+        encoding: EncodingObject = {
+            "contentType": "image/png",
+            "style": "form",
+            "explode": True,
+        }
+        assert encoding["contentType"] == "image/png"
+
+    def test_media_type_object_with_examples(self) -> None:
+        """Test MediaTypeObject with multiple examples."""
+        media_type: MediaTypeObject = {
+            "schema": {"type": "object", "properties": {"name": {"type": "string"}}},
+            "examples": {
+                "user1": {"value": {"name": "Alice"}},
+                "user2": {"value": {"name": "Bob"}},
+            },
+        }
+        assert "user1" in media_type["examples"]
+        assert media_type["examples"]["user2"]["value"]["name"] == "Bob"
+
+    def test_empty_reference_object(self) -> None:
+        """Test ReferenceObject can be instantiated (even if empty)."""
+        ref: ReferenceObject = {}
+        assert isinstance(ref, dict)
+
+    def test_schema_object_with_composition(self) -> None:
+        """Test SchemaObject with allOf, oneOf, anyOf."""
+        schema_allof: SchemaObject = {
+            "allOf": [
+                {"type": "object", "properties": {"id": {"type": "integer"}}},
+                {"type": "object", "properties": {"name": {"type": "string"}}},
+            ]
+        }
+        schema_oneof: SchemaObject = {
+            "oneOf": [{"type": "string"}, {"type": "integer"}]
+        }
+        schema_anyof: SchemaObject = {
+            "anyOf": [{"type": "string"}, {"type": "null"}]
+        }
+
+        assert len(schema_allof["allOf"]) == 2
+        assert len(schema_oneof["oneOf"]) == 2
+        assert len(schema_anyof["anyOf"]) == 2

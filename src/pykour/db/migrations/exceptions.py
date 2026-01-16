@@ -44,3 +44,24 @@ class OperationError(MigrationError):
 
 class SchemaIntrospectionError(MigrationError):
     """Error reading database schema."""
+
+
+class SquashError(MigrationError):
+    """Error during migration squashing."""
+
+
+class SquashRangeError(SquashError):
+    """Invalid squash range."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class ArchiveBoundaryError(MigrationError):
+    """Cannot perform operation past archive boundary."""
+
+    def __init__(self, boundary: str, message: str | None = None) -> None:
+        self.boundary = boundary
+        if message is None:
+            message = f"Cannot perform operation past archive boundary ({boundary})"
+        super().__init__(message)

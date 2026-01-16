@@ -1,0 +1,202 @@
+"""CRUD code generator."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from pykour.generators.naming import pluralize, singularize, snake_to_pascal
+from pykour.generators.templates import (
+    COLLECTION_ROUTE_TEMPLATE,
+    ITEM_ROUTE_TEMPLATE,
+    SCHEMA_TEMPLATE,
+    TEST_TEMPLATE,
+)
+
+
+class CRUDGenerator:
+    """Generate CRUD route files for a resource."""
+
+    def __init__(
+        self,
+        resource_name: str,
+        *,
+        table_name: str | None = None,
+        id_field: str = "id",
+        id_type: str = "int",
+        routes_dir: str = "routes",
+    ) -> None:
+        """Initialize the CRUD generator.
+
+        Args:
+            resource_name: Resource name (e.g., "users", "products").
+            table_name: Database table name. Defaults to resource_name.
+            id_field: Primary key field name.
+            id_type: Python type for the ID field.
+            routes_dir: Base routes directory.
+        """
+        self.resource_name = resource_name.lower()
+        # Always singularize first, then derive plural from singular
+        # This handles both "user" and "users" inputs correctly
+        self.resource_singular = singularize(self.resource_name)
+        self.resource_plural = pluralize(self.resource_singular)
+        self.resource_pascal = snake_to_pascal(self.resource_singular)
+        self.resource_title = self.resource_pascal
+
+        self.table_name = table_name or self.resource_plural
+        self.id_field = id_field
+        self.id_type = id_type
+        self.routes_dir = Path(routes_dir)
+
+    def generate(
+        self,
+        *,
+        with_schema: bool = False,
+        with_tests: bool = False,
+        force: bool = False,
+    ) -> list[Path]:
+        """Generate CRUD files.
+
+        Args:
+            with_schema: Generate schema file.
+            with_tests: Generate test file.
+            force: Overwrite existing files.
+
+        Returns:
+            List of created file paths.
+
+        Raises:
+            FileExistsError: If files exist and force is False.
+        """
+        created_files: list[Path] = []
+
+        # Generate collection route (list + create)
+        collection_path = self._generate_collection_route(with_schema, force)
+        created_files.append(collection_path)
+
+        # Generate item route (get, update, delete)
+        item_path = self._generate_item_route(with_schema, force)
+        created_files.append(item_path)
+
+        # Generate schema file if requested
+        if with_schema:
+            schema_path = self._generate_schema(force)
+            created_files.append(schema_path)
+
+        # Generate test file if requested
+        if with_tests:
+            test_path = self._generate_test(force)
+            created_files.append(test_path)
+
+        return created_files
+
+    def _generate_collection_route(
+        self,
+        with_schema: bool,
+        force: bool,
+    ) -> Path:
+        """Generate the collection route file (list + create)."""
+        route_dir = self.routes_dir / "api" / self.resource_plural
+        route_dir.mkdir(parents=True, exist_ok=True)
+
+        route_file = route_dir / "route.py"
+        if route_file.exists() and not force:
+            raise FileExistsError(f"File already exists: {route_file}")
+
+        # Build schema import
+        if with_schema:
+            schema_import = f"\nfrom schemas.{self.resource_singular} import Create{self.resource_pascal}Schema\n"
+            create_schema = f"Create{self.resource_pascal}Schema"
+        else:
+            schema_import = ""
+            create_schema = "dict"
+
+        content = COLLECTION_ROUTE_TEMPLATE.format(
+            resource_title=self.resource_title,
+            resource_plural=self.resource_plural,
+            resource_singular=self.resource_singular,
+            table_name=self.table_name,
+            schema_import=schema_import,
+            create_schema=create_schema,
+        )
+
+        route_file.write_text(content)
+        return route_file
+
+    def _generate_item_route(
+        self,
+        with_schema: bool,
+        force: bool,
+    ) -> Path:
+        """Generate the item route file (get, update, delete)."""
+        route_dir = (
+            self.routes_dir / "api" / self.resource_plural / f"[{self.id_field}]"
+        )
+        route_dir.mkdir(parents=True, exist_ok=True)
+
+        route_file = route_dir / "route.py"
+        if route_file.exists() and not force:
+            raise FileExistsError(f"File already exists: {route_file}")
+
+        # Build schema import
+        if with_schema:
+            schema_import = f"\nfrom schemas.{self.resource_singular} import Update{self.resource_pascal}Schema\n"
+            update_schema = f"Update{self.resource_pascal}Schema"
+        else:
+            schema_import = ""
+            update_schema = "dict"
+
+        content = ITEM_ROUTE_TEMPLATE.format(
+            resource_title=self.resource_title,
+            resource_plural=self.resource_plural,
+            resource_singular=self.resource_singular,
+            table_name=self.table_name,
+            id_field=self.id_field,
+            id_type=self.id_type,
+            schema_import=schema_import,
+            update_schema=update_schema,
+        )
+
+        route_file.write_text(content)
+        return route_file
+
+    def _generate_schema(self, force: bool) -> Path:
+        """Generate the schema file."""
+        schema_dir = Path("schemas")
+        schema_dir.mkdir(parents=True, exist_ok=True)
+
+        schema_file = schema_dir / f"{self.resource_singular}.py"
+        if schema_file.exists() and not force:
+            raise FileExistsError(f"File already exists: {schema_file}")
+
+        # Generate field definitions (placeholder - user should customize)
+        create_fields = "    # TODO: Add fields for create operation\n    pass"
+        update_fields = "    # TODO: Add fields for update operation\n    pass"
+
+        content = SCHEMA_TEMPLATE.format(
+            resource_title=self.resource_title,
+            resource_pascal=self.resource_pascal,
+            create_fields=create_fields,
+            update_fields=update_fields,
+        )
+
+        schema_file.write_text(content)
+        return schema_file
+
+    def _generate_test(self, force: bool) -> Path:
+        """Generate the test file."""
+        test_dir = Path("tests")
+        test_dir.mkdir(parents=True, exist_ok=True)
+
+        test_file = test_dir / f"test_{self.resource_plural}_api.py"
+        if test_file.exists() and not force:
+            raise FileExistsError(f"File already exists: {test_file}")
+
+        content = TEST_TEMPLATE.format(
+            resource_title=self.resource_title,
+            resource_pascal=self.resource_pascal,
+            resource_plural=self.resource_plural,
+            resource_singular=self.resource_singular,
+        )
+
+        test_file.write_text(content)
+        return test_file

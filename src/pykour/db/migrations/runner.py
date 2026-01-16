@@ -124,6 +124,54 @@ class MigrationRunner:
 
         return migrations
 
+    def get_archive_boundary(self) -> str | None:
+        """Get the archive boundary version.
+
+        The archive boundary is the highest version in the archive/ subdirectory.
+        All migrations at or before this version are considered archived
+        and cannot be squashed or rolled back.
+
+        Returns:
+            The archive boundary version, or None if no archive exists.
+        """
+        archive_dir = self._migrations_dir / "archive"
+        if not archive_dir.exists():
+            return None
+
+        versions: list[str] = []
+        for path in archive_dir.glob("*.py"):
+            if path.name.startswith("_"):
+                continue
+            match = MIGRATION_PATTERN.match(path.name)
+            if match:
+                versions.append(match.group(1))
+
+        return max(versions) if versions else None
+
+    def discover_archived(self) -> list[Migration]:
+        """Discover archived migration files.
+
+        Returns:
+            List of archived migrations sorted by version.
+        """
+        migrations: list[Migration] = []
+        archive_dir = self._migrations_dir / "archive"
+
+        if not archive_dir.exists():
+            return migrations
+
+        for path in sorted(archive_dir.glob("*.py")):
+            if path.name.startswith("_"):
+                continue
+
+            match = MIGRATION_PATTERN.match(path.name)
+            if match:
+                version = match.group(1)
+                name = match.group(2)
+                migrations.append(Migration(version=version, name=name, path=path))
+
+        return migrations
+
     async def get_pending(self) -> list[Migration]:
         """Get pending (not yet applied) migrations.
 

@@ -363,6 +363,79 @@ class Pykour:
             return decorator(func)
         return decorator
 
+    def register_route(
+        self,
+        path: str,
+        handlers: dict[str, Any],
+    ) -> None:
+        """Register a route programmatically.
+
+        This allows adding routes without creating route.py files.
+
+        Args:
+            path: URL path pattern (e.g., "/api/users", "/api/users/[id]").
+            handlers: Dict mapping HTTP methods to handler functions.
+                Keys should be uppercase (e.g., "GET", "POST").
+
+        Example:
+            async def list_users(request):
+                return JSONResponse({"users": []})
+
+            app.register_route("/api/users", {"GET": list_users})
+        """
+        self._router.register_route(path, handlers)
+
+    def register_crud(
+        self,
+        path: str,
+        table: type,
+        *,
+        operations: list[str] | None = None,
+        list_config: Any | None = None,
+        id_field: str | None = None,
+        exclude_fields: list[str] | None = None,
+        readonly_fields: list[str] | None = None,
+    ) -> None:
+        """Register CRUD endpoints for a Table.
+
+        Automatically creates list, get, create, update, and delete
+        endpoints for the specified Table.
+
+        Args:
+            path: Base path for the endpoints (e.g., "/api/users").
+            table: Table class to generate CRUD for.
+            operations: List of operations to enable.
+                Options: "list", "get", "create", "update", "delete".
+                Defaults to all operations.
+            list_config: Configuration for list endpoint (ListConfig instance).
+            id_field: Primary key field name. Auto-detected if not provided.
+            exclude_fields: Fields to exclude from the API.
+            readonly_fields: Fields that cannot be set on create/update.
+
+        Example:
+            from pykour.db.migrations import Table, Column, Integer, String
+
+            class UserTable(Table):
+                __tablename__ = "users"
+                id = Column(Integer(), primary_key=True, autoincrement=True)
+                name = Column(String(100), nullable=False)
+
+            app.register_crud("/api/users", UserTable)
+        """
+        from pykour.crud.registrar import CRUDRegistrar
+        from pykour.db.migrations import Table as TableClass
+
+        registrar = CRUDRegistrar(self)
+        registrar.register(
+            path=path,
+            table=cast(type[TableClass], table),
+            operations=operations,
+            list_config=list_config,
+            id_field=id_field,
+            exclude_fields=exclude_fields,
+            readonly_fields=readonly_fields,
+        )
+
     def _build_middleware_stack(self) -> Any:
         """Build the middleware stack wrapping the core app.
 

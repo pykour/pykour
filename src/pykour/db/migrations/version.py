@@ -149,3 +149,41 @@ class VersionManager:
 
         row = await self._driver.fetch_one(conn, sql, (version,))
         return row is not None
+
+    async def replace_versions(
+        self,
+        conn: Any,
+        old_versions: list[str],
+        new_version: str,
+        new_name: str,
+    ) -> None:
+        """Replace multiple migration records with a single squashed record.
+
+        This is used during migration squashing to update the history.
+
+        Args:
+            conn: Database connection.
+            old_versions: List of versions to remove.
+            new_version: Version of the new squashed migration.
+            new_name: Name of the new squashed migration.
+        """
+        driver_name = self._driver.driver_name
+
+        for old_version in old_versions:
+            if driver_name == "postgresql":
+                sql = f"DELETE FROM {MIGRATIONS_TABLE} WHERE version = $1"
+            elif driver_name == "mysql":
+                sql = f"DELETE FROM {MIGRATIONS_TABLE} WHERE version = %s"
+            else:
+                sql = f"DELETE FROM {MIGRATIONS_TABLE} WHERE version = ?"
+            await self._driver.execute(conn, sql, (old_version,))
+
+        if driver_name == "postgresql":
+            sql = f"INSERT INTO {MIGRATIONS_TABLE} (version, name) VALUES ($1, $2)"
+        elif driver_name == "mysql":
+            sql = f"INSERT INTO {MIGRATIONS_TABLE} (version, name) VALUES (%s, %s)"
+        else:
+            sql = f"INSERT INTO {MIGRATIONS_TABLE} (version, name) VALUES (?, ?)"
+
+        await self._driver.execute(conn, sql, (new_version, new_name))
+        await self._driver.commit(conn)

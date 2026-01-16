@@ -685,3 +685,323 @@ class TestTableWithIndexes:
 
         indexes = UserTable.get_indexes()
         assert len(indexes) == 0
+
+
+# =============================================================================
+# Version Manager Tests
+# =============================================================================
+
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
+
+from pykour.db.migrations.version import (
+    MIGRATIONS_TABLE,
+    MigrationRecord,
+    VersionManager,
+)
+
+
+class TestMigrationRecord:
+    """Tests for MigrationRecord dataclass."""
+
+    def test_create_migration_record(self) -> None:
+        """Test creating a MigrationRecord."""
+        now = datetime.now()
+        record = MigrationRecord(
+            version="20240101_000000",
+            name="create_users",
+            applied_at=now,
+        )
+        assert record.version == "20240101_000000"
+        assert record.name == "create_users"
+        assert record.applied_at == now
+
+
+class TestVersionManager:
+    """Tests for VersionManager class."""
+
+    def create_mock_driver(self, driver_name: str = "sqlite") -> MagicMock:
+        """Create a mock driver for testing."""
+        driver = MagicMock()
+        driver.driver_name = driver_name
+        driver.commit = AsyncMock()
+        driver.execute = AsyncMock()
+        driver.fetch_all = AsyncMock(return_value=[])
+        driver.fetch_one = AsyncMock(return_value=None)
+        return driver
+
+    @pytest.mark.asyncio
+    async def test_init_sqlite(self) -> None:
+        """Test init creates SQLite migrations table."""
+        driver = self.create_mock_driver("sqlite")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+        conn.execute = AsyncMock()
+
+        await manager.init(conn)
+
+        conn.execute.assert_called_once()
+        sql = conn.execute.call_args[0][0]
+        assert MIGRATIONS_TABLE in sql
+        assert "TEXT PRIMARY KEY" in sql
+        driver.commit.assert_called_once_with(conn)
+
+    @pytest.mark.asyncio
+    async def test_init_postgresql(self) -> None:
+        """Test init creates PostgreSQL migrations table."""
+        driver = self.create_mock_driver("postgresql")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+        conn.execute = AsyncMock()
+
+        await manager.init(conn)
+
+        sql = conn.execute.call_args[0][0]
+        assert "VARCHAR(64) PRIMARY KEY" in sql
+
+    @pytest.mark.asyncio
+    async def test_init_mysql(self) -> None:
+        """Test init creates MySQL migrations table."""
+        driver = self.create_mock_driver("mysql")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+        conn.execute = AsyncMock()
+
+        await manager.init(conn)
+
+        sql = conn.execute.call_args[0][0]
+        assert "VARCHAR(64) PRIMARY KEY" in sql
+
+    @pytest.mark.asyncio
+    async def test_get_applied_returns_empty_list(self) -> None:
+        """Test get_applied returns empty list when no migrations."""
+        driver = self.create_mock_driver()
+        driver.fetch_all = AsyncMock(return_value=[])
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        result = await manager.get_applied(conn)
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_applied_returns_migration_records(self) -> None:
+        """Test get_applied returns MigrationRecord objects."""
+        driver = self.create_mock_driver()
+        now = datetime.now()
+        driver.fetch_all = AsyncMock(return_value=[
+            {"version": "20240101_000000", "name": "create_users", "applied_at": now},
+            {"version": "20240102_000000", "name": "add_email", "applied_at": now},
+        ])
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        result = await manager.get_applied(conn)
+
+        assert len(result) == 2
+        assert isinstance(result[0], MigrationRecord)
+        assert result[0].version == "20240101_000000"
+        assert result[1].version == "20240102_000000"
+
+    @pytest.mark.asyncio
+    async def test_get_applied_versions(self) -> None:
+        """Test get_applied_versions returns set of versions."""
+        driver = self.create_mock_driver()
+        now = datetime.now()
+        driver.fetch_all = AsyncMock(return_value=[
+            {"version": "20240101_000000", "name": "create_users", "applied_at": now},
+            {"version": "20240102_000000", "name": "add_email", "applied_at": now},
+        ])
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        result = await manager.get_applied_versions(conn)
+
+        assert result == {"20240101_000000", "20240102_000000"}
+
+    @pytest.mark.asyncio
+    async def test_get_current_version_returns_none_when_empty(self) -> None:
+        """Test get_current_version returns None when no migrations."""
+        driver = self.create_mock_driver()
+        driver.fetch_one = AsyncMock(return_value=None)
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        result = await manager.get_current_version(conn)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_current_version_returns_latest(self) -> None:
+        """Test get_current_version returns latest version."""
+        driver = self.create_mock_driver()
+        driver.fetch_one = AsyncMock(return_value={"version": "20240102_000000"})
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        result = await manager.get_current_version(conn)
+
+        assert result == "20240102_000000"
+
+    @pytest.mark.asyncio
+    async def test_mark_applied_sqlite(self) -> None:
+        """Test mark_applied with SQLite driver."""
+        driver = self.create_mock_driver("sqlite")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        await manager.mark_applied(conn, "20240101_000000", "create_users")
+
+        driver.execute.assert_called_once()
+        sql, params = driver.execute.call_args[0][1:3]
+        assert "INSERT INTO" in sql
+        assert "?" in sql
+        assert params == ("20240101_000000", "create_users")
+        driver.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_mark_applied_postgresql(self) -> None:
+        """Test mark_applied with PostgreSQL driver."""
+        driver = self.create_mock_driver("postgresql")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        await manager.mark_applied(conn, "20240101_000000", "create_users")
+
+        sql, params = driver.execute.call_args[0][1:3]
+        assert "$1" in sql
+        assert "$2" in sql
+
+    @pytest.mark.asyncio
+    async def test_mark_applied_mysql(self) -> None:
+        """Test mark_applied with MySQL driver."""
+        driver = self.create_mock_driver("mysql")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        await manager.mark_applied(conn, "20240101_000000", "create_users")
+
+        sql, params = driver.execute.call_args[0][1:3]
+        assert "%s" in sql
+
+    @pytest.mark.asyncio
+    async def test_mark_unapplied_sqlite(self) -> None:
+        """Test mark_unapplied with SQLite driver."""
+        driver = self.create_mock_driver("sqlite")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        await manager.mark_unapplied(conn, "20240101_000000")
+
+        driver.execute.assert_called_once()
+        sql, params = driver.execute.call_args[0][1:3]
+        assert "DELETE FROM" in sql
+        assert "?" in sql
+        assert params == ("20240101_000000",)
+
+    @pytest.mark.asyncio
+    async def test_mark_unapplied_postgresql(self) -> None:
+        """Test mark_unapplied with PostgreSQL driver."""
+        driver = self.create_mock_driver("postgresql")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        await manager.mark_unapplied(conn, "20240101_000000")
+
+        sql, _ = driver.execute.call_args[0][1:3]
+        assert "$1" in sql
+
+    @pytest.mark.asyncio
+    async def test_is_applied_returns_true(self) -> None:
+        """Test is_applied returns True when migration exists."""
+        driver = self.create_mock_driver()
+        driver.fetch_one = AsyncMock(return_value={"1": 1})
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        result = await manager.is_applied(conn, "20240101_000000")
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_is_applied_returns_false(self) -> None:
+        """Test is_applied returns False when migration doesn't exist."""
+        driver = self.create_mock_driver()
+        driver.fetch_one = AsyncMock(return_value=None)
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        result = await manager.is_applied(conn, "20240101_000000")
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_replace_versions(self) -> None:
+        """Test replace_versions deletes old and inserts new."""
+        driver = self.create_mock_driver("sqlite")
+        manager = VersionManager(driver)
+        conn = MagicMock()
+
+        await manager.replace_versions(
+            conn,
+            ["20240101_000000", "20240102_000000"],
+            "20240102_000001",
+            "squashed_migration",
+        )
+
+        # 2 deletes + 1 insert = 3 execute calls
+        assert driver.execute.call_count == 3
+        driver.commit.assert_called_once()
+
+
+class TestParseAppliedAt:
+    """Tests for _parse_applied_at method."""
+
+    def test_parse_datetime_object(self) -> None:
+        """Test parsing datetime object returns as-is."""
+        driver = MagicMock()
+        driver.driver_name = "sqlite"
+        manager = VersionManager(driver)
+        now = datetime.now()
+
+        result = manager._parse_applied_at(now, "20240101_000000")
+
+        assert result == now
+
+    def test_parse_iso_string(self) -> None:
+        """Test parsing ISO format string."""
+        driver = MagicMock()
+        driver.driver_name = "sqlite"
+        manager = VersionManager(driver)
+
+        result = manager._parse_applied_at("2024-01-15T10:30:00", "20240101_000000")
+
+        assert result.year == 2024
+        assert result.month == 1
+        assert result.day == 15
+        assert result.hour == 10
+        assert result.minute == 30
+
+    def test_parse_invalid_string_raises_error(self) -> None:
+        """Test parsing invalid string raises ValueError."""
+        driver = MagicMock()
+        driver.driver_name = "sqlite"
+        manager = VersionManager(driver)
+
+        with pytest.raises(ValueError) as exc_info:
+            manager._parse_applied_at("not-a-date", "20240101_000000")
+
+        assert "Invalid applied_at format" in str(exc_info.value)
+        assert "20240101_000000" in str(exc_info.value)
+
+    def test_parse_invalid_type_raises_error(self) -> None:
+        """Test parsing invalid type raises ValueError."""
+        driver = MagicMock()
+        driver.driver_name = "sqlite"
+        manager = VersionManager(driver)
+
+        with pytest.raises(ValueError) as exc_info:
+            manager._parse_applied_at(12345, "20240101_000000")
+
+        assert "Invalid applied_at type" in str(exc_info.value)
+        assert "int" in str(exc_info.value)

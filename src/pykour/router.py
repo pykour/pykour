@@ -256,6 +256,37 @@ class Router:
         node.handlers.update(handlers)
         node.path_pattern = path_pattern
 
+    def register_route(
+        self,
+        path_pattern: str,
+        handlers: dict[str, RouteHandler],
+    ) -> None:
+        """Register a route programmatically.
+
+        This is the public API for dynamically adding routes without
+        creating route.py files.
+
+        Args:
+            path_pattern: URL pattern (e.g., "/api/users", "/api/users/[id]").
+            handlers: Dict mapping HTTP methods to handler functions.
+                Keys should be uppercase (e.g., "GET", "POST").
+
+        Example:
+            async def list_users(request):
+                return JSONResponse({"users": []})
+
+            async def create_user(request):
+                return JSONResponse({"created": True}, status_code=201)
+
+            router.register_route("/api/users", {
+                "GET": list_users,
+                "POST": create_user,
+            })
+        """
+        self._insert(path_pattern, handlers)
+        # Invalidate routes cache
+        self._routes_cache = None
+
     def _load_handlers(self, route_file: Path) -> dict[str, RouteHandler]:
         """Load HTTP method handlers from a route.py file."""
         # Generate unique module name from file path to avoid conflicts
