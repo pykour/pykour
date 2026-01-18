@@ -25,9 +25,12 @@ class Scope(Enum):
 class ServiceNotFoundException(Exception):
     """Exception raised when a requested service is not registered."""
 
-    def __init__(self, service_type: type) -> None:
+    def __init__(self, service_type: type | str) -> None:
         self.service_type = service_type
-        super().__init__(f"Service not found: {service_type.__name__}")
+        type_name = (
+            service_type if isinstance(service_type, str) else service_type.__name__
+        )
+        super().__init__(f"Service not found: {type_name}")
 
 
 # Backward compatibility alias
@@ -350,9 +353,12 @@ class ServiceContainer:
             elif not is_required:
                 kwargs[param_name] = default
             else:
+                type_name = (
+                    param_type if isinstance(param_type, str) else param_type.__name__
+                )
                 raise ValueError(
                     f"Cannot resolve required parameter '{param_name}' of "
-                    f"'{callable_name}': type '{param_type.__name__}' is not "
+                    f"'{callable_name}': type '{type_name}' is not "
                     "registered in the container"
                 )
 

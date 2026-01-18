@@ -73,7 +73,7 @@ async def get():
                 await self.app(scope, receive, send)
 
         app.add_middleware(TestMiddleware)
-        assert len(app._middleware_stack) == 1
+        assert len(app._middleware_builder.stack) == 1
 
     def test_middleware_decorator(self, tmp_path) -> None:
         """Middleware can be added using decorator."""
@@ -94,8 +94,8 @@ async def get():
         async def test_middleware(request: Request, call_next):
             return await call_next(request)
 
-        assert len(app._middleware_stack) == 1
-        assert app._middleware_stack[0][0] == FunctionMiddleware
+        assert len(app._middleware_builder.stack) == 1
+        assert app._middleware_builder.stack[0][0] == FunctionMiddleware
 
     def test_multiple_middleware(self, tmp_path) -> None:
         """Multiple middleware can be added."""
@@ -123,7 +123,7 @@ async def get():
         app.add_middleware(Middleware1)
         app.add_middleware(Middleware2)
 
-        assert len(app._middleware_stack) == 2
+        assert len(app._middleware_builder.stack) == 2
 
     @pytest.mark.asyncio
     async def test_middleware_execution_order(self, tmp_path) -> None:
@@ -363,11 +363,11 @@ async def get():
 
         # First request builds the stack
         await app(scope, receive, send)
-        first_app = app._app
+        first_app = app._lifespan.app
 
         # Second request uses the same stack
         await app(scope, receive, send)
-        second_app = app._app
+        second_app = app._lifespan.app
 
         assert first_app is second_app
 
