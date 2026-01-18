@@ -6,6 +6,9 @@ This module consolidates tests for:
 - Table, Column, and Index definitions
 """
 
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from pykour.db.migrations.operations import (
@@ -35,6 +38,11 @@ from pykour.db.migrations.types import (
     Text,
     Time,
     UUID,
+)
+from pykour.db.migrations.version import (
+    MIGRATIONS_TABLE,
+    MigrationRecord,
+    VersionManager,
 )
 
 
@@ -691,15 +699,6 @@ class TestTableWithIndexes:
 # Version Manager Tests
 # =============================================================================
 
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
-
-from pykour.db.migrations.version import (
-    MIGRATIONS_TABLE,
-    MigrationRecord,
-    VersionManager,
-)
-
 
 class TestMigrationRecord:
     """Tests for MigrationRecord dataclass."""
@@ -789,10 +788,16 @@ class TestVersionManager:
         """Test get_applied returns MigrationRecord objects."""
         driver = self.create_mock_driver()
         now = datetime.now()
-        driver.fetch_all = AsyncMock(return_value=[
-            {"version": "20240101_000000", "name": "create_users", "applied_at": now},
-            {"version": "20240102_000000", "name": "add_email", "applied_at": now},
-        ])
+        driver.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "version": "20240101_000000",
+                    "name": "create_users",
+                    "applied_at": now,
+                },
+                {"version": "20240102_000000", "name": "add_email", "applied_at": now},
+            ]
+        )
         manager = VersionManager(driver)
         conn = MagicMock()
 
@@ -808,10 +813,16 @@ class TestVersionManager:
         """Test get_applied_versions returns set of versions."""
         driver = self.create_mock_driver()
         now = datetime.now()
-        driver.fetch_all = AsyncMock(return_value=[
-            {"version": "20240101_000000", "name": "create_users", "applied_at": now},
-            {"version": "20240102_000000", "name": "add_email", "applied_at": now},
-        ])
+        driver.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "version": "20240101_000000",
+                    "name": "create_users",
+                    "applied_at": now,
+                },
+                {"version": "20240102_000000", "name": "add_email", "applied_at": now},
+            ]
+        )
         manager = VersionManager(driver)
         conn = MagicMock()
 

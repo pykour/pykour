@@ -11,7 +11,6 @@ from pykour.openapi.models import (
     ContactObject,
     LicenseObject,
     InfoObject,
-    ServerVariableObject,
     ServerObject,
     ExternalDocumentationObject,
     TagObject,
@@ -470,11 +469,17 @@ class TestOpenAPIModels:
         response: ResponseObject = {
             "description": "Successful response",
             "headers": {
-                "X-Rate-Limit": {"schema": {"type": "integer"}, "description": "Rate limit"}
+                "X-Rate-Limit": {
+                    "schema": {"type": "integer"},
+                    "description": "Rate limit",
+                }
             },
             "content": {
                 "application/json": {
-                    "schema": {"type": "object", "properties": {"data": {"type": "array"}}}
+                    "schema": {
+                        "type": "object",
+                        "properties": {"data": {"type": "array"}},
+                    }
                 }
             },
         }
@@ -571,7 +576,10 @@ class TestOpenAPIModels:
             },
             "components": {
                 "schemas": {
-                    "User": {"type": "object", "properties": {"id": {"type": "integer"}}}
+                    "User": {
+                        "type": "object",
+                        "properties": {"id": {"type": "integer"}},
+                    }
                 }
             },
             "tags": [{"name": "users", "description": "User operations"}],
@@ -586,9 +594,7 @@ class TestOpenAPIModels:
             "openapi": "3.1.0",
             "info": {"title": "Serialization Test", "version": "1.0.0"},
             "paths": {
-                "/test": {
-                    "get": {"responses": {"200": {"description": "Success"}}}
-                }
+                "/test": {"get": {"responses": {"200": {"description": "Success"}}}}
             },
         }
         json_str = json.dumps(doc)
@@ -683,9 +689,7 @@ class TestOpenAPIModels:
         schema_oneof: SchemaObject = {
             "oneOf": [{"type": "string"}, {"type": "integer"}]
         }
-        schema_anyof: SchemaObject = {
-            "anyOf": [{"type": "string"}, {"type": "null"}]
-        }
+        schema_anyof: SchemaObject = {"anyOf": [{"type": "string"}, {"type": "null"}]}
 
         assert len(schema_allof["allOf"]) == 2
         assert len(schema_oneof["oneOf"]) == 2

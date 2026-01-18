@@ -282,10 +282,12 @@ class TestPostgreSQLDriverFetch:
         """Test fetch_all returns list of Row objects."""
         driver = PostgreSQLDriver()
         mock_conn = MagicMock()
-        mock_conn.fetch = AsyncMock(return_value=[
-            MockRecord({"id": 1, "name": "Alice"}),
-            MockRecord({"id": 2, "name": "Bob"}),
-        ])
+        mock_conn.fetch = AsyncMock(
+            return_value=[
+                MockRecord({"id": 1, "name": "Alice"}),
+                MockRecord({"id": 2, "name": "Bob"}),
+            ]
+        )
 
         result = await driver.fetch_all(mock_conn, "SELECT * FROM users", ())
 

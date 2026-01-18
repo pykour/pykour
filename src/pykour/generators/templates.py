@@ -192,3 +192,20 @@ class Test{resource_pascal}API:
         response = await client.delete("/api/{resource_plural}/1")
         assert response.status_code in (204, 404)
 '''
+
+# Template for simple route file (generate route command)
+SIMPLE_ROUTE_FILE_TEMPLATE = '''\
+"""Route handlers for {path}."""
+
+from pykour import JSONResponse, Request
+
+
+{handlers}
+'''
+
+# Template for simple handler function
+SIMPLE_HANDLER_TEMPLATE = '''\
+async def {method_lower}(request: Request) -> JSONResponse:
+    """{method_upper} {path}"""
+    return JSONResponse({{"message": "Hello"}})
+'''

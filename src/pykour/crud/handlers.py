@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any, Callable, Coroutine
 
 from pykour.response import JSONResponse
+from pykour.schema.errors import ValidationError
+
+logger = logging.getLogger("pykour")
 
 if TYPE_CHECKING:
     from pykour.crud.config import ListConfig
@@ -86,13 +90,15 @@ def create_list_handler(
         items = await query.fetch_all()
         total = await db.count(tablename)
 
-        return JSONResponse({
-            "items": [dict(item) for item in items],
-            "page": page,
-            "limit": limit,
-            "total": total,
-            "pages": (total + limit - 1) // limit if total > 0 else 0,
-        })
+        return JSONResponse(
+            {
+                "items": [dict(item) for item in items],
+                "page": page,
+                "limit": limit,
+                "total": total,
+                "pages": (total + limit - 1) // limit if total > 0 else 0,
+            }
+        )
 
     return handler
 
@@ -121,7 +127,12 @@ def create_get_handler(
         if item_id is None:
             return JSONResponse({"error": "ID not provided"}, status_code=400)
 
-        item = await db.select("*").from_(tablename).where(**{id_field: item_id}).fetch_one()
+        item = (
+            await db.select("*")
+            .from_(tablename)
+            .where(**{id_field: item_id})
+            .fetch_one()
+        )
 
         if item is None:
             return JSONResponse({"error": "Not Found"}, status_code=404)
@@ -157,8 +168,11 @@ def create_create_handler(
         try:
             validated = schema(**body)
             values = validated.model_dump()
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=422)
+        except ValidationError as e:
+            return JSONResponse(e.to_dict(), status_code=422)
+        except Exception:
+            logger.exception("Unexpected error during request body validation")
+            return JSONResponse({"error": "Internal Server Error"}, status_code=500)
 
         # Insert with RETURNING
         query = db.insert(tablename).values(**values).returning("*")
@@ -200,7 +214,12 @@ def create_update_handler(
             return JSONResponse({"error": "ID not provided"}, status_code=400)
 
         # Check if item exists
-        existing = await db.select("*").from_(tablename).where(**{id_field: item_id}).fetch_one()
+        existing = (
+            await db.select("*")
+            .from_(tablename)
+            .where(**{id_field: item_id})
+            .fetch_one()
+        )
         if existing is None:
             return JSONResponse({"error": "Not Found"}, status_code=404)
 
@@ -209,14 +228,22 @@ def create_update_handler(
         try:
             validated = schema(**body)
             values = validated.model_dump()
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=422)
+        except ValidationError as e:
+            return JSONResponse(e.to_dict(), status_code=422)
+        except Exception:
+            logger.exception("Unexpected error during request body validation")
+            return JSONResponse({"error": "Internal Server Error"}, status_code=500)
 
         # Update
         await db.update(tablename).set(**values).where(**{id_field: item_id}).execute()
 
         # Fetch updated item
-        item = await db.select("*").from_(tablename).where(**{id_field: item_id}).fetch_one()
+        item = (
+            await db.select("*")
+            .from_(tablename)
+            .where(**{id_field: item_id})
+            .fetch_one()
+        )
         return JSONResponse(dict(item) if item else values)
 
     return handler
@@ -247,7 +274,12 @@ def create_delete_handler(
             return JSONResponse({"error": "ID not provided"}, status_code=400)
 
         # Check if item exists
-        existing = await db.select("*").from_(tablename).where(**{id_field: item_id}).fetch_one()
+        existing = (
+            await db.select("*")
+            .from_(tablename)
+            .where(**{id_field: item_id})
+            .fetch_one()
+        )
         if existing is None:
             return JSONResponse({"error": "Not Found"}, status_code=404)
 

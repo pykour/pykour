@@ -63,7 +63,7 @@ class TestSelectMigrations:
         groups = {"users": [m1, m2]}
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            result = select_migrations([m1, m2], groups, set())
+            result = select_migrations([m1, m2], groups, set())  # type: ignore[list-item]
             assert result == [m1, m2]
 
     def test_filters_none_values_from_selection(self) -> None:
@@ -82,7 +82,7 @@ class TestSelectMigrations:
         groups = {"users": [m1]}
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            result = select_migrations([m1], groups, set())
+            result = select_migrations([m1], groups, set())  # type: ignore[list-item]
             assert result == [m1]
             assert None not in result
 
@@ -116,10 +116,12 @@ class TestSelectMigrations:
         }
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            select_migrations([m1, m2, m3, m4], groups, set())
+            select_migrations([m1, m2, m3, m4], groups, set())  # type: ignore[list-item]
 
         # Extract group headers from choices
-        headers = [c["title"] for c in mock_choice_calls if "─" in str(c.get("title", ""))]
+        headers = [
+            c["title"] for c in mock_choice_calls if "─" in str(c.get("title", ""))
+        ]
         # posts and users should come before (no tables) and multiple tables
         assert len(headers) == 4
         # First two should be posts and users (alphabetical)
@@ -149,11 +151,12 @@ class TestSelectMigrations:
         applied_versions = {"20240101_000000"}
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            select_migrations([m1, m2], groups, applied_versions)
+            select_migrations([m1, m2], groups, applied_versions)  # type: ignore[list-item]
 
         # Find migration choices (not headers)
         migration_choices = [
-            c for c in mock_choice_calls
+            c
+            for c in mock_choice_calls
             if c.get("value") is not None and "─" not in str(c.get("title", ""))
         ]
 
@@ -182,7 +185,7 @@ class TestConfirmSquash:
         mock_questionary.confirm = mock_confirm
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            result = confirm_squash([m1], [])
+            result = confirm_squash([m1], [])  # type: ignore[list-item]
             assert result is True
 
     def test_with_questionary_returns_false_on_decline(self) -> None:
@@ -198,7 +201,7 @@ class TestConfirmSquash:
         mock_questionary.confirm = mock_confirm
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            result = confirm_squash([m1], [])
+            result = confirm_squash([m1], [])  # type: ignore[list-item]
             assert result is False
 
     def test_with_questionary_handles_none_as_false(self) -> None:
@@ -214,7 +217,7 @@ class TestConfirmSquash:
         mock_questionary.confirm = mock_confirm
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            result = confirm_squash([m1], [])
+            result = confirm_squash([m1], [])  # type: ignore[list-item]
             assert result is False
 
     def test_shows_pending_warning(self, capsys: pytest.CaptureFixture[str]) -> None:
@@ -232,7 +235,7 @@ class TestConfirmSquash:
         pending = ["20240101_000000", "20240102_000000"]
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            confirm_squash([m1], pending)
+            confirm_squash([m1], pending)  # type: ignore[list-item]
 
         captured = capsys.readouterr()
         assert "Warning" in captured.out
@@ -247,7 +250,7 @@ class TestConfirmSquash:
 
         with patch.dict("sys.modules", {"questionary": None}):
             with patch("builtins.input", return_value="y"):
-                result = confirm_squash([m1], [])
+                result = confirm_squash([m1], [])  # type: ignore[list-item]
                 assert result is True
 
 
@@ -261,16 +264,16 @@ class TestSimpleConfirm:
         m1 = MockMigration("20240101_000000", "create_users")
 
         with patch("builtins.input", return_value="y"):
-            assert _simple_confirm([m1], []) is True
+            assert _simple_confirm([m1], []) is True  # type: ignore[list-item]
 
         with patch("builtins.input", return_value="yes"):
-            assert _simple_confirm([m1], []) is True
+            assert _simple_confirm([m1], []) is True  # type: ignore[list-item]
 
         with patch("builtins.input", return_value="Y"):
-            assert _simple_confirm([m1], []) is True
+            assert _simple_confirm([m1], []) is True  # type: ignore[list-item]
 
         with patch("builtins.input", return_value="YES"):
-            assert _simple_confirm([m1], []) is True
+            assert _simple_confirm([m1], []) is True  # type: ignore[list-item]
 
     def test_returns_false_for_no(self) -> None:
         """Test that False is returned for 'n', 'no', or empty."""
@@ -279,16 +282,16 @@ class TestSimpleConfirm:
         m1 = MockMigration("20240101_000000", "create_users")
 
         with patch("builtins.input", return_value="n"):
-            assert _simple_confirm([m1], []) is False
+            assert _simple_confirm([m1], []) is False  # type: ignore[list-item]
 
         with patch("builtins.input", return_value="no"):
-            assert _simple_confirm([m1], []) is False
+            assert _simple_confirm([m1], []) is False  # type: ignore[list-item]
 
         with patch("builtins.input", return_value=""):
-            assert _simple_confirm([m1], []) is False
+            assert _simple_confirm([m1], []) is False  # type: ignore[list-item]
 
         with patch("builtins.input", return_value="anything"):
-            assert _simple_confirm([m1], []) is False
+            assert _simple_confirm([m1], []) is False  # type: ignore[list-item]
 
     def test_shows_pending_warning(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test that pending versions warning is shown."""
@@ -298,7 +301,7 @@ class TestSimpleConfirm:
         pending = ["20240101_000000"]
 
         with patch("builtins.input", return_value="n"):
-            _simple_confirm([m1], pending)
+            _simple_confirm([m1], pending)  # type: ignore[list-item]
 
         captured = capsys.readouterr()
         assert "Warning" in captured.out
@@ -321,7 +324,7 @@ class TestSelectArchiveTarget:
 
         m1 = MockMigration("20240101_000000", "create_users")
 
-        result = select_archive_target([m1], "20250101_000000")
+        result = select_archive_target([m1], "20250101_000000")  # type: ignore[list-item]
         assert result == []
 
     def test_filters_by_current_boundary(self) -> None:
@@ -340,7 +343,7 @@ class TestSelectArchiveTarget:
 
         # m1 should be excluded due to boundary
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            result = select_archive_target([m1, m2], "20240101_000000")
+            result = select_archive_target([m1, m2], "20240101_000000")  # type: ignore[list-item]
             # Only m2 should be in the result (m2 is both available and <= selected)
             assert len(result) == 1
             assert result[0].version == "20240201_000000"
@@ -359,7 +362,7 @@ class TestSelectArchiveTarget:
         mock_questionary.Choice = MagicMock(side_effect=lambda **kwargs: kwargs)
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            result = select_archive_target([m1], None)
+            result = select_archive_target([m1], None)  # type: ignore[list-item]
             assert result == []
 
     def test_returns_migrations_up_to_selected(self) -> None:
@@ -378,7 +381,7 @@ class TestSelectArchiveTarget:
         mock_questionary.Choice = MagicMock(side_effect=lambda **kwargs: kwargs)
 
         with patch.dict("sys.modules", {"questionary": mock_questionary}):
-            result = select_archive_target([m1, m2, m3], None)
+            result = select_archive_target([m1, m2, m3], None)  # type: ignore[list-item]
             assert len(result) == 2
             versions = [m.version for m in result]
             assert "20240101_000000" in versions
@@ -393,7 +396,7 @@ class TestSelectArchiveTarget:
 
         with patch.dict("sys.modules", {"questionary": None}):
             with patch("builtins.input", return_value="1"):
-                result = select_archive_target([m1], None)
+                result = select_archive_target([m1], None)  # type: ignore[list-item]
                 assert len(result) == 1
                 assert result[0].version == "20240101_000000"
 
@@ -408,13 +411,13 @@ class TestSimpleSelectArchive:
         m1 = MockMigration("20240101_000000", "create_users")
 
         with patch("builtins.input", return_value="q"):
-            assert _simple_select_archive([m1], None) == []
+            assert _simple_select_archive([m1], None) == []  # type: ignore[list-item]
 
         with patch("builtins.input", return_value="quit"):
-            assert _simple_select_archive([m1], None) == []
+            assert _simple_select_archive([m1], None) == []  # type: ignore[list-item]
 
         with patch("builtins.input", return_value=""):
-            assert _simple_select_archive([m1], None) == []
+            assert _simple_select_archive([m1], None) == []  # type: ignore[list-item]
 
     def test_returns_migrations_for_valid_selection(self) -> None:
         """Test that migrations are returned for valid selection."""
@@ -424,11 +427,11 @@ class TestSimpleSelectArchive:
         m2 = MockMigration("20240102_000000", "add_email")
 
         with patch("builtins.input", return_value="2"):
-            result = _simple_select_archive([m1, m2], None)
+            result = _simple_select_archive([m1, m2], None)  # type: ignore[list-item]
             assert len(result) == 2
 
         with patch("builtins.input", return_value="1"):
-            result = _simple_select_archive([m1, m2], None)
+            result = _simple_select_archive([m1, m2], None)  # type: ignore[list-item]
             assert len(result) == 1
             assert result[0].version == "20240101_000000"
 
@@ -441,7 +444,7 @@ class TestSimpleSelectArchive:
         m1 = MockMigration("20240101_000000", "create_users")
 
         with patch("builtins.input", return_value="invalid"):
-            result = _simple_select_archive([m1], None)
+            result = _simple_select_archive([m1], None)  # type: ignore[list-item]
             assert result == []
 
         captured = capsys.readouterr()
@@ -456,7 +459,7 @@ class TestSimpleSelectArchive:
         m1 = MockMigration("20240101_000000", "create_users")
 
         with patch("builtins.input", return_value="99"):
-            result = _simple_select_archive([m1], None)
+            result = _simple_select_archive([m1], None)  # type: ignore[list-item]
             assert result == []
 
         captured = capsys.readouterr()
@@ -469,12 +472,14 @@ class TestSimpleSelectArchive:
         m1 = MockMigration("20240101_000000", "create_users")
 
         with patch("builtins.input", return_value="q"):
-            _simple_select_archive([m1], "20230101_000000")
+            _simple_select_archive([m1], "20230101_000000")  # type: ignore[list-item]
 
         captured = capsys.readouterr()
         assert "Current archive boundary: 20230101_000000" in captured.out
 
-    def test_lists_available_migrations(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_lists_available_migrations(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """Test that available migrations are listed."""
         from pykour.cli.interactive import _simple_select_archive
 
@@ -482,7 +487,7 @@ class TestSimpleSelectArchive:
         m2 = MockMigration("20240102_000000", "add_email")
 
         with patch("builtins.input", return_value="q"):
-            _simple_select_archive([m1, m2], None)
+            _simple_select_archive([m1, m2], None)  # type: ignore[list-item]
 
         captured = capsys.readouterr()
         assert "1. 20240101_000000_create_users" in captured.out

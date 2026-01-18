@@ -1,10 +1,15 @@
 """HTTP Request wrapper for ASGI scope."""
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from pykour import json as pykour_json
 from pykour.schema.parser import parse_query_string
 from pykour.types import Receive, Scope
+
+if TYPE_CHECKING:
+    from pykour.datastructures import FormData
 
 
 class State:
@@ -55,6 +60,7 @@ class Request:
         self._path_params = path_params or {}
         self._state: State | None = None
         self._cookies: dict[str, str] | None = None
+        self._form_data: FormData | None = None
 
     @property
     def path_params(self) -> dict[str, str]:
@@ -223,3 +229,38 @@ class Request:
             else:
                 self._json = pykour_json.loads(body)
         return self._json
+
+    async def form(self) -> FormData:
+        """Parse and return form data from request body.
+
+        Supports both application/x-www-form-urlencoded and
+        multipart/form-data content types.
+
+        Returns:
+            FormData object containing fields and files.
+
+        Raises:
+            ValidationError: If Content-Type is invalid or parsing fails.
+
+        Example:
+            form_data = await request.form()
+            name = form_data.fields.get("name")
+            avatar = form_data.files.get("avatar")
+        """
+        if self._form_data is not None:
+            return self._form_data
+
+        from pykour.datastructures import FormData
+        from pykour.injection.form_parsers import parse_multipart, parse_urlencoded
+
+        content_type = self.headers.get("content-type", "")
+
+        if "multipart/form-data" in content_type:
+            self._form_data = await parse_multipart(self)
+        elif "application/x-www-form-urlencoded" in content_type:
+            self._form_data = await parse_urlencoded(self)
+        else:
+            # Return empty FormData for unsupported content types
+            self._form_data = FormData(fields={}, files={})
+
+        return self._form_data

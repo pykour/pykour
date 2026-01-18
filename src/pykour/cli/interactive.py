@@ -27,7 +27,7 @@ def select_migrations(
         ImportError: If questionary is not installed.
     """
     try:
-        from questionary import Choice, checkbox
+        from questionary import Choice, checkbox  # type: ignore[import-not-found]
     except ImportError as e:
         raise ImportError(
             "questionary is required for interactive mode. "
@@ -94,7 +94,7 @@ def confirm_squash(
         True if user confirms, False otherwise.
     """
     try:
-        from questionary import confirm
+        from questionary import confirm  # type: ignore[import-not-found]
     except ImportError:
         return _simple_confirm(migrations, pending_versions)
 
@@ -154,7 +154,7 @@ def select_archive_target(
         return []
 
     try:
-        from questionary import Choice, select
+        from questionary import Choice, select  # type: ignore[import-not-found]
     except ImportError:
         return _simple_select_archive(available, current_boundary)
 

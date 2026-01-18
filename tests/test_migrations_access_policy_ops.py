@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -23,7 +21,9 @@ def create_mock_driver(driver_name: str = "sqlite") -> MagicMock:
     driver.execute = AsyncMock()
     driver.fetch_all = AsyncMock(return_value=[])
     driver.fetch_one = AsyncMock(return_value=None)
-    driver.convert_placeholders = MagicMock(side_effect=lambda sql, _: sql.replace("$1", "?").replace("$2", "?"))
+    driver.convert_placeholders = MagicMock(
+        side_effect=lambda sql, _: sql.replace("$1", "?").replace("$2", "?")
+    )
     return driver
 
 
@@ -159,8 +159,12 @@ class TestCreateAccessPolicy:
 
         # Check that CREATE POLICY was called with correct actions
         calls = [str(call) for call in driver.execute.call_args_list]
-        assert any("CREATE POLICY" in str(call) and "SELECT" in str(call) for call in calls)
-        assert any("CREATE POLICY" in str(call) and "INSERT" in str(call) for call in calls)
+        assert any(
+            "CREATE POLICY" in str(call) and "SELECT" in str(call) for call in calls
+        )
+        assert any(
+            "CREATE POLICY" in str(call) and "INSERT" in str(call) for call in calls
+        )
 
     @pytest.mark.asyncio
     async def test_execute_postgresql_converts_params(self) -> None:
@@ -194,7 +198,10 @@ class TestCreateAccessPolicy:
 
         # Check that metadata table was created and policy was inserted
         calls = [str(call) for call in driver.execute.call_args_list]
-        assert any("CREATE TABLE IF NOT EXISTS _pykour_access_policies" in str(call) for call in calls)
+        assert any(
+            "CREATE TABLE IF NOT EXISTS _pykour_access_policies" in str(call)
+            for call in calls
+        )
         assert any("INSERT INTO _pykour_access_policies" in str(call) for call in calls)
 
     @pytest.mark.asyncio
@@ -223,7 +230,9 @@ class TestCreateAccessPolicy:
     def test_convert_to_pg_condition_multiple(self) -> None:
         """Test _convert_to_pg_condition with multiple conditions."""
         op = CreateAccessPolicy("orders", "policy")
-        result = op._convert_to_pg_condition(["tenant_id = :tenant_id", "user_id = :user_id"])
+        result = op._convert_to_pg_condition(
+            ["tenant_id = :tenant_id", "user_id = :user_id"]
+        )
         assert "AND" in result
         assert "app.tenant_id" in result
         assert "app.user_id" in result
@@ -300,10 +309,18 @@ class TestDropAccessPolicy:
 
         # Check that DROP POLICY was called for each action
         calls = [str(call) for call in driver.execute.call_args_list]
-        assert any("DROP POLICY IF EXISTS orders_tenant_select" in str(call) for call in calls)
-        assert any("DROP POLICY IF EXISTS orders_tenant_insert" in str(call) for call in calls)
-        assert any("DROP POLICY IF EXISTS orders_tenant_update" in str(call) for call in calls)
-        assert any("DROP POLICY IF EXISTS orders_tenant_delete" in str(call) for call in calls)
+        assert any(
+            "DROP POLICY IF EXISTS orders_tenant_select" in str(call) for call in calls
+        )
+        assert any(
+            "DROP POLICY IF EXISTS orders_tenant_insert" in str(call) for call in calls
+        )
+        assert any(
+            "DROP POLICY IF EXISTS orders_tenant_update" in str(call) for call in calls
+        )
+        assert any(
+            "DROP POLICY IF EXISTS orders_tenant_delete" in str(call) for call in calls
+        )
 
     @pytest.mark.asyncio
     async def test_execute_postgresql_disables_rls(self) -> None:
@@ -450,14 +467,18 @@ class TestAlterAccessPolicy:
         )
         driver = create_mock_driver("sqlite")
         # Return existing policy data
-        driver.fetch_all = AsyncMock(return_value=[{
-            "select_rules": '["tenant_id = :tenant_id"]',
-            "insert_rules": '[]',
-            "update_rules": '[]',
-            "delete_rules": '[]',
-            "auto_set": '{}',
-            "bypass_roles": '[]',
-        }])
+        driver.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "select_rules": '["tenant_id = :tenant_id"]',
+                    "insert_rules": "[]",
+                    "update_rules": "[]",
+                    "delete_rules": "[]",
+                    "auto_set": "{}",
+                    "bypass_roles": "[]",
+                }
+            ]
+        )
         conn = MagicMock()
 
         await op.execute(driver, conn)
@@ -477,9 +498,15 @@ class TestAlterAccessPolicy:
         )
         driver = create_mock_driver("postgresql")
         # Return policy data from pg_policies
-        driver.fetch_all = AsyncMock(return_value=[
-            {"policyname": "orders_tenant_select", "qual": "current_setting('app.tenant_id', true)", "with_check": None},
-        ])
+        driver.fetch_all = AsyncMock(
+            return_value=[
+                {
+                    "policyname": "orders_tenant_select",
+                    "qual": "current_setting('app.tenant_id', true)",
+                    "with_check": None,
+                },
+            ]
+        )
         conn = MagicMock()
 
         await op.execute(driver, conn)
@@ -491,17 +518,13 @@ class TestAlterAccessPolicy:
     def test_convert_from_pg_condition(self) -> None:
         """Test _convert_from_pg_condition converts back to :param."""
         op = AlterAccessPolicy("orders", "policy")
-        result = op._convert_from_pg_condition(
-            "current_setting('app.tenant_id', true)"
-        )
+        result = op._convert_from_pg_condition("current_setting('app.tenant_id', true)")
         assert result == ":tenant_id"
 
     def test_convert_from_pg_condition_without_true(self) -> None:
         """Test _convert_from_pg_condition handles case without true arg."""
         op = AlterAccessPolicy("orders", "policy")
-        result = op._convert_from_pg_condition(
-            "current_setting('app.tenant_id')"
-        )
+        result = op._convert_from_pg_condition("current_setting('app.tenant_id')")
         assert result == ":tenant_id"
 
 

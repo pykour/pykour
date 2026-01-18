@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import threading
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Callable, TypeVar, get_type_hints
@@ -113,6 +114,7 @@ class ServiceContainer:
         """Initialize empty container."""
         self._registrations: dict[type, ServiceRegistration] = {}
         self._singletons: dict[type, Any] = {}
+        self._singleton_lock = threading.Lock()
 
     def register(
         self,
@@ -207,6 +209,8 @@ class ServiceContainer:
     def resolve(self, interface: type[T]) -> T:
         """Resolve a dependency.
 
+        This method is thread-safe for singleton resolution.
+
         Args:
             interface: Type to resolve.
 
@@ -221,18 +225,24 @@ class ServiceContainer:
 
         registration = self._registrations[interface]
 
-        # Return existing singleton
+        # Return existing singleton (fast path without lock)
         if registration.scope == Scope.SINGLETON and interface in self._singletons:
             return self._singletons[interface]
 
-        # Create instance
-        instance = self._create_instance(registration)
+        # For transient scope, just create and return
+        if registration.scope == Scope.TRANSIENT:
+            return self._create_instance(registration)
 
-        # Cache singleton
-        if registration.scope == Scope.SINGLETON:
+        # For singleton scope, use lock to ensure thread-safety
+        with self._singleton_lock:
+            # Double-check after acquiring lock
+            if interface in self._singletons:
+                return self._singletons[interface]
+
+            # Create instance and cache
+            instance = self._create_instance(registration)
             self._singletons[interface] = instance
-
-        return instance
+            return instance
 
     def resolve_or_none(self, interface: type[T]) -> T | None:
         """Resolve a dependency, returning None if not found.

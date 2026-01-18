@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, get_args, get_origin
 
 import orjson
 
+from pykour.datastructures import FormData, UploadFile
 from pykour.di import Depends as DIDepends
 from pykour.di import ServiceContainer, ServiceNotFoundException
 from pykour.injection.body_parsers import DEFAULT_BODY_PARSERS, BodyParser
 from pykour.schema.errors import ErrorDetail, ValidationError
 from pykour.schema.fields import Body, FieldInfo, Path as PathParam, Query
+from pykour.schema.form_fields import File, Form
 from pykour.schema.parser import coerce_path_param, coerce_query_param, coerce_value
 
 if TYPE_CHECKING:
@@ -262,6 +264,144 @@ class ParameterInjector:
         except (TypeError, ValueError) as e:
             _raise_validation_error("query", param_name, str(e), "type_error")
 
+    def inject_file_param(
+        self,
+        param_name: str,
+        param_type: type,
+        default: File,
+        form_data: FormData,
+    ) -> UploadFile | list[UploadFile] | None:
+        """Inject file parameter from form data.
+
+        Args:
+            param_name: Name of the parameter.
+            param_type: Expected type of the parameter.
+            default: File marker instance.
+            form_data: Parsed form data.
+
+        Returns:
+            UploadFile or list[UploadFile] from the form data.
+
+        Raises:
+            ValidationError: If required file is missing or validation fails.
+        """
+        key = default.alias or param_name
+        file = form_data.files.get(key)
+
+        if file is None:
+            if default.has_default:
+                return default.get_default()
+            _raise_validation_error(
+                "file", param_name, "File required", "value_error.missing"
+            )
+            return None  # Unreachable but satisfies type checker
+
+        # Validate file size if constraint specified
+        if default.max_size is not None:
+            if isinstance(file, list):
+                for f in file:
+                    if isinstance(f, UploadFile) and f.size is not None:
+                        if f.size > default.max_size:
+                            _raise_validation_error(
+                                "file",
+                                param_name,
+                                f"File size {f.size} exceeds maximum {default.max_size}",
+                                "value_error.max_size",
+                            )
+            elif isinstance(file, UploadFile):
+                if file.size is not None and file.size > default.max_size:
+                    _raise_validation_error(
+                        "file",
+                        param_name,
+                        f"File size {file.size} exceeds maximum {default.max_size}",
+                        "value_error.max_size",
+                    )
+
+        # Validate content type if constraint specified
+        if default.allowed_types is not None:
+            if isinstance(file, list):
+                for f in file:
+                    if isinstance(f, UploadFile):
+                        if f.content_type not in default.allowed_types:
+                            _raise_validation_error(
+                                "file",
+                                param_name,
+                                f"Content type {f.content_type} not allowed",
+                                "value_error.content_type",
+                            )
+            elif isinstance(file, UploadFile):
+                if file.content_type not in default.allowed_types:
+                    _raise_validation_error(
+                        "file",
+                        param_name,
+                        f"Content type {file.content_type} not allowed",
+                        "value_error.content_type",
+                    )
+
+        # Handle list[UploadFile] type
+        origin = get_origin(param_type)
+        if origin is list:
+            if isinstance(file, list):
+                return file
+            if isinstance(file, UploadFile):
+                return [file]
+            return []
+
+        # Single file expected but got list
+        if isinstance(file, list):
+            return file[0] if file else None
+
+        return file
+
+    def inject_form_param(
+        self,
+        param_name: str,
+        param_type: type,
+        default: Form,
+        form_data: FormData,
+    ) -> Any:
+        """Inject form field parameter from form data.
+
+        Args:
+            param_name: Name of the parameter.
+            param_type: Expected type of the parameter.
+            default: Form marker instance.
+            form_data: Parsed form data.
+
+        Returns:
+            Coerced form field value.
+
+        Raises:
+            ValidationError: If required field is missing or coercion fails.
+        """
+        key = default.alias or param_name
+        value = form_data.fields.get(key)
+
+        if value is None:
+            if default.has_default:
+                return default.get_default()
+            _raise_validation_error(
+                "form", param_name, "Form field required", "value_error.missing"
+            )
+
+        # Handle list type
+        origin = get_origin(param_type)
+        if origin is list:
+            args = get_args(param_type)
+            inner_type = args[0] if args else str
+            if isinstance(value, list):
+                return [coerce_value(v, inner_type) for v in value]
+            return [coerce_value(value, inner_type)]
+
+        # Single value expected but got list
+        if isinstance(value, list):
+            value = value[0] if value else ""
+
+        try:
+            return coerce_value(value, param_type)
+        except (TypeError, ValueError) as e:
+            _raise_validation_error("form", param_name, str(e), "type_error")
+
     async def inject(
         self,
         handler: Callable[..., Any],
@@ -290,6 +430,7 @@ class ParameterInjector:
         kwargs: dict[str, Any] = {}
         query_params = request.query_params
         body_data: dict[str, Any] | None = None
+        form_data: FormData | None = None
 
         for param_name, param in sig.parameters.items():
             if param_name == "request":
@@ -315,6 +456,20 @@ class ParameterInjector:
                     param_name, param_type, request, body_data
                 )
                 kwargs[param_name] = value
+
+            elif isinstance(default, File):
+                if form_data is None:
+                    form_data = await request.form()
+                kwargs[param_name] = self.inject_file_param(
+                    param_name, param_type, default, form_data
+                )
+
+            elif isinstance(default, Form):
+                if form_data is None:
+                    form_data = await request.form()
+                kwargs[param_name] = self.inject_form_param(
+                    param_name, param_type, default, form_data
+                )
 
             elif isinstance(default, Query):
                 kwargs[param_name] = self.inject_query_param(

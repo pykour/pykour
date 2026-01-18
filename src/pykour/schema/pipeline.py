@@ -14,8 +14,15 @@ if TYPE_CHECKING:
     from pykour.schema.validators import FieldValidatorInfo, ModelValidatorInfo
 
 
-def is_optional(type_: type) -> bool:
-    """Check if a type annotation is Optional (Union with None)."""
+def is_optional(type_: type | Any) -> bool:
+    """Check if a type annotation is Optional (Union with None).
+
+    Args:
+        type_: A type annotation (type, UnionType, or typing construct).
+
+    Returns:
+        True if the type annotation includes None.
+    """
     from types import UnionType
     from typing import Union, get_args, get_origin
 

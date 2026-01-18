@@ -7,9 +7,27 @@ import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 
-from pykour import json as pykour_json
+from pykour.config import PykourConfig, load_config
+from pykour.core.exceptions import (
+    handle_exception as _handle_exception_impl,
+    handle_http_exception,
+    handle_validation_exception,
+)
+from pykour.core.handler import (
+    deserialize_response,
+    interpolate_cache_key,
+    interpolate_header_value,
+    serialize_response,
+)
+from pykour.core.websocket import handle_websocket
+from pykour.di import ServiceContainer
 from pykour.exception_handlers import ExceptionHandler, ExceptionHandlerRegistry
 from pykour.exceptions import HTTPException
+from pykour.health.config import HealthCheckConfig
+from pykour.health.handler import HealthCheckHandler, setup_health_check
+from pykour.metrics.collector import MetricsCollector
+from pykour.metrics.config import MetricsConfig
+from pykour.metrics.handler import MetricsHandler, setup_metrics
 from pykour.injection import ParameterInjector
 from pykour.middleware import BaseMiddleware, FunctionMiddleware, MiddlewareFunc
 from pykour.openapi.config import OpenAPIConfig
@@ -19,12 +37,58 @@ from pykour.response import JSONResponse, Response
 from pykour.router import Router
 from pykour.schema import ValidationError
 from pykour.types import Receive, Scope, Send
-from pykour.di import ServiceContainer
 
 if TYPE_CHECKING:
     from pykour.cache.storage import CacheStorage
     from pykour.db import Database
-    from pykour.websocket import WebSocket
+
+
+# Sentinel value to indicate that routes_dir should be resolved from the caller's directory
+_CALLER_ROUTES_DIR: object = object()
+
+# Sentinel value to indicate "use config file default"
+_USE_CONFIG_DEFAULT: object = object()
+
+
+def _resolve_routes_dir(routes_dir: str | Path | object) -> Path:
+    """Resolve routes_dir to an absolute Path.
+
+    If routes_dir is the sentinel value _CALLER_ROUTES_DIR, resolves to a "routes"
+    subdirectory in the same directory as the file that called Pykour().
+
+    Args:
+        routes_dir: Explicitly specified routes directory, or sentinel value.
+
+    Returns:
+        Resolved Path to the routes directory.
+    """
+    if routes_dir is not _CALLER_ROUTES_DIR:
+        return Path(routes_dir)  # type: ignore[arg-type]
+
+    # Resolve from caller's directory
+    # stack[0] = _resolve_routes_dir
+    # stack[1] = __init__
+    # stack[2] = Pykour() caller
+    stack = inspect.stack()
+
+    if len(stack) < 3:
+        # Stack too shallow (unlikely but handle defensively)
+        return Path.cwd() / "routes"
+
+    caller_frame = stack[2]
+    caller_file = caller_frame.filename
+
+    # Handle REPL, exec(), or other non-file contexts
+    if not caller_file or caller_file.startswith("<"):
+        return Path.cwd() / "routes"
+
+    caller_path = Path(caller_file)
+
+    # Handle frozen executables or missing files
+    if not caller_path.exists():
+        return Path.cwd() / "routes"
+
+    return caller_path.parent.resolve() / "routes"
 
 
 class Pykour:
@@ -83,59 +147,109 @@ class Pykour:
 
     def __init__(
         self,
-        routes_dir: str | Path = "routes",
+        routes_dir: str | Path | None = None,
         database: "Database | None" = None,
         cache: "CacheStorage | None" = None,
         debug: bool | None = None,
         *,
-        title: str = "Pykour API",
-        version: str = "1.0.0",
+        config_file: str | Path | None = None,
+        auto_load_config: bool = True,
+        title: str | None = None,
+        version: str | None = None,
         description: str | None = None,
-        docs_url: str | None = "/docs",
-        openapi_url: str | None = "/openapi.json",
-        redoc_url: str | None = "/redoc",
+        docs_url: str | None | object = _USE_CONFIG_DEFAULT,
+        openapi_url: str | None | object = _USE_CONFIG_DEFAULT,
+        redoc_url: str | None | object = _USE_CONFIG_DEFAULT,
+        health_url: str | None | object = _USE_CONFIG_DEFAULT,
+        metrics_url: str | None | object = _USE_CONFIG_DEFAULT,
     ) -> None:
         """Initialize Pykour application.
 
         Args:
-            routes_dir: Directory containing route.py files.
+            routes_dir: Directory containing route.py files. If not specified,
+                uses config file value or defaults to a "routes" subdirectory
+                in the same directory as the file that calls Pykour().
             database: Optional database instance for dependency injection.
+                If not specified and config file has database.url, creates one.
             cache: Optional cache storage for response and data caching.
+                If not specified and config file has cache.url, creates one.
             debug: Enable debug mode for detailed error tracebacks.
-                   If None, reads from PYKOUR_DEBUG environment variable.
+                If None, reads from config file or PYKOUR_DEBUG environment variable.
+            config_file: Path to configuration file (pykour.toml).
+                If not specified, auto-discovers pykour.toml in current directory.
+            auto_load_config: Whether to auto-discover pykour.toml. Default True.
             title: API title for OpenAPI documentation.
             version: API version for OpenAPI documentation.
             description: API description for OpenAPI documentation.
             docs_url: URL path for Swagger UI. Set to None to disable.
             openapi_url: URL path for OpenAPI JSON schema. Set to None to disable.
             redoc_url: URL path for ReDoc. Set to None to disable.
+            health_url: URL path for health check endpoint. Set to None to disable.
+            metrics_url: URL path for Prometheus metrics endpoint. Set to None to disable.
         """
-        import os
+        # Load configuration (priority: code > env > config file > defaults)
+        self._pykour_config = load_config(
+            config_file=config_file,
+            auto_discover=auto_load_config,
+        )
+        cfg = self._pykour_config
 
-        self._router = Router(routes_dir)
-        self._database = database
-        self._cache = cache
+        # Resolve routes_dir (code > config file > caller's directory)
+        if routes_dir is not None:
+            resolved_routes_dir = _resolve_routes_dir(routes_dir)
+        elif cfg.app.routes_dir != "routes":
+            # Config file specified a non-default value
+            resolved_routes_dir = Path(cfg.app.routes_dir)
+        else:
+            # Use caller's directory as default
+            resolved_routes_dir = _resolve_routes_dir(_CALLER_ROUTES_DIR)
+
+        self._router = Router(resolved_routes_dir)
         self._started = False
         self._startup_lock = asyncio.Lock()
         self._middleware_stack: list[tuple[type[BaseMiddleware], dict[str, Any]]] = []
         self._app: Any = None
         self._services = ServiceContainer()
 
-        # Determine debug mode
-        if debug is None:
-            self._debug = os.environ.get("PYKOUR_DEBUG", "").lower() in (
-                "1",
-                "true",
-                "yes",
+        # Determine debug mode (code > env/config)
+        if debug is not None:
+            self._debug = debug
+        else:
+            self._debug = cfg.app.debug
+
+        # Database: explicit > config file
+        if database is not None:
+            self._database = database
+        elif cfg.database.url:
+            from pykour.db.database import Database as DatabaseClass
+
+            self._database = DatabaseClass(
+                url=cfg.database.url,
+                min_size=cfg.database.min_size,
+                max_size=cfg.database.max_size,
+                enable_access_policies=cfg.database.enable_access_policies,
             )
         else:
-            self._debug = debug
+            self._database = None
+
+        # Cache: explicit > config file
+        if cache is not None:
+            self._cache = cache
+        elif cfg.cache.url:
+            from pykour.cache.valkey import ValkeyStorage
+
+            self._cache = ValkeyStorage(
+                url=cfg.cache.url,
+                prefix=cfg.cache.prefix,
+            )
+        else:
+            self._cache = None
 
         # Auto-register database in service container for DI
         if self._database is not None:
-            from pykour.db.database import Database
+            from pykour.db.database import Database as DatabaseClass
 
-            self._services.register_instance(Database, self._database)
+            self._services.register_instance(DatabaseClass, self._database)
 
         # Auto-register cache client in service container for DI
         if self._cache is not None:
@@ -146,24 +260,103 @@ class Pykour:
 
         # Initialize exception handler registry with default handlers
         self._exception_handlers = ExceptionHandlerRegistry()
-        self._exception_handlers.add(HTTPException, self._handle_http_exception)
-        self._exception_handlers.add(ValidationError, self._handle_validation_exception)
+        self._exception_handlers.add(HTTPException, handle_http_exception)
+        self._exception_handlers.add(ValidationError, handle_validation_exception)
 
         # Initialize parameter injector
         self._injector = ParameterInjector(self._services, self._database)
 
+        # Resolve OpenAPI settings (code > config file)
+        # Use sentinel check to distinguish "not specified" from "explicitly None"
+        resolved_title = title if title is not None else cfg.openapi.title
+        resolved_version = version if version is not None else cfg.openapi.version
+        resolved_description = (
+            description if description is not None else cfg.openapi.description
+        )
+        resolved_docs_url: str | None = (
+            cfg.openapi.docs_url
+            if docs_url is _USE_CONFIG_DEFAULT
+            else cast("str | None", docs_url)
+        )
+        resolved_openapi_url: str | None = (
+            cfg.openapi.openapi_url
+            if openapi_url is _USE_CONFIG_DEFAULT
+            else cast("str | None", openapi_url)
+        )
+        resolved_redoc_url: str | None = (
+            cfg.openapi.redoc_url
+            if redoc_url is _USE_CONFIG_DEFAULT
+            else cast("str | None", redoc_url)
+        )
+
         # Set up OpenAPI documentation
         self._openapi_config = OpenAPIConfig(
-            title=title,
-            version=version,
-            description=description,
-            docs_url=docs_url,
-            openapi_url=openapi_url,
-            redoc_url=redoc_url,
+            title=resolved_title,
+            version=resolved_version,
+            description=resolved_description,
+            docs_url=resolved_docs_url,
+            openapi_url=resolved_openapi_url,
+            redoc_url=resolved_redoc_url,
         )
         self._openapi_handler: OpenAPIRouteHandler | None = None
-        if docs_url or openapi_url or redoc_url:
+        if resolved_docs_url or resolved_openapi_url or resolved_redoc_url:
             self._openapi_handler = setup_openapi(self, self._openapi_config)
+
+        # Resolve health check settings (code > config file)
+        # Use sentinel check to distinguish "not specified" from "explicitly None"
+        resolved_health_url: str | None = (
+            cfg.health.url
+            if health_url is _USE_CONFIG_DEFAULT
+            else cast("str | None", health_url)
+        )
+
+        # Set up health check endpoint
+        self._health_config = HealthCheckConfig(health_url=resolved_health_url)
+        self._health_handler: HealthCheckHandler | None = None
+        if resolved_health_url is not None:
+            self._health_handler = setup_health_check(self._health_config)
+
+        # Resolve metrics settings (code > config file)
+        # Use sentinel check to distinguish "not specified" from "explicitly None"
+        resolved_metrics_url: str | None = (
+            cfg.metrics.url
+            if metrics_url is _USE_CONFIG_DEFAULT
+            else cast("str | None", metrics_url)
+        )
+
+        # Set up metrics endpoint
+        # Build exclude paths list
+        metrics_exclude_paths = ["/metrics"]
+        if resolved_health_url is not None:
+            metrics_exclude_paths.append(resolved_health_url)
+        if resolved_metrics_url is not None and resolved_metrics_url != "/metrics":
+            metrics_exclude_paths.append(resolved_metrics_url)
+
+        self._metrics_config = MetricsConfig(
+            metrics_url=resolved_metrics_url,
+            exclude_paths=metrics_exclude_paths,
+        )
+        self._metrics_collector: MetricsCollector | None = None
+        self._metrics_handler: MetricsHandler | None = None
+        if resolved_metrics_url is not None:
+            self._metrics_collector = MetricsCollector(
+                buckets=self._metrics_config.latency_buckets
+            )
+            self._metrics_handler = setup_metrics(
+                self._metrics_config, self._metrics_collector
+            )
+
+        # Auto-configure middleware from config file
+        self._configure_middleware_from_config()
+
+    @property
+    def config(self) -> PykourConfig:
+        """Get the loaded configuration.
+
+        Returns:
+            PykourConfig instance with merged configuration values.
+        """
+        return self._pykour_config
 
     @property
     def services(self) -> ServiceContainer:
@@ -314,6 +507,35 @@ class Pykour:
             await self._cache.disconnect()
         self._started = False
 
+    def enable_metrics(self) -> None:
+        """Enable metrics collection middleware.
+
+        This adds the MetricsMiddleware to collect request metrics
+        (latency, request count, etc.) that are exposed via the /metrics endpoint.
+
+        Must be called before the application starts processing requests.
+
+        Raises:
+            RuntimeError: If metrics endpoint is disabled (metrics_url=None).
+
+        Example:
+            app = Pykour(routes_dir="routes", metrics_url="/metrics")
+            app.enable_metrics()  # Start collecting metrics
+        """
+        if self._metrics_collector is None:
+            raise RuntimeError(
+                "Metrics endpoint is disabled. "
+                "Enable it by setting metrics_url in the Pykour constructor."
+            )
+
+        from pykour.metrics.middleware import MetricsMiddleware
+
+        self.add_middleware(
+            MetricsMiddleware,
+            collector=self._metrics_collector,
+            config=self._metrics_config,
+        )
+
     def add_middleware(
         self,
         middleware_class: type[BaseMiddleware],
@@ -362,6 +584,151 @@ class Pykour:
         if func is not None:
             return decorator(func)
         return decorator
+
+    def _configure_middleware_from_config(self) -> None:
+        """Configure middleware based on config file settings.
+
+        Automatically adds middleware when enabled in the configuration file.
+        Middleware is added in a specific order to ensure correct behavior.
+        """
+        mw_config = self._pykour_config.middleware
+
+        # Trace middleware (should be outermost for proper trace ID propagation)
+        if mw_config.trace.enabled:
+            from pykour.middleware import TraceMiddleware
+
+            self.add_middleware(TraceMiddleware)
+
+        # Logging middleware
+        if mw_config.logging.enabled:
+            from pykour.middleware import LoggingMiddleware
+
+            self.add_middleware(
+                LoggingMiddleware,
+                logger_name=mw_config.logging.logger_name,
+                level=mw_config.logging.level,
+                exclude_paths=mw_config.logging.exclude_paths,
+                log_request_headers=mw_config.logging.log_request_headers,
+                log_response_headers=mw_config.logging.log_response_headers,
+            )
+
+        # Security Headers middleware
+        if mw_config.security.enabled:
+            from pykour.middleware import (
+                ContentSecurityPolicy,
+                SecurityHeadersMiddleware,
+            )
+
+            csp = None
+            if mw_config.security.csp:
+                csp = ContentSecurityPolicy(
+                    default_src=mw_config.security.csp.default_src,
+                    script_src=mw_config.security.csp.script_src,
+                    style_src=mw_config.security.csp.style_src,
+                    img_src=mw_config.security.csp.img_src,
+                    font_src=mw_config.security.csp.font_src,
+                    connect_src=mw_config.security.csp.connect_src,
+                    media_src=mw_config.security.csp.media_src,
+                    object_src=mw_config.security.csp.object_src,
+                    frame_src=mw_config.security.csp.frame_src,
+                    frame_ancestors=mw_config.security.csp.frame_ancestors,
+                    form_action=mw_config.security.csp.form_action,
+                    base_uri=mw_config.security.csp.base_uri,
+                )
+            self.add_middleware(
+                SecurityHeadersMiddleware,
+                hsts_max_age=mw_config.security.hsts_max_age,
+                hsts_include_subdomains=mw_config.security.hsts_include_subdomains,
+                hsts_preload=mw_config.security.hsts_preload,
+                x_content_type_options=mw_config.security.x_content_type_options,
+                x_frame_options=mw_config.security.x_frame_options,
+                x_xss_protection=mw_config.security.x_xss_protection,
+                referrer_policy=mw_config.security.referrer_policy,
+                content_security_policy=csp,
+                csp_report_only=mw_config.security.csp_report_only,
+                exclude_paths=mw_config.security.exclude_paths,
+            )
+
+        # CORS middleware
+        if mw_config.cors.enabled:
+            from pykour.middleware import CORSMiddleware
+
+            self.add_middleware(
+                CORSMiddleware,
+                allow_origins=mw_config.cors.allow_origins,
+                allow_methods=mw_config.cors.allow_methods,
+                allow_headers=mw_config.cors.allow_headers,
+                allow_credentials=mw_config.cors.allow_credentials,
+                expose_headers=mw_config.cors.expose_headers,
+                max_age=mw_config.cors.max_age,
+            )
+
+        # CSRF middleware
+        if mw_config.csrf.enabled:
+            from pykour.middleware import CSRFMiddleware
+
+            self.add_middleware(
+                CSRFMiddleware,
+                cookie_name=mw_config.csrf.cookie_name,
+                header_name=mw_config.csrf.header_name,
+                cookie_path=mw_config.csrf.cookie_path,
+                cookie_domain=mw_config.csrf.cookie_domain,
+                cookie_secure=mw_config.csrf.cookie_secure,
+                cookie_httponly=mw_config.csrf.cookie_httponly,
+                cookie_samesite=mw_config.csrf.cookie_samesite,
+                cookie_max_age=mw_config.csrf.cookie_max_age,
+                exclude_paths=mw_config.csrf.exclude_paths,
+            )
+
+        # Rate Limiting middleware
+        if mw_config.rate_limit.enabled:
+            from pykour.middleware import RateLimitConfig, RateLimitMiddleware
+
+            path_configs = {
+                path: RateLimitConfig(cfg.requests_per_second, cfg.burst_size)
+                for path, cfg in mw_config.rate_limit.path_configs.items()
+            }
+            self.add_middleware(
+                RateLimitMiddleware,
+                requests_per_second=mw_config.rate_limit.requests_per_second,
+                burst_size=mw_config.rate_limit.burst_size,
+                exclude_paths=mw_config.rate_limit.exclude_paths,
+                include_headers=mw_config.rate_limit.include_headers,
+                path_configs=path_configs if path_configs else None,
+            )
+
+        # Request Size Limit middleware
+        if mw_config.size_limit.enabled:
+            from pykour.middleware import RequestSizeLimitMiddleware
+
+            self.add_middleware(
+                RequestSizeLimitMiddleware,
+                max_size=mw_config.size_limit.max_size,
+                max_size_by_content_type=mw_config.size_limit.max_size_by_content_type
+                or None,
+                exclude_paths=mw_config.size_limit.exclude_paths,
+                check_content_length=mw_config.size_limit.check_content_length,
+                check_body_size=mw_config.size_limit.check_body_size,
+            )
+
+        # JWT Auth middleware (should be one of the innermost)
+        if mw_config.jwt.enabled:
+            from pykour.middleware import JWTAuthMiddleware
+
+            if not mw_config.jwt.secret_key and not mw_config.jwt.secret_keys:
+                raise ValueError(
+                    "JWT middleware enabled but no secret_key configured. "
+                    "Set middleware.jwt.secret_key in pykour.toml or "
+                    "PYKOUR_JWT_SECRET_KEY environment variable."
+                )
+            self.add_middleware(
+                JWTAuthMiddleware,
+                secret_key=mw_config.jwt.secret_key,
+                secret_keys=mw_config.jwt.secret_keys,
+                algorithm=mw_config.jwt.algorithm,
+                exclude_paths=mw_config.jwt.exclude_paths,
+                auto_error=mw_config.jwt.auto_error,
+            )
 
     def register_route(
         self,
@@ -457,146 +824,23 @@ class Pykour:
         send: Send,
     ) -> None:
         """Core ASGI application handler (without middleware)."""
-        # Check OpenAPI routes first
+        # Check health check endpoint first (lightweight)
+        if self._health_handler is not None:
+            if await self._health_handler.handle(scope, receive, send):
+                return
+
+        # Check metrics endpoint
+        if self._metrics_handler is not None:
+            if await self._metrics_handler.handle(scope, receive, send):
+                return
+
+        # Check OpenAPI routes
         if self._openapi_handler is not None:
             if await self._openapi_handler.handle(scope, receive, send):
                 return
 
         response = await self._handle_request(scope, receive)
         await response(scope, receive, send)
-
-    def _interpolate_cache_key(self, template: str, kwargs: dict[str, Any]) -> str:
-        """Interpolate {param} placeholders in cache key template.
-
-        Args:
-            template: Key template with {param} placeholders.
-            kwargs: Handler kwargs for interpolation.
-
-        Returns:
-            Interpolated cache key.
-
-        Example:
-            template = "user:{id}:profile"
-            kwargs = {"id": 123, "request": ...}
-            result = "user:123:profile"
-        """
-        import re
-
-        def replace(match: re.Match[str]) -> str:
-            param_name = match.group(1)
-            if param_name in kwargs:
-                return str(kwargs[param_name])
-            raise ValueError(f"Cache key references unknown parameter: {param_name}")
-
-        return re.sub(r"\{(\w+)\}", replace, template)
-
-    def _interpolate_header_value(
-        self,
-        template: str,
-        kwargs: dict[str, Any],
-        response: Response,
-    ) -> str | None:
-        """Interpolate {param} placeholders in header value template.
-
-        Args:
-            template: Value template with {param} or {param.field} placeholders.
-            kwargs: Handler kwargs for interpolation.
-            response: Response object for response body interpolation.
-
-        Returns:
-            Interpolated value, or None if interpolation failed.
-
-        Example:
-            template = "/users/{id}"
-            kwargs = {"id": 123}
-            result = "/users/123"
-
-            # With response body
-            template = "/users/{id}"
-            kwargs = {}
-            response.body = b'{"id": 456}'
-            result = "/users/456"
-        """
-        import re
-
-        def get_value(param_path: str) -> str | None:
-            """Get value for a parameter path (supports dot notation)."""
-            parts = param_path.split(".")
-
-            # First, try to resolve from kwargs
-            if parts[0] in kwargs:
-                value = kwargs[parts[0]]
-                for part in parts[1:]:
-                    if isinstance(value, dict) and part in value:
-                        value = value[part]
-                    elif hasattr(value, part):
-                        value = getattr(value, part)
-                    else:
-                        return None
-                return str(value)
-
-            # Then, try to resolve from response body
-            if hasattr(response, "body") and response.body:
-                try:
-                    data = pykour_json.loads(response.body)
-                    for part in parts:
-                        if isinstance(data, dict) and part in data:
-                            data = data[part]
-                        else:
-                            return None
-                    return str(data)
-                except Exception:
-                    pass
-
-            return None
-
-        def replace(match: re.Match[str]) -> str:
-            param_path = match.group(1)
-            value = get_value(param_path)
-            if value is not None:
-                return value
-            # If value not found, keep the original placeholder
-            return match.group(0)
-
-        result = re.sub(r"\{([^}]+)\}", replace, template)
-        # Return None if any placeholder was not resolved
-        if "{" in result:
-            return None
-        return result
-
-    def _serialize_response(self, response: Response) -> bytes:
-        """Serialize a Response object for caching.
-
-        Args:
-            response: Response to serialize.
-
-        Returns:
-            Serialized response as bytes.
-        """
-        data = {
-            "status_code": response.status_code,
-            "headers": response.headers,
-            "body": response.body.decode("utf-8"),
-            "media_type": response.media_type,
-        }
-        return pykour_json.dumps(data)
-
-    def _deserialize_response(self, data: bytes) -> Response:
-        """Deserialize cached bytes to a Response object.
-
-        Args:
-            data: Cached response bytes.
-
-        Returns:
-            Reconstructed Response object.
-        """
-        parsed = pykour_json.loads(data)
-        return Response(
-            content=parsed["body"],
-            status_code=parsed["status_code"],
-            headers=parsed["headers"],
-            media_type=parsed.get("media_type"),
-        )
 
     async def _handle_request(self, scope: Scope, receive: Receive) -> Response:
         """Find and execute the appropriate route handler."""
@@ -619,16 +863,49 @@ class Pykour:
 
                 # Check for @cache decorator and try to serve from cache
                 from pykour.cache.decorators import get_cache_info, get_cache_evict_info
+                from pykour.conditional import get_etag_info, get_last_modified_info
+                from pykour.core.handler import (
+                    check_etag_match,
+                    compute_etag,
+                    extract_last_modified,
+                    format_last_modified,
+                    parse_if_modified_since,
+                )
 
                 cache_infos = get_cache_info(handler)
+                etag_infos = get_etag_info(handler)
+                last_modified_infos = get_last_modified_info(handler)
                 cache_key: str | None = None
 
                 if cache_infos and self._cache is not None:
                     cache_info = cache_infos[0]  # Use first cache decorator
-                    cache_key = self._interpolate_cache_key(cache_info.key, kwargs)
+                    cache_key = interpolate_cache_key(cache_info.key, kwargs)
                     cached_data = await self._cache.get(cache_key)
                     if cached_data is not None:
-                        return self._deserialize_response(cached_data)
+                        cached_response = deserialize_response(cached_data)
+
+                        # Check ETag on cache hit (returns 304 without handler execution)
+                        if etag_infos:
+                            etag_info = etag_infos[0]
+                            computed_etag = compute_etag(
+                                cached_response.body,
+                                weak=etag_info.weak,
+                                algorithm=etag_info.algorithm,
+                            )
+                            if_none_match = request.headers.get("if-none-match")
+                            if if_none_match and check_etag_match(
+                                if_none_match, computed_etag
+                            ):
+                                # Return 304 Not Modified (no body)
+                                return Response(
+                                    content=b"",
+                                    status_code=304,
+                                    headers={"ETag": computed_etag},
+                                )
+                            # Add ETag to cached response
+                            cached_response.set_header("ETag", computed_etag)
+
+                        return cached_response
 
                 # Execute handler
                 result = handler(**kwargs)
@@ -662,25 +939,77 @@ class Pykour:
                         continue
 
                     # Interpolate header value
-                    header_value = self._interpolate_header_value(
+                    header_value = interpolate_header_value(
                         header_info.value_template, kwargs, response
                     )
                     if header_value is not None:
                         response.add_header(header_info.name, header_value)
+
+                # Handle @etag decorator (after handler execution)
+                computed_etag: str | None = None
+                if etag_infos:
+                    etag_info = etag_infos[0]
+                    computed_etag = compute_etag(
+                        response.body,
+                        weak=etag_info.weak,
+                        algorithm=etag_info.algorithm,
+                    )
+                    response.set_header("ETag", computed_etag)
+
+                    # Check If-None-Match header
+                    if_none_match = request.headers.get("if-none-match")
+                    if if_none_match and check_etag_match(if_none_match, computed_etag):
+                        # Return 304 Not Modified (no body)
+                        return Response(
+                            content=b"",
+                            status_code=304,
+                            headers={"ETag": computed_etag},
+                        )
+
+                # Handle @last_modified decorator
+                if last_modified_infos:
+                    lm_info = last_modified_infos[0]
+                    last_mod_time = extract_last_modified(
+                        response,
+                        lm_info.static_value,
+                        lm_info.response_field,
+                        lm_info.format,
+                    )
+
+                    if last_mod_time:
+                        lm_header = format_last_modified(last_mod_time)
+                        response.set_header("Last-Modified", lm_header)
+
+                        # Check If-Modified-Since header
+                        if_modified_since = request.headers.get("if-modified-since")
+                        if if_modified_since:
+                            ims_time = parse_if_modified_since(if_modified_since)
+                            if ims_time and last_mod_time <= ims_time:
+                                # Return 304 Not Modified (no body)
+                                headers_304: dict[str, str] = {
+                                    "Last-Modified": lm_header
+                                }
+                                if computed_etag:
+                                    headers_304["ETag"] = computed_etag
+                                return Response(
+                                    content=b"",
+                                    status_code=304,
+                                    headers=headers_304,
+                                )
 
                 # Cache response if @cache decorator is present
                 if cache_infos and self._cache is not None and cache_key is not None:
                     cache_info = cache_infos[0]
                     # Only cache successful responses (2xx)
                     if 200 <= response.status_code < 300:
-                        serialized = self._serialize_response(response)
+                        serialized = serialize_response(response)
                         await self._cache.set(cache_key, serialized, cache_info.ttl)
 
                 # Handle @cache_evict decorator
                 evict_infos = get_cache_evict_info(handler)
                 if evict_infos and self._cache is not None:
                     for evict_info in evict_infos:
-                        evict_key = self._interpolate_cache_key(evict_info.key, kwargs)
+                        evict_key = interpolate_cache_key(evict_info.key, kwargs)
                         if evict_info.all_entries:
                             await self._cache.delete_pattern(evict_key)
                         else:
@@ -719,8 +1048,7 @@ class Pykour:
     async def _handle_exception(self, request: Request, exc: Exception) -> Response:
         """Handle exceptions during request processing.
 
-        Looks up a registered handler for the exception type (checking MRO).
-        If no handler is found, uses the default fallback handler.
+        Delegates to the core exception handling implementation.
 
         Args:
             request: The request object.
@@ -729,92 +1057,9 @@ class Pykour:
         Returns:
             Response from the exception handler.
         """
-        handler = self._exception_handlers.get(exc)
-        if handler is not None:
-            result = handler(request, exc)
-            if inspect.isawaitable(result):
-                return cast(Response, await result)
-            return cast(Response, result)
-
-        # No registered handler - use fallback
-        return self._handle_unhandled_exception(exc)
-
-    def _handle_http_exception(self, request: Request, exc: HTTPException) -> Response:
-        """Default handler for HTTPException.
-
-        Args:
-            request: The request object.
-            exc: The HTTP exception that was raised.
-
-        Returns:
-            JSON response with error details.
-        """
-        content: dict[str, Any] = {"error": exc.detail}
-
-        # Convert headers dict to proper format
-        headers: dict[str, str] = {}
-        if exc.headers:
-            headers.update(exc.headers)
-
-        return JSONResponse(
-            content=content,
-            status_code=exc.status_code,
-            headers=headers,
+        return await _handle_exception_impl(
+            request, exc, self._exception_handlers, self._debug
         )
-
-    def _handle_validation_exception(
-        self, request: Request, exc: ValidationError
-    ) -> Response:
-        """Default handler for ValidationError.
-
-        Args:
-            request: The request object.
-            exc: The validation exception that was raised.
-
-        Returns:
-            JSON response with validation error details.
-        """
-        return JSONResponse(
-            content=exc.to_dict(),
-            status_code=422,
-        )
-
-    def _handle_unhandled_exception(self, exc: Exception) -> Response:
-        """Handle exceptions with no registered handler.
-
-        Args:
-            exc: The exception that was raised.
-
-        Returns:
-            JSON response with error details (verbose in debug mode).
-        """
-        import logging
-        import traceback
-
-        logger = logging.getLogger("pykour")
-
-        if self._debug:
-            # In debug mode, show full traceback
-            tb_lines = traceback.format_exception(type(exc), exc, exc.__traceback__)
-            tb_str = "".join(tb_lines)
-            logger.error(f"Unhandled exception:\n{tb_str}")
-
-            return JSONResponse(
-                content={
-                    "error": "Internal Server Error",
-                    "detail": str(exc),
-                    "type": type(exc).__name__,
-                    "traceback": tb_lines,
-                },
-                status_code=500,
-            )
-        else:
-            # In production, log the error but return generic message
-            logger.exception("Unhandled exception during request processing")
-            return JSONResponse(
-                content={"error": "Internal Server Error"},
-                status_code=500,
-            )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI application entry point."""
@@ -861,115 +1106,11 @@ class Pykour:
     ) -> None:
         """Handle WebSocket connections.
 
+        Delegates to the core websocket handling implementation.
+
         Args:
             scope: ASGI WebSocket scope.
             receive: ASGI receive callable.
             send: ASGI send callable.
         """
-        import logging
-
-        from pykour.websocket import WebSocket, WebSocketDisconnect, WebSocketState
-
-        logger = logging.getLogger("pykour")
-        path = scope.get("path", "/")
-        handler, path_params = self._router.match(path, "WEBSOCKET")
-
-        if handler is None:
-            # No WebSocket handler found - close with 4004 (not found)
-            await send(
-                {
-                    "type": "websocket.close",
-                    "code": 4004,
-                    "reason": "Not Found",
-                }
-            )
-            return
-
-        ws = WebSocket(scope, receive, send, path_params)
-
-        try:
-            # Inject parameters (WebSocket instance and path params)
-            kwargs = await self._inject_websocket_params(handler, ws, path_params)
-
-            result = handler(**kwargs)
-            if inspect.isawaitable(result):
-                await result
-        except WebSocketDisconnect:
-            pass  # Normal disconnect
-        except Exception as e:
-            logger.exception(f"WebSocket error: {e}")
-
-            if ws.state != WebSocketState.DISCONNECTED:
-                try:
-                    await ws.close(code=1011, reason="Internal Error")
-                except Exception:
-                    pass  # Connection may already be closed
-
-    async def _inject_websocket_params(
-        self,
-        handler: Callable[..., Any],
-        ws: "WebSocket",
-        path_params: dict[str, str],
-    ) -> dict[str, Any]:
-        """Inject parameters for WebSocket handler.
-
-        Supports:
-        - WebSocket instance (ws parameter or by type annotation)
-        - Path parameters
-        - Service dependencies via Depends()
-
-        Args:
-            handler: The WebSocket handler function.
-            ws: The WebSocket connection instance.
-            path_params: Path parameters extracted from URL.
-
-        Returns:
-            Dictionary of keyword arguments for the handler.
-        """
-        from typing import get_type_hints
-
-        from pykour.di import Depends as DIDepends
-        from pykour.schema.fields import Path as PathParam
-        from pykour.schema.parser import coerce_path_param
-        from pykour.websocket import WebSocket as WebSocketClass
-
-        try:
-            hints = get_type_hints(handler)
-        except Exception:
-            hints = {}
-
-        sig = inspect.signature(handler)
-        kwargs: dict[str, Any] = {}
-
-        for param_name, param in sig.parameters.items():
-            param_type = hints.get(param_name, Any)
-            default = param.default
-
-            # WebSocket instance injection (by type or by name)
-            if param_type is WebSocketClass or param_name == "ws":
-                kwargs[param_name] = ws
-
-            # Service dependency injection
-            elif isinstance(default, DIDepends):
-                service = self._injector.inject_service_depends(
-                    param_name, param_type, default
-                )
-                kwargs[param_name] = service
-
-            # Path parameter with explicit marker
-            elif isinstance(default, PathParam):
-                kwargs[param_name] = self._injector.inject_path_param(
-                    param_name, param_type, default, path_params
-                )
-
-            # Path parameter by convention (name matches)
-            elif param_name in path_params:
-                kwargs[param_name] = coerce_path_param(
-                    path_params[param_name], param_name, param_type
-                )
-
-            # Default value
-            elif param.default is not inspect.Parameter.empty:
-                kwargs[param_name] = param.default
-
-        return kwargs
+        await handle_websocket(scope, receive, send, self._router, self._injector)

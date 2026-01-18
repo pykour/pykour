@@ -2,7 +2,7 @@
 
 import inspect
 import re
-from typing import Any, Callable, get_type_hints
+from typing import Any, Callable, get_origin, get_type_hints
 
 from pykour.openapi.config import OpenAPIConfig
 from pykour.openapi.schema_converter import SchemaConverter
@@ -16,6 +16,7 @@ from pykour.response import (
 )
 from pykour.router import Route, Router
 from pykour.schema.fields import Body, FieldInfo, Path, Query
+from pykour.schema.form_fields import File, Form
 
 
 class OpenAPIGenerator:
@@ -220,6 +221,11 @@ class OpenAPIGenerator:
         parameters: list[dict[str, Any]] = []
         request_body: dict[str, Any] | None = None
 
+        # Track form/file fields for multipart request body
+        form_properties: dict[str, Any] = {}
+        form_required: list[str] = []
+        has_file_or_form = False
+
         try:
             sig = inspect.signature(handler)
             hints = get_type_hints(handler)
@@ -261,6 +267,24 @@ class OpenAPIGenerator:
                 # Request body
                 request_body = self._create_request_body(param_type, default)
 
+            elif isinstance(default, File):
+                # File upload field
+                has_file_or_form = True
+                field_name = default.alias or param_name
+                schema = self._create_file_schema(param_type, default)
+                form_properties[field_name] = schema
+                if not default.has_default:
+                    form_required.append(field_name)
+
+            elif isinstance(default, Form):
+                # Form text field
+                has_file_or_form = True
+                field_name = default.alias or param_name
+                schema = self._schema_converter._convert_type(param_type, default)
+                form_properties[field_name] = schema
+                if not default.has_default:
+                    form_required.append(field_name)
+
             elif isinstance(default, FieldInfo):
                 # Generic FieldInfo - treat as query parameter
                 param_obj = self._create_parameter(
@@ -282,6 +306,12 @@ class OpenAPIGenerator:
                     required=True,
                 )
                 parameters.append(param_obj)
+
+        # Create multipart request body if we have file or form fields
+        if has_file_or_form:
+            request_body = self._create_multipart_request_body(
+                form_properties, form_required
+            )
 
         return parameters, request_body
 
@@ -345,6 +375,60 @@ class OpenAPIGenerator:
             body["description"] = field_info.description
 
         return body
+
+    def _create_file_schema(self, param_type: type, field_info: File) -> dict[str, Any]:
+        """Create OpenAPI schema for file upload field.
+
+        Args:
+            param_type: Type annotation for the parameter.
+            field_info: File marker instance.
+
+        Returns:
+            Schema object for the file field.
+        """
+        schema: dict[str, Any]
+
+        # Check if it's a list[UploadFile]
+        origin = get_origin(param_type)
+        if origin is list:
+            schema = {
+                "type": "array",
+                "items": {"type": "string", "format": "binary"},
+            }
+        else:
+            schema = {"type": "string", "format": "binary"}
+
+        if field_info.description:
+            schema["description"] = field_info.description
+
+        return schema
+
+    def _create_multipart_request_body(
+        self,
+        properties: dict[str, Any],
+        required: list[str],
+    ) -> dict[str, Any]:
+        """Create request body for multipart/form-data.
+
+        Args:
+            properties: Schema properties for form fields and files.
+            required: List of required field names.
+
+        Returns:
+            Request body object for multipart/form-data.
+        """
+        content_schema: dict[str, Any] = {
+            "type": "object",
+            "properties": properties,
+        }
+
+        if required:
+            content_schema["required"] = required
+
+        return {
+            "content": {"multipart/form-data": {"schema": content_schema}},
+            "required": bool(required),
+        }
 
     def _generate_responses(
         self, handler: Callable[..., Any]

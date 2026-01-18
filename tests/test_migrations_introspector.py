@@ -26,10 +26,12 @@ class TestSQLiteIntrospector:
         introspector = SQLiteIntrospector()
         conn = MagicMock()
         cursor = AsyncMock()
-        cursor.fetchall = AsyncMock(return_value=[
-            ("users",),
-            ("orders",),
-        ])
+        cursor.fetchall = AsyncMock(
+            return_value=[
+                ("users",),
+                ("orders",),
+            ]
+        )
         conn.execute = AsyncMock(return_value=cursor)
 
         result = await introspector.get_tables(conn)
@@ -42,9 +44,11 @@ class TestSQLiteIntrospector:
         introspector = SQLiteIntrospector()
         conn = MagicMock()
         cursor = AsyncMock()
-        cursor.fetchall = AsyncMock(return_value=[
-            ("users",),
-        ])
+        cursor.fetchall = AsyncMock(
+            return_value=[
+                ("users",),
+            ]
+        )
         conn.execute = AsyncMock(return_value=cursor)
 
         await introspector.get_tables(conn)
@@ -61,11 +65,13 @@ class TestSQLiteIntrospector:
 
         # Mock for PRAGMA table_info
         table_cursor = AsyncMock()
-        table_cursor.fetchall = AsyncMock(return_value=[
-            (0, "id", "INTEGER", 0, None, 1),
-            (1, "name", "TEXT", 1, None, 0),
-            (2, "email", "TEXT", 0, "'guest@example.com'", 0),
-        ])
+        table_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "id", "INTEGER", 0, None, 1),
+                (1, "name", "TEXT", 1, None, 0),
+                (2, "email", "TEXT", 0, "'guest@example.com'", 0),
+            ]
+        )
 
         # Mock for PRAGMA index_list
         index_cursor = AsyncMock()
@@ -100,15 +106,19 @@ class TestSQLiteIntrospector:
 
         # Mock for PRAGMA index_list
         index_list_cursor = AsyncMock()
-        index_list_cursor.fetchall = AsyncMock(return_value=[
-            (0, "idx_email", 1, "c", 0),  # unique index
-        ])
+        index_list_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "idx_email", 1, "c", 0),  # unique index
+            ]
+        )
 
         # Mock for PRAGMA index_info
         index_info_cursor = AsyncMock()
-        index_info_cursor.fetchall = AsyncMock(return_value=[
-            (0, 2, "email"),  # column at position 2, name "email"
-        ])
+        index_info_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, 2, "email"),  # column at position 2, name "email"
+            ]
+        )
 
         async def mock_execute(sql: str) -> Any:
             if "index_list" in sql:
@@ -134,9 +144,11 @@ class TestSQLiteIntrospector:
 
         # Mock for PRAGMA index_list with pk origin
         index_list_cursor = AsyncMock()
-        index_list_cursor.fetchall = AsyncMock(return_value=[
-            (0, "sqlite_autoindex_users_1", 1, "pk", 0),  # primary key
-        ])
+        index_list_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "sqlite_autoindex_users_1", 1, "pk", 0),  # primary key
+            ]
+        )
 
         conn.execute = AsyncMock(return_value=index_list_cursor)
 
@@ -153,10 +165,12 @@ class TestPostgreSQLIntrospector:
         """Test get_tables returns table names."""
         introspector = PostgreSQLIntrospector()
         conn = MagicMock()
-        conn.fetch = AsyncMock(return_value=[
-            {"table_name": "orders"},
-            {"table_name": "users"},
-        ])
+        conn.fetch = AsyncMock(
+            return_value=[
+                {"table_name": "orders"},
+                {"table_name": "users"},
+            ]
+        )
 
         result = await introspector.get_tables(conn)
 
@@ -214,13 +228,15 @@ class TestPostgreSQLIntrospector:
         """Test get_indexes returns index definitions."""
         introspector = PostgreSQLIntrospector()
         conn = MagicMock()
-        conn.fetch = AsyncMock(return_value=[
-            {
-                "index_name": "idx_users_email",
-                "is_unique": True,
-                "columns": ["email"],
-            },
-        ])
+        conn.fetch = AsyncMock(
+            return_value=[
+                {
+                    "index_name": "idx_users_email",
+                    "is_unique": True,
+                    "columns": ["email"],
+                },
+            ]
+        )
 
         result = await introspector.get_indexes(conn, "users")
 
@@ -242,7 +258,9 @@ class TestPostgreSQLIntrospector:
     def test_normalize_type_timestamp(self) -> None:
         """Test _normalize_type handles timestamp types."""
         introspector = PostgreSQLIntrospector()
-        assert introspector._normalize_type("timestamp without time zone") == "TIMESTAMP"
+        assert (
+            introspector._normalize_type("timestamp without time zone") == "TIMESTAMP"
+        )
         assert introspector._normalize_type("timestamp with time zone") == "TIMESTAMPTZ"
 
     def test_normalize_type_json(self) -> None:
@@ -293,10 +311,12 @@ class TestMySQLIntrospector:
         introspector = MySQLIntrospector()
         conn = MagicMock()
         cursor = AsyncMock()
-        cursor.fetchall = AsyncMock(return_value=[
-            ("users",),
-            ("orders",),
-        ])
+        cursor.fetchall = AsyncMock(
+            return_value=[
+                ("users",),
+                ("orders",),
+            ]
+        )
         conn.execute = AsyncMock(return_value=cursor)
 
         result = await introspector.get_tables(conn)
@@ -309,10 +329,12 @@ class TestMySQLIntrospector:
         introspector = MySQLIntrospector()
         conn = MagicMock()
         cursor = AsyncMock()
-        cursor.fetchall = AsyncMock(return_value=[
-            ("users",),
-            ("_pykour_migrations",),
-        ])
+        cursor.fetchall = AsyncMock(
+            return_value=[
+                ("users",),
+                ("_pykour_migrations",),
+            ]
+        )
         conn.execute = AsyncMock(return_value=cursor)
 
         result = await introspector.get_tables(conn)
@@ -328,10 +350,12 @@ class TestMySQLIntrospector:
 
         # Mock for DESCRIBE
         describe_cursor = AsyncMock()
-        describe_cursor.fetchall = AsyncMock(return_value=[
-            ("id", "int(11)", "NO", "PRI", None, "auto_increment"),
-            ("name", "varchar(255)", "YES", "", None, ""),
-        ])
+        describe_cursor.fetchall = AsyncMock(
+            return_value=[
+                ("id", "int(11)", "NO", "PRI", None, "auto_increment"),
+                ("name", "varchar(255)", "YES", "", None, ""),
+            ]
+        )
 
         # Mock for SHOW INDEX
         index_cursor = AsyncMock()
@@ -364,10 +388,26 @@ class TestMySQLIntrospector:
         introspector = MySQLIntrospector()
         conn = MagicMock()
         cursor = AsyncMock()
-        cursor.fetchall = AsyncMock(return_value=[
-            # (Table, Non_unique, Key_name, Seq_in_index, Column_name, ...)
-            ("users", 0, "idx_email", 1, "email", None, None, None, None, "", "", "", ""),
-        ])
+        cursor.fetchall = AsyncMock(
+            return_value=[
+                # (Table, Non_unique, Key_name, Seq_in_index, Column_name, ...)
+                (
+                    "users",
+                    0,
+                    "idx_email",
+                    1,
+                    "email",
+                    None,
+                    None,
+                    None,
+                    None,
+                    "",
+                    "",
+                    "",
+                    "",
+                ),
+            ]
+        )
         conn.execute = AsyncMock(return_value=cursor)
 
         result = await introspector.get_indexes(conn, "users")
@@ -383,9 +423,25 @@ class TestMySQLIntrospector:
         introspector = MySQLIntrospector()
         conn = MagicMock()
         cursor = AsyncMock()
-        cursor.fetchall = AsyncMock(return_value=[
-            ("users", 0, "PRIMARY", 1, "id", None, None, None, None, "", "", "", ""),
-        ])
+        cursor.fetchall = AsyncMock(
+            return_value=[
+                (
+                    "users",
+                    0,
+                    "PRIMARY",
+                    1,
+                    "id",
+                    None,
+                    None,
+                    None,
+                    None,
+                    "",
+                    "",
+                    "",
+                    "",
+                ),
+            ]
+        )
         conn.execute = AsyncMock(return_value=cursor)
 
         result = await introspector.get_indexes(conn, "users")
@@ -398,10 +454,40 @@ class TestMySQLIntrospector:
         introspector = MySQLIntrospector()
         conn = MagicMock()
         cursor = AsyncMock()
-        cursor.fetchall = AsyncMock(return_value=[
-            ("users", 1, "idx_name_email", 1, "name", None, None, None, None, "", "", "", ""),
-            ("users", 1, "idx_name_email", 2, "email", None, None, None, None, "", "", "", ""),
-        ])
+        cursor.fetchall = AsyncMock(
+            return_value=[
+                (
+                    "users",
+                    1,
+                    "idx_name_email",
+                    1,
+                    "name",
+                    None,
+                    None,
+                    None,
+                    None,
+                    "",
+                    "",
+                    "",
+                    "",
+                ),
+                (
+                    "users",
+                    1,
+                    "idx_name_email",
+                    2,
+                    "email",
+                    None,
+                    None,
+                    None,
+                    None,
+                    "",
+                    "",
+                    "",
+                    "",
+                ),
+            ]
+        )
         conn.execute = AsyncMock(return_value=cursor)
 
         result = await introspector.get_indexes(conn, "users")

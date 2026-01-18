@@ -478,10 +478,19 @@ class TestCreateHandler:
         handler = create_create_handler(UserTable, schema_cls, "id")
 
         request = create_mock_request(
-            json_body={"name": "Charlie", "email": "charlie@example.com", "active": True}
+            json_body={
+                "name": "Charlie",
+                "email": "charlie@example.com",
+                "active": True,
+            }
         )
         db = create_mock_db(
-            insert_result={"id": 3, "name": "Charlie", "email": "charlie@example.com", "active": True}
+            insert_result={
+                "id": 3,
+                "name": "Charlie",
+                "email": "charlie@example.com",
+                "active": True,
+            }
         )
 
         response = await handler(request, db)
@@ -537,7 +546,11 @@ class TestUpdateHandler:
             json_body={"id": 1, "name": "Alice Updated", "email": "alice@example.com"},
         )
         db = create_mock_db(
-            fetch_one_result={"id": 1, "name": "Alice Updated", "email": "alice@example.com"}
+            fetch_one_result={
+                "id": 1,
+                "name": "Alice Updated",
+                "email": "alice@example.com",
+            }
         )
 
         response = await handler(request, db)

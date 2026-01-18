@@ -29,6 +29,10 @@ class JWTAuthMiddleware(BaseMiddleware):
     header. On successful validation, the decoded payload is stored in the
     ASGI scope under 'user' key, accessible via request.state.user.
 
+    Supports key rotation by accepting multiple secret keys. During rotation,
+    tokens signed with any of the provided keys will be accepted, allowing
+    graceful migration to new keys.
+
     Example:
         # Basic usage
         app.add_middleware(
@@ -45,6 +49,12 @@ class JWTAuthMiddleware(BaseMiddleware):
             auto_error=True,
         )
 
+        # Key rotation (accepts tokens signed with any key)
+        app.add_middleware(
+            JWTAuthMiddleware,
+            secret_keys=["new-secret-key", "old-secret-key"],
+        )
+
         # In route handler
         async def get(request: Request) -> JSONResponse:
             user = request.state.user
@@ -55,7 +65,8 @@ class JWTAuthMiddleware(BaseMiddleware):
         self,
         app: Any,
         *,
-        secret_key: str,
+        secret_key: str | None = None,
+        secret_keys: Sequence[str] | None = None,
         algorithm: str = "HS256",
         exclude_paths: Sequence[str] = (),
         auto_error: bool = True,
@@ -65,13 +76,42 @@ class JWTAuthMiddleware(BaseMiddleware):
         Args:
             app: The ASGI application to wrap.
             secret_key: Secret key used for token signature verification.
+                       Deprecated in favor of secret_keys for key rotation.
+            secret_keys: List of secret keys for token verification. The first
+                        key is used for signing new tokens. All keys are tried
+                        during verification, enabling graceful key rotation.
             algorithm: JWT signing algorithm. Currently only HS256 is supported.
             exclude_paths: List of paths to exclude from authentication.
             auto_error: If True, return 401 response for invalid tokens.
                        If False, continue without setting user data.
+
+        Raises:
+            ValueError: If neither secret_key nor secret_keys is provided,
+                       or if both are provided, or if secret_keys is empty.
         """
         super().__init__(app)
-        self.secret_key = secret_key
+
+        # Validate key configuration
+        if secret_key is not None and secret_keys is not None:
+            raise ValueError(
+                "Cannot specify both 'secret_key' and 'secret_keys'. "
+                "Use 'secret_keys' for key rotation support."
+            )
+
+        if secret_key is None and secret_keys is None:
+            raise ValueError("Either 'secret_key' or 'secret_keys' must be provided.")
+
+        if secret_keys is not None and len(secret_keys) == 0:
+            raise ValueError("'secret_keys' cannot be empty.")
+
+        # Store keys as list (for rotation support)
+        if secret_keys is not None:
+            self._secret_keys = list(secret_keys)
+        else:
+            # secret_key must be non-None here due to earlier validation
+            assert secret_key is not None
+            self._secret_keys = [secret_key]
+
         self.algorithm = algorithm
         self.exclude_paths = list(exclude_paths)
         self.auto_error = auto_error
@@ -80,6 +120,16 @@ class JWTAuthMiddleware(BaseMiddleware):
             raise ValueError(
                 f"Unsupported algorithm: {algorithm}. Only HS256 is supported."
             )
+
+    @property
+    def secret_key(self) -> str:
+        """Get the primary secret key (first in the list)."""
+        return self._secret_keys[0]
+
+    @property
+    def secret_keys(self) -> list[str]:
+        """Get all secret keys for verification."""
+        return self._secret_keys.copy()
 
     def _b64decode(self, data: str) -> bytes:
         """Decode base64url encoded string.
@@ -92,16 +142,39 @@ class JWTAuthMiddleware(BaseMiddleware):
             data += "=" * padding
         return base64.urlsafe_b64decode(data)
 
-    def _sign(self, message: bytes) -> bytes:
-        """Sign message with HMAC-SHA256."""
+    def _sign(self, message: bytes, key: str | None = None) -> bytes:
+        """Sign message with HMAC-SHA256.
+
+        Args:
+            message: Message bytes to sign.
+            key: Secret key to use. Defaults to primary key.
+        """
+        secret = key if key is not None else self.secret_key
         return hmac.new(
-            self.secret_key.encode("utf-8"),
+            secret.encode("utf-8"),
             message,
             hashlib.sha256,
         ).digest()
 
+    def _verify_signature(self, message: bytes, signature: bytes, key: str) -> bool:
+        """Verify signature with a specific key.
+
+        Args:
+            message: Original message bytes.
+            signature: Signature bytes to verify.
+            key: Secret key to use for verification.
+
+        Returns:
+            True if signature is valid, False otherwise.
+        """
+        expected_sig = self._sign(message, key)
+        return hmac.compare_digest(expected_sig, signature)
+
     def _verify_token(self, token: str) -> dict[str, Any] | None:
         """Verify and decode JWT token.
+
+        Tries all configured secret keys during verification to support
+        key rotation. Signature is considered valid if it matches any key.
 
         Returns:
             Decoded payload dict if valid, None otherwise.
@@ -113,12 +186,18 @@ class JWTAuthMiddleware(BaseMiddleware):
 
             header_b64, payload_b64, signature_b64 = parts
 
-            # Verify signature
+            # Decode signature
             message = f"{header_b64}.{payload_b64}".encode("ascii")
-            expected_sig = self._sign(message)
             actual_sig = self._b64decode(signature_b64)
 
-            if not hmac.compare_digest(expected_sig, actual_sig):
+            # Try verification with each key (for key rotation support)
+            signature_valid = False
+            for key in self._secret_keys:
+                if self._verify_signature(message, actual_sig, key):
+                    signature_valid = True
+                    break
+
+            if not signature_valid:
                 return None
 
             # Decode and verify header

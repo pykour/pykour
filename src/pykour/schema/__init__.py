@@ -3,6 +3,7 @@
 from pykour.schema.base import Schema
 from pykour.schema.errors import ErrorDetail, ValidationError
 from pykour.schema.fields import Body, Field, FieldInfo, Path, Query
+from pykour.schema.form_fields import File, Form
 from pykour.schema.parser import (
     coerce_path_param,
     coerce_query_param,
@@ -32,6 +33,8 @@ __all__ = [
     "Path",
     "Query",
     "Body",
+    "File",
+    "Form",
     # Errors
     "ValidationError",
     "ErrorDetail",

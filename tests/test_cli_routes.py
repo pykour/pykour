@@ -190,6 +190,154 @@ class TestRoutesCommandExecution:
         assert "id" in captured.out
 
 
+class TestRoutesCommandCatchAll:
+    """Test routes command with catch-all routes."""
+
+    def test_routes_verbose_catch_all(self, tmp_path: Path, capsys: object) -> None:
+        """Should display catch-all indicator in verbose mode."""
+        routes_dir = tmp_path / "routes"
+        routes_dir.mkdir()
+        catchall_dir = routes_dir / "[...path]"
+        catchall_dir.mkdir()
+        (catchall_dir / "route.py").write_text(
+            "from pykour import JSONResponse\n"
+            'async def get(path: str): return JSONResponse({"path": path})'
+        )
+
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        register_command(subparsers)
+
+        args = parser.parse_args(["routes", "--routes-dir", str(routes_dir), "-v"])
+        result = cmd_routes(args)
+
+        assert result == 0
+        captured = capsys.readouterr()  # type: ignore[attr-defined]
+        assert "Catch-all: Yes" in captured.out
+
+
+class TestRoutesCommandMultiplePaths:
+    """Test routes command with multiple paths."""
+
+    def test_routes_multiple_paths(self, tmp_path: Path, capsys: object) -> None:
+        """Should display all routes in the directory."""
+        routes_dir = tmp_path / "routes"
+        routes_dir.mkdir()
+
+        # Root route
+        (routes_dir / "route.py").write_text(
+            'from pykour import JSONResponse\nasync def get(): return JSONResponse({"ok": True})'
+        )
+
+        # API route
+        api_dir = routes_dir / "api"
+        api_dir.mkdir()
+        (api_dir / "route.py").write_text(
+            'from pykour import JSONResponse\nasync def get(): return JSONResponse({"api": True})'
+        )
+
+        # Users route
+        users_dir = routes_dir / "api" / "users"
+        users_dir.mkdir()
+        (users_dir / "route.py").write_text(
+            'from pykour import JSONResponse\nasync def get(): return JSONResponse({"users": []})'
+        )
+
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        register_command(subparsers)
+
+        args = parser.parse_args(["routes", "--routes-dir", str(routes_dir)])
+        result = cmd_routes(args)
+
+        assert result == 0
+        captured = capsys.readouterr()  # type: ignore[attr-defined]
+        assert "3 total" in captured.out
+        assert "/" in captured.out
+        assert "/api" in captured.out
+        assert "/api/users" in captured.out
+
+
+class TestRoutesCommandErrorHandling:
+    """Test routes command error handling."""
+
+    def test_routes_syntax_error_graceful(
+        self, tmp_path: Path, capsys: object, caplog: object
+    ) -> None:
+        """Should gracefully handle syntax errors in route files."""
+        routes_dir = tmp_path / "routes"
+        routes_dir.mkdir()
+
+        # Create a syntactically invalid route file
+        (routes_dir / "route.py").write_text(
+            "def get(\n"  # Syntax error: missing closing paren
+        )
+
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        register_command(subparsers)
+
+        args = parser.parse_args(["routes", "--routes-dir", str(routes_dir)])
+        result = cmd_routes(args)
+
+        # Router gracefully handles syntax errors and returns empty routes
+        assert result == 0
+        captured = capsys.readouterr()  # type: ignore[attr-defined]
+        assert "No routes found" in captured.out
+
+    def test_routes_router_exception(self, tmp_path: Path, capsys: object) -> None:
+        """Should handle Router initialization exceptions."""
+        routes_dir = tmp_path / "routes"
+        routes_dir.mkdir()
+
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        register_command(subparsers)
+
+        args = parser.parse_args(["routes", "--routes-dir", str(routes_dir)])
+
+        # Mock Router to raise an exception
+        with patch("pykour.router.Router") as mock_router:
+            mock_router.side_effect = RuntimeError("Router initialization failed")
+            result = cmd_routes(args)
+
+        assert result == 1
+        captured = capsys.readouterr()  # type: ignore[attr-defined]
+        assert "Error loading routes" in captured.out
+
+
+class TestRoutesCommandCombinedOptions:
+    """Test routes command with combined options."""
+
+    def test_routes_with_custom_dir_and_verbose(
+        self, tmp_path: Path, capsys: object
+    ) -> None:
+        """Should work with both --routes-dir and --verbose."""
+        custom_routes = tmp_path / "custom_routes"
+        custom_routes.mkdir()
+        (custom_routes / "route.py").write_text(
+            "from pykour import JSONResponse\n"
+            'async def get(): return JSONResponse({"ok": True})\n'
+            'async def post(): return JSONResponse({"created": True})'
+        )
+
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers()
+        register_command(subparsers)
+
+        args = parser.parse_args(
+            ["routes", "--routes-dir", str(custom_routes), "--verbose"]
+        )
+        result = cmd_routes(args)
+
+        assert result == 0
+        captured = capsys.readouterr()  # type: ignore[attr-defined]
+        assert "Registered routes" in captured.out
+        assert "Methods:" in captured.out
+        assert "GET" in captured.out
+        assert "POST" in captured.out
+
+
 class TestRoutesCommandIntegration:
     """Test routes command integration with main CLI."""
 

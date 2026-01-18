@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
+from typing import Literal, cast
+
 import pytest
 
 from pykour.db.sql_utils import (
     InvalidIdentifierError,
-    validate_identifier,
-    quote_identifier,
-    is_valid_identifier,
-    validate_rls_condition,
     _MAX_IDENTIFIER_LENGTH,
     _SQL_RESERVED_KEYWORDS,
+    is_valid_identifier,
+    quote_identifier,
+    validate_identifier,
+    validate_rls_condition,
 )
+
+# Type alias for driver names
+DriverName = Literal["sqlite", "postgresql", "mysql"]
 
 
 class TestInvalidIdentifierError:
@@ -125,7 +130,18 @@ class TestValidateIdentifier:
 
     @pytest.mark.parametrize(
         "keyword",
-        ["select", "from", "where", "and", "or", "insert", "update", "delete", "create", "drop"],
+        [
+            "select",
+            "from",
+            "where",
+            "and",
+            "or",
+            "insert",
+            "update",
+            "delete",
+            "create",
+            "drop",
+        ],
     )
     def test_common_reserved_keywords(self, keyword: str) -> None:
         """Test common SQL reserved keywords are rejected."""
@@ -186,7 +202,7 @@ class TestQuoteIdentifier:
     )
     def test_quote_character_by_driver(self, driver: str, expected_quote: str) -> None:
         """Test correct quote character is used for each driver."""
-        result = quote_identifier("test", driver)
+        result = quote_identifier("test", cast(DriverName, driver))
         assert result.startswith(expected_quote)
         assert result.endswith(expected_quote)
 
@@ -231,7 +247,10 @@ class TestValidateRLSCondition:
 
     def test_valid_simple_condition(self) -> None:
         """Test valid simple RLS conditions."""
-        assert validate_rls_condition("user_id = :current_user") == "user_id = :current_user"
+        assert (
+            validate_rls_condition("user_id = :current_user")
+            == "user_id = :current_user"
+        )
         assert validate_rls_condition("tenant_id = :tenant") == "tenant_id = :tenant"
 
     def test_valid_complex_condition(self) -> None:
@@ -284,7 +303,17 @@ class TestValidateRLSCondition:
 
     @pytest.mark.parametrize(
         "dangerous_keyword",
-        ["drop", "truncate", "delete", "insert", "update", "create", "alter", "grant", "revoke"],
+        [
+            "drop",
+            "truncate",
+            "delete",
+            "insert",
+            "update",
+            "create",
+            "alter",
+            "grant",
+            "revoke",
+        ],
     )
     def test_dangerous_keywords_blocked(self, dangerous_keyword: str) -> None:
         """Test that dangerous SQL keywords are blocked."""
@@ -317,10 +346,30 @@ class TestReservedKeywords:
     def test_common_keywords_present(self) -> None:
         """Test that common SQL keywords are in the set."""
         common_keywords = [
-            "select", "from", "where", "and", "or", "not",
-            "insert", "update", "delete", "create", "drop",
-            "table", "index", "join", "left", "right", "inner", "outer",
-            "group", "order", "by", "having", "limit", "offset",
+            "select",
+            "from",
+            "where",
+            "and",
+            "or",
+            "not",
+            "insert",
+            "update",
+            "delete",
+            "create",
+            "drop",
+            "table",
+            "index",
+            "join",
+            "left",
+            "right",
+            "inner",
+            "outer",
+            "group",
+            "order",
+            "by",
+            "having",
+            "limit",
+            "offset",
         ]
         for keyword in common_keywords:
             assert keyword in _SQL_RESERVED_KEYWORDS, f"Missing keyword: {keyword}"

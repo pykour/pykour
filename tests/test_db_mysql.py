@@ -14,7 +14,9 @@ from pykour.db.result import Row
 class MockCursor:
     """Mock cursor for testing."""
 
-    def __init__(self, rows: list[dict[str, Any]] | None = None, rowcount: int = 0) -> None:
+    def __init__(
+        self, rows: list[dict[str, Any]] | None = None, rowcount: int = 0
+    ) -> None:
         self._rows = rows or []
         self.rowcount = rowcount
 
@@ -256,10 +258,12 @@ class TestMySQLDriverFetch:
     async def test_fetch_all_returns_rows(self) -> None:
         """Test fetch_all returns list of Row objects."""
         driver = MySQLDriver()
-        mock_cursor = MockCursor(rows=[
-            {"id": 1, "name": "Alice"},
-            {"id": 2, "name": "Bob"},
-        ])
+        mock_cursor = MockCursor(
+            rows=[
+                {"id": 1, "name": "Alice"},
+                {"id": 2, "name": "Bob"},
+            ]
+        )
         mock_conn = MagicMock()
         mock_conn.cursor = MagicMock(return_value=mock_cursor)
 

@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+from pykour.generators.field_inference import FieldInferrer
 from pykour.generators.naming import pluralize, singularize, snake_to_pascal
 from pykour.generators.templates import (
     COLLECTION_ROUTE_TEMPLATE,
@@ -11,6 +14,28 @@ from pykour.generators.templates import (
     SCHEMA_TEMPLATE,
     TEST_TEMPLATE,
 )
+
+if TYPE_CHECKING:
+    from pykour.db.migrations.table import Table
+
+logger = logging.getLogger("pykour")
+
+
+def _write_file(file_path: Path, content: str) -> None:
+    """Write content to file with error handling.
+
+    Args:
+        file_path: Path to the file to write.
+        content: Content to write.
+
+    Raises:
+        RuntimeError: If writing fails due to OS error.
+    """
+    try:
+        file_path.write_text(content)
+    except OSError as e:
+        logger.error("Failed to write file %s: %s", file_path, e)
+        raise RuntimeError(f"Failed to write file {file_path}: {e}") from e
 
 
 class CRUDGenerator:
@@ -21,6 +46,7 @@ class CRUDGenerator:
         resource_name: str,
         *,
         table_name: str | None = None,
+        table_class: type[Table] | None = None,
         id_field: str = "id",
         id_type: str = "int",
         routes_dir: str = "routes",
@@ -30,6 +56,7 @@ class CRUDGenerator:
         Args:
             resource_name: Resource name (e.g., "users", "products").
             table_name: Database table name. Defaults to resource_name.
+            table_class: Table class for field inference.
             id_field: Primary key field name.
             id_type: Python type for the ID field.
             routes_dir: Base routes directory.
@@ -43,6 +70,7 @@ class CRUDGenerator:
         self.resource_title = self.resource_pascal
 
         self.table_name = table_name or self.resource_plural
+        self.table_class = table_class
         self.id_field = id_field
         self.id_type = id_type
         self.routes_dir = Path(routes_dir)
@@ -119,7 +147,7 @@ class CRUDGenerator:
             create_schema=create_schema,
         )
 
-        route_file.write_text(content)
+        _write_file(route_file, content)
         return route_file
 
     def _generate_item_route(
@@ -156,7 +184,7 @@ class CRUDGenerator:
             update_schema=update_schema,
         )
 
-        route_file.write_text(content)
+        _write_file(route_file, content)
         return route_file
 
     def _generate_schema(self, force: bool) -> Path:
@@ -168,9 +196,17 @@ class CRUDGenerator:
         if schema_file.exists() and not force:
             raise FileExistsError(f"File already exists: {schema_file}")
 
-        # Generate field definitions (placeholder - user should customize)
-        create_fields = "    # TODO: Add fields for create operation\n    pass"
-        update_fields = "    # TODO: Add fields for update operation\n    pass"
+        # Generate field definitions
+        if self.table_class is not None:
+            # Infer fields from Table definition
+            inferrer = FieldInferrer()
+            fields = inferrer.infer_from_table(self.table_class)
+            create_fields = inferrer.generate_create_fields(fields)
+            update_fields = inferrer.generate_update_fields(fields)
+        else:
+            # Placeholder for manual customization
+            create_fields = "    # TODO: Add fields for create operation\n    pass"
+            update_fields = "    # TODO: Add fields for update operation\n    pass"
 
         content = SCHEMA_TEMPLATE.format(
             resource_title=self.resource_title,
@@ -179,7 +215,7 @@ class CRUDGenerator:
             update_fields=update_fields,
         )
 
-        schema_file.write_text(content)
+        _write_file(schema_file, content)
         return schema_file
 
     def _generate_test(self, force: bool) -> Path:
@@ -198,5 +234,5 @@ class CRUDGenerator:
             resource_singular=self.resource_singular,
         )
 
-        test_file.write_text(content)
+        _write_file(test_file, content)
         return test_file
