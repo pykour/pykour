@@ -320,9 +320,17 @@ class Router:
             )
             del sys.modules[module_name]
             return {}
-        except Exception as e:
+        except (RuntimeError, TypeError, ValueError, AttributeError) as e:
             logger.error(
                 "Failed to load route file '%s': %s",
+                route_file,
+                e,
+            )
+            del sys.modules[module_name]
+            return {}
+        except Exception as e:
+            logger.warning(
+                "Unexpected error loading route file '%s': %s",
                 route_file,
                 e,
             )

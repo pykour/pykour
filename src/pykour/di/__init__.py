@@ -37,6 +37,7 @@ Example:
 """
 
 from pykour.di.container import (
+    CircularDependencyError,
     Depends,
     Scope,
     ServiceContainer,
@@ -48,6 +49,7 @@ from pykour.di.container import (
 )
 
 __all__ = [
+    "CircularDependencyError",
     "Depends",
     "Scope",
     "ServiceContainer",

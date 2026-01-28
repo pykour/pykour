@@ -60,13 +60,16 @@ async def handle_websocket(
     except WebSocketDisconnect:
         pass  # Normal disconnect
     except Exception as e:
-        logger.exception(f"WebSocket error: {e}")
+        logger.exception("WebSocket error: %s", e)
 
         if ws.state != WebSocketState.DISCONNECTED:
             try:
                 await ws.close(code=1011, reason="Internal Error")
-            except Exception:
-                pass  # Connection may already be closed
+            except Exception as close_error:
+                logger.debug(
+                    "WebSocket close error (connection may already be closed): %s",
+                    close_error,
+                )
 
 
 async def inject_websocket_params(
@@ -100,7 +103,8 @@ async def inject_websocket_params(
 
     try:
         hints = get_type_hints(handler)
-    except Exception:
+    except (TypeError, NameError, AttributeError) as e:
+        logger.debug("Failed to get type hints for WebSocket handler: %s", e)
         hints = {}
 
     sig = inspect.signature(handler)

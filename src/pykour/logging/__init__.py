@@ -11,6 +11,8 @@ Components:
     - set_trace_id: Set the trace ID for the current request
     - reset_trace_id: Clear the current request's trace ID
     - generate_trace_id: Generate a new trace ID (UUID v4)
+    - sanitize_log_message: Mask sensitive information in log messages
+    - sanitize_dict: Mask sensitive values in dictionaries
 
 Example:
     import logging
@@ -31,6 +33,11 @@ Example:
 
     # Access trace ID programmatically
     trace_id = get_trace_id()
+
+    # Sanitize sensitive information
+    from pykour.logging import sanitize_log_message
+    safe_msg = sanitize_log_message('password="secret"')
+    # Output: 'password="***"'
 """
 
 from pykour.logging.context import (
@@ -41,6 +48,7 @@ from pykour.logging.context import (
 )
 from pykour.logging.filter import TraceLogFilter
 from pykour.logging.formatter import JsonFormatter, TextFormatter
+from pykour.logging.sanitizer import sanitize_dict, sanitize_log_message
 
 __all__ = [
     "TraceLogFilter",
@@ -50,4 +58,6 @@ __all__ = [
     "set_trace_id",
     "reset_trace_id",
     "generate_trace_id",
+    "sanitize_log_message",
+    "sanitize_dict",
 ]

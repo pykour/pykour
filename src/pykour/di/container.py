@@ -33,6 +33,33 @@ class ServiceNotFoundException(Exception):
         super().__init__(f"Service not found: {type_name}")
 
 
+class CircularDependencyError(Exception):
+    """Exception raised when a circular dependency is detected.
+
+    This occurs when service A depends on service B, which depends on
+    service A (directly or indirectly).
+
+    Example:
+        class ServiceA:
+            def __init__(self, b: ServiceB = Depends()): ...
+
+        class ServiceB:
+            def __init__(self, a: ServiceA = Depends()): ...
+
+        # Resolving ServiceA will raise CircularDependencyError
+    """
+
+    def __init__(self, dependency_chain: list[str]) -> None:
+        """Initialize with the dependency chain that caused the cycle.
+
+        Args:
+            dependency_chain: List of type names showing the cycle.
+        """
+        self.dependency_chain = dependency_chain
+        chain_str = " -> ".join(dependency_chain)
+        super().__init__(f"Circular dependency detected: {chain_str}")
+
+
 # Backward compatibility alias
 ServiceNotFoundError = ServiceNotFoundException
 
@@ -261,11 +288,16 @@ class ServiceContainer:
         except ServiceNotFoundError:
             return None
 
-    def _create_instance(self, registration: ServiceRegistration) -> Any:
+    def _create_instance(
+        self,
+        registration: ServiceRegistration,
+        _resolving_chain: list[str] | None = None,
+    ) -> Any:
         """Create an instance for a registration.
 
         Args:
             registration: Service registration info.
+            _resolving_chain: Internal parameter for circular dependency detection.
 
         Returns:
             Created instance.
@@ -277,15 +309,24 @@ class ServiceContainer:
         # Factory function
         if registration.is_factory():
             assert registration.factory is not None
-            return self._call_with_dependencies(registration.factory)
+            return self._call_with_dependencies(
+                registration.factory, _resolving_chain=_resolving_chain
+            )
 
         # Class instantiation
         if registration.implementation:
-            return self._call_with_dependencies(registration.implementation)
+            return self._call_with_dependencies(
+                registration.implementation, _resolving_chain=_resolving_chain
+            )
 
         raise RuntimeError(f"Invalid registration for {registration.interface}")
 
-    def _call_with_dependencies(self, callable_obj: Callable[..., T]) -> T:
+    def _call_with_dependencies(
+        self,
+        callable_obj: Callable[..., T],
+        *,
+        _resolving_chain: list[str] | None = None,
+    ) -> T:
         """Call a callable, resolving its dependencies.
 
         Handles Depends markers in parameter defaults for explicit
@@ -293,6 +334,7 @@ class ServiceContainer:
 
         Args:
             callable_obj: Function or class to call.
+            _resolving_chain: Internal parameter for circular dependency detection.
 
         Returns:
             Result of calling the callable.
@@ -300,10 +342,18 @@ class ServiceContainer:
         Raises:
             ValueError: If a required parameter cannot be resolved.
             ServiceNotFoundError: If a Depends-marked dependency is not registered.
+            CircularDependencyError: If a circular dependency is detected.
         """
         sig = inspect.signature(callable_obj)
         hints = self._get_type_hints(callable_obj)
-        callable_name = getattr(callable_obj, "__name__", repr(callable_obj))
+
+        # Initialize the resolving chain for circular dependency detection
+        if _resolving_chain is None:
+            _resolving_chain = []
+
+        # Note: Circular dependency check is done in _resolve_with_chain,
+        # not here, to avoid false positives when the same callable is
+        # used for multiple parameters.
 
         kwargs: dict[str, Any] = {}
 
@@ -325,9 +375,13 @@ class ServiceContainer:
                 if dep_type is not None:
                     if callable(dep_type) and not isinstance(dep_type, type):
                         # It's a factory function, call it with dependencies
-                        kwargs[param_name] = self._call_with_dependencies(dep_type)
+                        kwargs[param_name] = self._call_with_dependencies(
+                            dep_type, _resolving_chain=_resolving_chain
+                        )
                     elif self.is_registered(dep_type):
-                        kwargs[param_name] = self.resolve(dep_type)
+                        kwargs[param_name] = self._resolve_with_chain(
+                            dep_type, _resolving_chain
+                        )
                     else:
                         raise ServiceNotFoundError(dep_type)
                 else:
@@ -340,6 +394,9 @@ class ServiceContainer:
             # No type hint - use default or raise error if required
             if param_type is None:
                 if is_required:
+                    callable_name = getattr(
+                        callable_obj, "__name__", repr(callable_obj)
+                    )
                     raise ValueError(
                         f"Cannot resolve required parameter '{param_name}' of "
                         f"'{callable_name}': no type hint and no default value"
@@ -349,10 +406,13 @@ class ServiceContainer:
 
             # Try to resolve dependency by type
             if self.is_registered(param_type):
-                kwargs[param_name] = self.resolve(param_type)
+                kwargs[param_name] = self._resolve_with_chain(
+                    param_type, _resolving_chain
+                )
             elif not is_required:
                 kwargs[param_name] = default
             else:
+                callable_name = getattr(callable_obj, "__name__", repr(callable_obj))
                 type_name = (
                     param_type if isinstance(param_type, str) else param_type.__name__
                 )
@@ -363,6 +423,53 @@ class ServiceContainer:
                 )
 
         return callable_obj(**kwargs)
+
+    def _resolve_with_chain(self, interface: type[T], resolving_chain: list[str]) -> T:
+        """Resolve a dependency with circular dependency tracking.
+
+        Args:
+            interface: Type to resolve.
+            resolving_chain: Current chain of dependencies being resolved.
+
+        Returns:
+            Instance of the requested type.
+
+        Raises:
+            ServiceNotFoundError: If the type is not registered.
+            CircularDependencyError: If a circular dependency is detected.
+        """
+        if interface not in self._registrations:
+            raise ServiceNotFoundError(interface)
+
+        registration = self._registrations[interface]
+        type_name = interface.__name__
+
+        # Check for circular dependency
+        if type_name in resolving_chain:
+            raise CircularDependencyError([*resolving_chain, type_name])
+
+        # Return existing singleton (fast path without lock)
+        if registration.scope == Scope.SINGLETON and interface in self._singletons:
+            return self._singletons[interface]
+
+        # For transient scope, just create and return
+        if registration.scope == Scope.TRANSIENT:
+            return self._create_instance(
+                registration, _resolving_chain=[*resolving_chain, type_name]
+            )
+
+        # For singleton scope, use lock to ensure thread-safety
+        with self._singleton_lock:
+            # Double-check after acquiring lock
+            if interface in self._singletons:
+                return self._singletons[interface]
+
+            # Create instance and cache
+            instance = self._create_instance(
+                registration, _resolving_chain=[*resolving_chain, type_name]
+            )
+            self._singletons[interface] = instance
+            return instance
 
     def _get_type_hints(self, callable_obj: Callable[..., Any]) -> dict[str, Any]:
         """Get type hints for a callable.
