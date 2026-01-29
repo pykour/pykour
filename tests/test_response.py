@@ -3,7 +3,13 @@
 import json
 from typing import Any
 
-from pykour.response import HTMLResponse, JSONResponse, PlainTextResponse, Response
+from pykour.response import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    Response,
+    is_body_allowed_for_status_code,
+)
 
 from tests.helpers import MockSend
 
@@ -433,3 +439,134 @@ class TestPlainTextResponse:
         await response(MOCK_SCOPE, mock_receive, send)
 
         assert send.messages[1]["body"] == text.encode("utf-8")
+
+
+class TestIsBodyAllowedForStatusCode:
+    """Test is_body_allowed_for_status_code helper function.
+
+    Per RFC 7230/7231:
+    - 1xx (Informational): No body allowed
+    - 204 (No Content): No body allowed
+    - 304 (Not Modified): No body allowed
+    """
+
+    def test_1xx_informational_no_body(self) -> None:
+        """1xx status codes should not allow body."""
+        assert is_body_allowed_for_status_code(100) is False
+        assert is_body_allowed_for_status_code(101) is False
+        assert is_body_allowed_for_status_code(199) is False
+
+    def test_204_no_content_no_body(self) -> None:
+        """204 No Content should not allow body."""
+        assert is_body_allowed_for_status_code(204) is False
+
+    def test_304_not_modified_no_body(self) -> None:
+        """304 Not Modified should not allow body."""
+        assert is_body_allowed_for_status_code(304) is False
+
+    def test_2xx_success_allows_body(self) -> None:
+        """2xx status codes (except 204) should allow body."""
+        assert is_body_allowed_for_status_code(200) is True
+        assert is_body_allowed_for_status_code(201) is True
+        assert is_body_allowed_for_status_code(202) is True
+        assert is_body_allowed_for_status_code(299) is True
+
+    def test_3xx_redirect_allows_body(self) -> None:
+        """3xx status codes (except 304) should allow body."""
+        assert is_body_allowed_for_status_code(301) is True
+        assert is_body_allowed_for_status_code(302) is True
+        assert is_body_allowed_for_status_code(307) is True
+        assert is_body_allowed_for_status_code(308) is True
+
+    def test_4xx_client_error_allows_body(self) -> None:
+        """4xx status codes should allow body."""
+        assert is_body_allowed_for_status_code(400) is True
+        assert is_body_allowed_for_status_code(401) is True
+        assert is_body_allowed_for_status_code(404) is True
+        assert is_body_allowed_for_status_code(422) is True
+
+    def test_5xx_server_error_allows_body(self) -> None:
+        """5xx status codes should allow body."""
+        assert is_body_allowed_for_status_code(500) is True
+        assert is_body_allowed_for_status_code(502) is True
+        assert is_body_allowed_for_status_code(503) is True
+
+
+class TestResponseNoBodyStatusCodes:
+    """Test Response behavior for status codes that don't allow body."""
+
+    async def test_204_no_content_type_header(self) -> None:
+        """204 response should not include Content-Type header."""
+        response = Response(status_code=204)
+        send = MockSend()
+
+        await response(MOCK_SCOPE, mock_receive, send)
+
+        headers = dict(send.messages[0]["headers"])
+        assert b"content-type" not in headers
+
+    async def test_204_no_content_length_header(self) -> None:
+        """204 response should not include Content-Length header."""
+        response = Response(status_code=204)
+        send = MockSend()
+
+        await response(MOCK_SCOPE, mock_receive, send)
+
+        headers = dict(send.messages[0]["headers"])
+        assert b"content-length" not in headers
+
+    async def test_304_no_content_type_header(self) -> None:
+        """304 response should not include Content-Type header."""
+        response = Response(status_code=304)
+        send = MockSend()
+
+        await response(MOCK_SCOPE, mock_receive, send)
+
+        headers = dict(send.messages[0]["headers"])
+        assert b"content-type" not in headers
+
+    async def test_304_no_content_length_header(self) -> None:
+        """304 response should not include Content-Length header."""
+        response = Response(status_code=304)
+        send = MockSend()
+
+        await response(MOCK_SCOPE, mock_receive, send)
+
+        headers = dict(send.messages[0]["headers"])
+        assert b"content-length" not in headers
+
+    async def test_1xx_no_content_headers(self) -> None:
+        """1xx responses should not include Content-Type or Content-Length headers."""
+        # Note: 1xx responses are typically handled specially by ASGI servers,
+        # but we test our _build_headers logic
+        response = Response(status_code=100)
+        send = MockSend()
+
+        await response(MOCK_SCOPE, mock_receive, send)
+
+        headers = dict(send.messages[0]["headers"])
+        assert b"content-type" not in headers
+        assert b"content-length" not in headers
+
+    async def test_204_preserves_custom_headers(self) -> None:
+        """204 response should preserve custom headers (non-content)."""
+        response = Response(status_code=204, headers={"x-custom": "value"})
+        send = MockSend()
+
+        await response(MOCK_SCOPE, mock_receive, send)
+
+        headers = dict(send.messages[0]["headers"])
+        assert headers[b"x-custom"] == b"value"
+        assert b"content-type" not in headers
+        assert b"content-length" not in headers
+
+    async def test_200_includes_content_headers(self) -> None:
+        """200 response should include Content-Type and Content-Length headers."""
+        response = Response(content="hello", status_code=200, media_type="text/plain")
+        send = MockSend()
+
+        await response(MOCK_SCOPE, mock_receive, send)
+
+        headers = dict(send.messages[0]["headers"])
+        assert headers[b"content-type"] == b"text/plain"
+        assert headers[b"content-length"] == b"5"

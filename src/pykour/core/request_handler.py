@@ -19,9 +19,13 @@ from pykour.core.handler import (
     serialize_response,
 )
 from pykour.header import get_header_info
+import logging
+
 from pykour.request import Request
-from pykour.response import JSONResponse, Response
+from pykour.response import JSONResponse, Response, is_body_allowed_for_status_code
 from pykour.status_code import get_default_status_code, get_method_default_status_code
+
+logger = logging.getLogger("pykour")
 
 if TYPE_CHECKING:
     from pykour.cache.storage import CacheStorage
@@ -138,12 +142,29 @@ class RequestHandler:
         # Execute handler
         result = handler(**kwargs)
         if inspect.isawaitable(result):
-            response = cast(Response, await result)
+            result = await result
+
+        # Convert result to Response
+        if result is None:
+            # None means empty response (status code determined by decorator or method default)
+            response = Response(status_code=200)
+        elif isinstance(result, dict):
+            response = JSONResponse(result)
         else:
             response = cast(Response, result)
 
         # Apply declarative status code
         response = self._apply_status_code(handler, request, response)
+
+        # For status codes that don't allow body, clear the body (with warning if non-empty)
+        if not is_body_allowed_for_status_code(response.status_code):
+            if response.body:
+                logger.warning(
+                    "Response body discarded for status code %d "
+                    "(body not allowed per RFC 7230/7231)",
+                    response.status_code,
+                )
+            response.body = b""
 
         # Apply declarative headers from @header decorator
         response = self._apply_headers(handler, kwargs, response)

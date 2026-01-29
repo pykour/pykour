@@ -1,5 +1,8 @@
 {
   "skills": [
     ".claude/skills/pykour-implement"
-  ]
+  ],
+  "enabledPlugins": {
+    "codescope@codescope": true
+  }
 }

@@ -104,6 +104,23 @@ def register_command(subparsers: Any) -> None:
         action="store_true",
         help="Enable debug mode (auto-enables reload, sets log level to DEBUG, shows tracebacks)",
     )
+    run_parser.add_argument(
+        "--auto-migrate",
+        action="store_true",
+        help="Run pending migrations before starting the server",
+    )
+    run_parser.add_argument(
+        "--migrations-dir",
+        type=str,
+        default="migrations",
+        help="Migrations directory (default: migrations)",
+    )
+    run_parser.add_argument(
+        "--database",
+        type=str,
+        default=None,
+        help="Database URL for migrations (defaults to PYKOUR_DATABASE_URL env var)",
+    )
     run_parser.set_defaults(func=cmd_run)
 
 
@@ -153,6 +170,12 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     # Configure logging
     _configure_logging(args.log_format, log_level)
+
+    # Run migrations if requested
+    if args.auto_migrate:
+        exit_code = _run_migrations(args)
+        if exit_code != 0:
+            return exit_code
 
     # Workers and reload are mutually exclusive
     workers = args.workers if not reload_enabled else 1
@@ -234,3 +257,53 @@ def _configure_logging(format_type: str, level: str) -> None:
     # Also configure pykour loggers
     pykour_logger = logging.getLogger("pykour")
     pykour_logger.setLevel(getattr(logging, level))
+
+
+def _run_migrations(args: argparse.Namespace) -> int:
+    """Run pending migrations before server start.
+
+    Args:
+        args: Parsed command line arguments.
+
+    Returns:
+        Exit code (0 for success, non-zero for failure).
+    """
+    import asyncio
+    import os
+    from pathlib import Path
+
+    async def run() -> int:
+        from pykour.db.database import Database
+        from pykour.db.migrations.runner import MigrationRunner
+
+        url = args.database or os.environ.get("PYKOUR_DATABASE_URL")
+        if not url:
+            print(
+                "Error: Database URL required for --auto-migrate.\n"
+                "Use --database or set PYKOUR_DATABASE_URL"
+            )
+            return 1
+
+        migrations_dir = Path(args.migrations_dir)
+
+        db = Database(url)
+        await db.connect()
+        try:
+            runner = MigrationRunner(db, migrations_dir)
+            await runner.init()
+            applied = await runner.up()
+
+            if applied:
+                print(f"Applied {len(applied)} migration(s):")
+                for version in applied:
+                    print(f"  {version}")
+            else:
+                print("No pending migrations")
+            return 0
+        except Exception as e:
+            print(f"Migration error: {e}")
+            return 1
+        finally:
+            await db.disconnect()
+
+    return asyncio.run(run())

@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from pykour.schema.errors import ErrorDetail, ValidationError
+from pykour.schema.fields import MISSING
 from pykour.schema.types import coerce_value
 
 if TYPE_CHECKING:
@@ -113,8 +114,8 @@ class FieldValidationStage(ValidationStage):
         """Validate a single field."""
         # Step 1: Extract value
         raw_value = self._extract_value(ctx, field_name, field_info)
-        if raw_value is None and field_name not in ctx.validated:
-            return  # Error already added or field missing
+        if raw_value is MISSING:
+            return  # Error already added (field required but missing)
 
         # Step 2: Handle None for Optional types
         if raw_value is None:
@@ -156,7 +157,11 @@ class FieldValidationStage(ValidationStage):
         field_name: str,
         field_info: "FieldInfo",
     ) -> Any:
-        """Extract field value from data or default."""
+        """Extract field value from data or default.
+
+        Returns:
+            The field value, or MISSING sentinel if field is required but not provided.
+        """
         key = field_info.alias or field_name
 
         if key in ctx.data:
@@ -171,7 +176,7 @@ class FieldValidationStage(ValidationStage):
                     type="value_error.missing",
                 )
             )
-            return None
+            return MISSING
 
     def _run_before_validators(
         self,

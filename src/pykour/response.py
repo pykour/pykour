@@ -19,6 +19,27 @@ ContentStream = (
 )
 
 
+def is_body_allowed_for_status_code(status_code: int) -> bool:
+    """Check if HTTP status code allows a response body.
+
+    Per RFC 7230/7231:
+    - 1xx (Informational): No body allowed
+    - 204 (No Content): No body allowed
+    - 304 (Not Modified): No body allowed
+
+    Args:
+        status_code: HTTP status code to check.
+
+    Returns:
+        True if body is allowed, False otherwise.
+    """
+    if status_code < 200:  # 1xx
+        return False
+    if status_code in (204, 304):
+        return False
+    return True
+
+
 class Response:
     """Base HTTP response."""
 
@@ -198,16 +219,21 @@ class Response:
         Auto-generated headers (content-type from media_type, content-length from body)
         take precedence over user-provided headers to ensure correctness.
         User-provided content-type and content-length headers are filtered out.
+
+        Per RFC 7230/7231, Content-Type and Content-Length are not included for
+        status codes that do not allow a body (1xx, 204, 304).
         """
         # Reserved headers that are auto-generated (case-insensitive)
         reserved_headers = {"content-type", "content-length"}
 
         headers: list[tuple[bytes, bytes]] = []
 
-        if self.media_type is not None:
-            headers.append((b"content-type", self.media_type.encode("latin-1")))
+        # Only include Content-Type and Content-Length for status codes that allow body
+        if is_body_allowed_for_status_code(self.status_code):
+            if self.media_type is not None:
+                headers.append((b"content-type", self.media_type.encode("latin-1")))
 
-        headers.append((b"content-length", str(len(self.body)).encode("latin-1")))
+            headers.append((b"content-length", str(len(self.body)).encode("latin-1")))
 
         # Append user headers, filtering out reserved ones
         for key, value in self._headers:

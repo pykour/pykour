@@ -40,6 +40,7 @@ from pykour.db.migrations.access_policy_ops import (
     DropAccessPolicy,
 )
 from pykour.db.migrations.table import ColumnDef
+from pykour.db.migrations.presets import ColumnGroup
 
 if TYPE_CHECKING:
     from pykour.db.drivers.base import BaseDriver
@@ -109,18 +110,33 @@ def column(
 
 def create_table(
     name: str,
-    *columns: ColumnDef,
+    *columns: ColumnDef | ColumnGroup,
     if_not_exists: bool = False,
 ) -> None:
     """Create a new table.
 
     Args:
         name: Table name.
-        *columns: Column definitions (use op.column()).
+        *columns: Column definitions (op.column()) or ColumnGroups (e.g., timestamps).
         if_not_exists: Add IF NOT EXISTS clause.
+
+    Example:
+        op.create_table(
+            "users",
+            op.column("id", "INTEGER", primary_key=True, autoincrement=True),
+            timestamps,  # ColumnGroup expands to created_at and updated_at
+            op.column("name", "VARCHAR(100)", nullable=False),
+        )
     """
+    all_columns: list[ColumnDef] = []
+    for item in columns:
+        if isinstance(item, ColumnGroup):
+            all_columns.extend(item.columns)
+        else:
+            all_columns.append(item)
+
     ctx = get_context()
-    op = CreateTable(name, list(columns), if_not_exists)
+    op = CreateTable(name, all_columns, if_not_exists)
     ctx.operations.append(op)
 
 

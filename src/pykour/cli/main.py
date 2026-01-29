@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 
 def main(args: list[str] | None = None) -> int:
@@ -15,6 +16,12 @@ def main(args: list[str] | None = None) -> int:
     Returns:
         Exit code.
     """
+    from dotenv import load_dotenv
+
+    # Explicitly specify .env in the current working directory
+    # (use user's working directory, not the entrypoint script location)
+    load_dotenv(Path.cwd() / ".env")
+
     parser = argparse.ArgumentParser(
         prog="pykour",
         description="Pykour framework CLI",

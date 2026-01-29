@@ -15,25 +15,43 @@ from pykour.cli.commands.migrate.inspect import cmd_history, cmd_status
 from pykour.cli.commands.migrate.maintenance import cmd_archive, cmd_squash
 
 
-def register_command(subparsers: Any) -> None:
-    """Register the migrate command and its subcommands."""
-    migrate_parser = subparsers.add_parser(
-        "migrate",
-        help="Database migration commands",
-    )
-    migrate_parser.add_argument(
+def _add_common_args(parser: Any, has_message_option: bool = False) -> None:
+    """Add common arguments to a subcommand parser.
+
+    Args:
+        parser: The argument parser to add arguments to.
+        has_message_option: If True, skip -m short option for migrations-dir
+                           to avoid conflict with --message.
+    """
+    parser.add_argument(
         "--database",
         "-d",
         type=str,
         default=None,
         help="Database URL (default: from PYKOUR_DATABASE_URL env)",
     )
-    migrate_parser.add_argument(
-        "--migrations-dir",
-        "-m",
-        type=str,
-        default="migrations",
-        help="Migrations directory (default: migrations)",
+    if has_message_option:
+        parser.add_argument(
+            "--migrations-dir",
+            type=str,
+            default="migrations",
+            help="Migrations directory (default: migrations)",
+        )
+    else:
+        parser.add_argument(
+            "--migrations-dir",
+            "-m",
+            type=str,
+            default="migrations",
+            help="Migrations directory (default: migrations)",
+        )
+
+
+def register_command(subparsers: Any) -> None:
+    """Register the migrate command and its subcommands."""
+    migrate_parser = subparsers.add_parser(
+        "migrate",
+        help="Database migration commands",
     )
 
     migrate_subparsers = migrate_parser.add_subparsers(
@@ -42,6 +60,7 @@ def register_command(subparsers: Any) -> None:
     )
 
     init_parser = migrate_subparsers.add_parser("init", help="Initialize migrations")
+    _add_common_args(init_parser)
     init_parser.set_defaults(func=cmd_init)
 
     new_parser = migrate_subparsers.add_parser("new", help="Create empty migration")
@@ -51,6 +70,7 @@ def register_command(subparsers: Any) -> None:
         required=True,
         help="Migration message",
     )
+    _add_common_args(new_parser, has_message_option=True)
     new_parser.set_defaults(func=cmd_new)
 
     generate_parser = migrate_subparsers.add_parser(
@@ -69,6 +89,7 @@ def register_command(subparsers: Any) -> None:
         default="models",
         help="Models module path (default: models)",
     )
+    _add_common_args(generate_parser, has_message_option=True)
     generate_parser.set_defaults(func=cmd_generate)
 
     up_parser = migrate_subparsers.add_parser("up", help="Apply migrations")
@@ -79,6 +100,7 @@ def register_command(subparsers: Any) -> None:
         default=None,
         help="Number of migrations to apply (default: all)",
     )
+    _add_common_args(up_parser)
     up_parser.set_defaults(func=cmd_up)
 
     down_parser = migrate_subparsers.add_parser("down", help="Rollback migrations")
@@ -89,16 +111,19 @@ def register_command(subparsers: Any) -> None:
         default=1,
         help="Number of migrations to rollback (default: 1)",
     )
+    _add_common_args(down_parser)
     down_parser.set_defaults(func=cmd_down)
 
     status_parser = migrate_subparsers.add_parser(
         "status", help="Show migration status"
     )
+    _add_common_args(status_parser)
     status_parser.set_defaults(func=cmd_status)
 
     history_parser = migrate_subparsers.add_parser(
         "history", help="Show migration history"
     )
+    _add_common_args(history_parser)
     history_parser.set_defaults(func=cmd_history)
 
     squash_parser = migrate_subparsers.add_parser(
@@ -148,6 +173,7 @@ def register_command(subparsers: Any) -> None:
         action="store_true",
         help="Skip confirmation prompt",
     )
+    _add_common_args(squash_parser, has_message_option=True)
     squash_parser.set_defaults(func=cmd_squash)
 
     archive_parser = migrate_subparsers.add_parser(
@@ -167,6 +193,7 @@ def register_command(subparsers: Any) -> None:
         action="store_true",
         help="Show what would be archived without making changes",
     )
+    _add_common_args(archive_parser)
     archive_parser.set_defaults(func=cmd_archive)
 
     migrate_parser.set_defaults(func=lambda args: migrate_parser.print_help() or 0)

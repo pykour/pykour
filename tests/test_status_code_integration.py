@@ -142,12 +142,18 @@ class TestMethodDefaultStatusCode:
 
     @pytest.mark.asyncio
     async def test_delete_returns_204_without_decorator(self) -> None:
-        """Test DELETE returns 204 without @status_code decorator."""
+        """Test DELETE returns 204 without @status_code decorator.
+
+        Per RFC 7231, 204 No Content MUST have an empty body, even if handler
+        returns data. The body should be discarded.
+        """
         app = Pykour(routes_dir=ROUTES_DIR / "method_default_test")
         client = TestClient(app)
 
         response = await client.delete("/")
         assert response.status_code == 204
+        # RFC 7231: 204 No Content MUST have empty body
+        assert response.body == b""
 
     @pytest.mark.asyncio
     async def test_get_returns_200_without_decorator(self) -> None:
@@ -181,3 +187,37 @@ class TestMethodDefaultStatusCode:
         assert response.status_code == 200
         data = response.json()
         assert data["method"] == "patch"
+
+
+class TestNoneReturnHandlers:
+    """Integration tests for handlers that return None."""
+
+    @pytest.mark.asyncio
+    async def test_delete_returning_none_returns_204(self) -> None:
+        """Test DELETE handler returning None returns 204 No Content."""
+        app = Pykour(routes_dir=ROUTES_DIR / "none_return_test")
+        client = TestClient(app)
+
+        response = await client.delete("/")
+        assert response.status_code == 204
+        assert response.body == b""
+
+    @pytest.mark.asyncio
+    async def test_post_with_status_code_decorator_returning_none(self) -> None:
+        """Test POST with @status_code(204) returning None."""
+        app = Pykour(routes_dir=ROUTES_DIR / "none_return_test")
+        client = TestClient(app)
+
+        response = await client.post("/")
+        assert response.status_code == 204
+        assert response.body == b""
+
+    @pytest.mark.asyncio
+    async def test_get_returning_none_returns_200(self) -> None:
+        """Test GET handler returning None returns 200 with empty body."""
+        app = Pykour(routes_dir=ROUTES_DIR / "none_return_test")
+        client = TestClient(app)
+
+        response = await client.get("/")
+        assert response.status_code == 200
+        assert response.body == b""

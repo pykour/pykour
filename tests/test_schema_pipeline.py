@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from pykour.schema.errors import ValidationError
-from pykour.schema.fields import FieldInfo
+from pykour.schema.fields import MISSING, FieldInfo
 from pykour.schema.pipeline import (
     FieldValidationStage,
     ModelAfterValidatorStage,
@@ -281,7 +281,7 @@ class TestFieldValidationStage:
 
         value = stage._extract_value(ctx, "name", field_info)
 
-        assert value is None
+        assert value is MISSING
         assert len(ctx.errors) == 1
         assert ctx.errors[0].type == "value_error.missing"
 
