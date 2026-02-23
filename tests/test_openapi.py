@@ -29,7 +29,14 @@ from pykour.openapi.models import (
     ComponentsObject,
     OpenAPIDocument,
 )
-from pykour.openapi.config import OpenAPIConfig
+from pykour.middleware.auth import require_scope
+from pykour.openapi.config import (
+    OAuthFlow,
+    OpenAPIConfig,
+    SecuritySchemeConfig,
+    api_key_scheme,
+    jwt_bearer_scheme,
+)
 from pykour.openapi.generator import OpenAPIGenerator
 from pykour.openapi.schema_converter import SchemaConverter
 from pykour.router import Router
@@ -694,3 +701,256 @@ class TestOpenAPIModels:
         assert len(schema_allof["allOf"]) == 2
         assert len(schema_oneof["oneOf"]) == 2
         assert len(schema_anyof["anyOf"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# OpenAPI Security Tests
+# ---------------------------------------------------------------------------
+
+
+class TestRequireScopeMetadata:
+    """Tests for require_scope OpenAPI metadata attachment."""
+
+    def test_metadata_attached_after_decoration(self) -> None:
+        """require_scope should attach __openapi_security__ to wrapper."""
+
+        @require_scope("users:read")
+        async def handler(**kwargs):
+            pass
+
+        assert hasattr(handler, "__openapi_security__")
+        meta = handler.__openapi_security__
+        assert meta["scopes"] == ["users:read"]
+        assert meta["claim"] == "scope"
+        assert meta["match"] == "any"
+
+    def test_metadata_multiple_scopes(self) -> None:
+        """Multiple scopes and match=all should be preserved in metadata."""
+
+        @require_scope("admin", "superuser", match="all", claim="permissions")
+        async def handler(**kwargs):
+            pass
+
+        meta = handler.__openapi_security__
+        assert set(meta["scopes"]) == {"admin", "superuser"}
+        assert meta["match"] == "all"
+        assert meta["claim"] == "permissions"
+
+    def test_no_metadata_without_decorator(self) -> None:
+        """Handler without require_scope should not have __openapi_security__."""
+
+        async def handler(**kwargs):
+            pass
+
+        assert not hasattr(handler, "__openapi_security__")
+
+    def test_functools_wraps_preserved(self) -> None:
+        """require_scope should preserve __name__ and __doc__ via functools.wraps."""
+
+        async def my_handler(**kwargs):
+            """My handler docstring."""
+
+        wrapped = require_scope("read")(my_handler)
+        assert wrapped.__name__ == "my_handler"
+        assert wrapped.__doc__ == "My handler docstring."
+
+
+class TestSecuritySchemeConfig:
+    """Tests for SecuritySchemeConfig and shortcut functions."""
+
+    def test_jwt_bearer_scheme_defaults(self) -> None:
+        """jwt_bearer_scheme() should return bearerAuth with JWT format."""
+        schemes = jwt_bearer_scheme()
+        assert "bearerAuth" in schemes
+        cfg = schemes["bearerAuth"]
+        assert cfg.type == "http"
+        assert cfg.scheme == "bearer"
+        assert cfg.bearer_format == "JWT"
+
+    def test_jwt_bearer_scheme_custom_name(self) -> None:
+        """jwt_bearer_scheme() should accept custom name."""
+        schemes = jwt_bearer_scheme(name="myAuth", description="My auth")
+        assert "myAuth" in schemes
+        assert schemes["myAuth"].description == "My auth"
+
+    def test_api_key_scheme_defaults(self) -> None:
+        """api_key_scheme() should return apiKeyAuth with X-API-Key header."""
+        schemes = api_key_scheme()
+        assert "apiKeyAuth" in schemes
+        cfg = schemes["apiKeyAuth"]
+        assert cfg.type == "apiKey"
+        assert cfg.name == "X-API-Key"
+        assert cfg.api_key_in == "header"
+
+    def test_api_key_scheme_custom(self) -> None:
+        """api_key_scheme() should accept custom header name."""
+        schemes = api_key_scheme(header_name="Authorization")
+        assert schemes["apiKeyAuth"].name == "Authorization"
+
+
+class TestOpenAPIGeneratorSecurity:
+    """Tests for OpenAPIGenerator security scheme generation."""
+
+    def _make_generator(
+        self,
+        routes: list | None = None,
+        security_schemes=None,
+        global_security=None,
+    ) -> OpenAPIGenerator:
+        router = Router.__new__(Router)
+        router._routes_cache = routes or []
+        config = OpenAPIConfig(
+            security_schemes=security_schemes,
+            global_security=global_security,
+        )
+        return OpenAPIGenerator(router, config)
+
+    def test_no_security_by_default(self) -> None:
+        """Without require_scope and no config, no securitySchemes generated."""
+        gen = self._make_generator()
+        doc = gen.generate()
+        components = doc.get("components", {})
+        assert "securitySchemes" not in components
+
+    def test_explicit_bearer_scheme(self) -> None:
+        """Explicit SecuritySchemeConfig should appear in components."""
+        gen = self._make_generator(
+            security_schemes={
+                "bearerAuth": SecuritySchemeConfig(
+                    type="http", scheme="bearer", bearer_format="JWT"
+                )
+            }
+        )
+        doc = gen.generate()
+        schemes = doc["components"]["securitySchemes"]
+        assert "bearerAuth" in schemes
+        assert schemes["bearerAuth"]["type"] == "http"
+        assert schemes["bearerAuth"]["scheme"] == "bearer"
+        assert schemes["bearerAuth"]["bearerFormat"] == "JWT"
+
+    def test_explicit_api_key_scheme(self) -> None:
+        """API key scheme should be converted correctly."""
+        gen = self._make_generator(
+            security_schemes={
+                "apiKeyAuth": SecuritySchemeConfig(
+                    type="apiKey",
+                    name="X-API-Key",
+                    api_key_in="header",
+                )
+            }
+        )
+        doc = gen.generate()
+        schemes = doc["components"]["securitySchemes"]
+        assert "apiKeyAuth" in schemes
+        assert schemes["apiKeyAuth"]["type"] == "apiKey"
+        assert schemes["apiKeyAuth"]["name"] == "X-API-Key"
+        assert schemes["apiKeyAuth"]["in"] == "header"
+
+    def test_oauth2_scheme(self) -> None:
+        """OAuth2 scheme with flows should be converted correctly."""
+        gen = self._make_generator(
+            security_schemes={
+                "oauth2": SecuritySchemeConfig(
+                    type="oauth2",
+                    flows={
+                        "authorizationCode": OAuthFlow(
+                            authorization_url="https://example.com/auth",
+                            token_url="https://example.com/token",
+                            scopes={"read": "Read access", "write": "Write access"},
+                        )
+                    },
+                )
+            }
+        )
+        doc = gen.generate()
+        schemes = doc["components"]["securitySchemes"]
+        assert "oauth2" in schemes
+        flow = schemes["oauth2"]["flows"]["authorizationCode"]
+        assert flow["authorizationUrl"] == "https://example.com/auth"
+        assert "read" in flow["scopes"]
+
+    def test_global_security_added_to_document(self) -> None:
+        """global_security should appear at the root of the OpenAPI document."""
+        gen = self._make_generator(
+            security_schemes=jwt_bearer_scheme(),
+            global_security=[{"bearerAuth": []}],
+        )
+        doc = gen.generate()
+        assert "security" in doc
+        assert doc["security"] == [{"bearerAuth": []}]
+
+    def test_no_global_security_without_config(self) -> None:
+        """Without global_security config, no security key at document root."""
+        gen = self._make_generator()
+        doc = gen.generate()
+        assert "security" not in doc
+
+    def test_auto_bearer_scheme_with_require_scope(self) -> None:
+        """When require_scope is used but no schemes configured, bearerAuth is auto-generated."""
+        from unittest.mock import MagicMock
+
+        @require_scope("users:read")
+        async def handler(**kwargs):
+            pass
+
+        route = MagicMock()
+        route.path_pattern = "/users"
+        route.param_names = []
+        route.handlers = {"GET": handler}
+
+        gen = self._make_generator(routes=[route])
+        doc = gen.generate()
+        schemes = doc["components"]["securitySchemes"]
+        assert "bearerAuth" in schemes
+        assert schemes["bearerAuth"]["type"] == "http"
+        assert schemes["bearerAuth"]["scheme"] == "bearer"
+
+    def test_operation_security_from_require_scope(self) -> None:
+        """Handler with require_scope should have security field in operation."""
+        from unittest.mock import MagicMock
+
+        @require_scope("users:read")
+        async def handler(**kwargs):
+            pass
+
+        route = MagicMock()
+        route.path_pattern = "/users"
+        route.param_names = []
+        route.handlers = {"GET": handler}
+
+        gen = self._make_generator(routes=[route])
+        doc = gen.generate()
+        operation = doc["paths"]["/users"]["get"]
+        assert "security" in operation
+        assert operation["security"] == [{"bearerAuth": ["users:read"]}]
+
+    def test_operation_no_security_without_decorator(self) -> None:
+        """Handler without require_scope should not have security field."""
+        from unittest.mock import MagicMock
+
+        async def handler(**kwargs):
+            pass
+
+        route = MagicMock()
+        route.path_pattern = "/public"
+        route.param_names = []
+        route.handlers = {"GET": handler}
+
+        gen = self._make_generator(routes=[route])
+        doc = gen.generate()
+        operation = doc["paths"]["/public"]["get"]
+        assert "security" not in operation
+
+    def test_backward_compatibility(self) -> None:
+        """Existing code without security params should work unchanged."""
+        router = Router.__new__(Router)
+        router._routes_cache = []
+        config = OpenAPIConfig(title="Test API", version="2.0.0")
+        gen = OpenAPIGenerator(router, config)
+        doc = gen.generate()
+
+        assert doc["info"]["title"] == "Test API"
+        assert doc["info"]["version"] == "2.0.0"
+        assert "security" not in doc
+        components = doc.get("components", {})
+        assert "securitySchemes" not in components

@@ -44,6 +44,7 @@ from pykour.core.exceptions import (
 if TYPE_CHECKING:
     from pykour.cache.storage import CacheStorage
     from pykour.db import Database
+    from pykour.openapi.config import SecuritySchemeConfig
 
 
 class Pykour:
@@ -118,6 +119,8 @@ class Pykour:
         redoc_url: str | None | object = _USE_CONFIG_DEFAULT,
         health_url: str | None | object = _USE_CONFIG_DEFAULT,
         metrics_url: str | None | object = _USE_CONFIG_DEFAULT,
+        security_schemes: "dict[str, SecuritySchemeConfig] | None" = None,
+        global_security: "list[dict[str, list[str]]] | None" = None,
     ) -> None:
         """Initialize Pykour application.
 
@@ -142,6 +145,10 @@ class Pykour:
             redoc_url: URL path for ReDoc. Set to None to disable.
             health_url: URL path for health check endpoint. Set to None to disable.
             metrics_url: URL path for Prometheus metrics endpoint. Set to None to disable.
+            security_schemes: Security scheme configurations for OpenAPI documentation.
+                When require_scope is used without specifying this, a default
+                bearerAuth JWT scheme is auto-generated.
+            global_security: Global security requirements applied to all operations.
         """
         # Load configuration (priority: code > env > config file > defaults)
         self._pykour_config = load_config(
@@ -200,7 +207,15 @@ class Pykour:
 
         # Resolve and setup OpenAPI
         self._openapi_config = resolve_openapi_config(
-            cfg, title, version, description, docs_url, openapi_url, redoc_url
+            cfg,
+            title,
+            version,
+            description,
+            docs_url,
+            openapi_url,
+            redoc_url,
+            security_schemes=security_schemes,
+            global_security=global_security,
         )
         self._openapi_handler: OpenAPIRouteHandler | None = None
         if (

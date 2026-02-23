@@ -438,6 +438,16 @@ def require_scope(
 
             return await func(**kwargs)
 
+        setattr(
+            wrapper,
+            "__openapi_security__",
+            {
+                "scopes": list(scopes),
+                "claim": claim,
+                "match": match,
+            },
+        )
+
         return wrapper
 
     return decorator

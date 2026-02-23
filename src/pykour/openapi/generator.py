@@ -4,7 +4,7 @@ import inspect
 import re
 from typing import Any, Callable, get_origin, get_type_hints
 
-from pykour.openapi.config import OpenAPIConfig
+from pykour.openapi.config import OpenAPIConfig, SecuritySchemeConfig
 from pykour.openapi.schema_converter import SchemaConverter
 from pykour.response import (
     EventSourceResponse,
@@ -17,6 +17,13 @@ from pykour.response import (
 from pykour.router import Route, Router
 from pykour.schema.fields import Body, FieldInfo, Path, Query
 from pykour.schema.form_fields import File, Form
+
+_DEFAULT_BEARER_SCHEME_NAME = "bearerAuth"
+_DEFAULT_BEARER_SCHEME: dict[str, str] = {
+    "type": "http",
+    "scheme": "bearer",
+    "bearerFormat": "JWT",
+}
 
 
 class OpenAPIGenerator:
@@ -68,6 +75,9 @@ class OpenAPIGenerator:
                 }
                 for server in self._config.servers
             ]
+
+        if self._config.global_security is not None:
+            doc["security"] = self._config.global_security
 
         return doc
 
@@ -207,6 +217,11 @@ class OpenAPIGenerator:
 
         # Generate responses
         operation["responses"] = self._generate_responses(handler)
+
+        # Add security requirements from require_scope metadata
+        security_requirements = self._extract_operation_security(handler)
+        if security_requirements is not None:
+            operation["security"] = security_requirements
 
         return operation
 
@@ -560,6 +575,10 @@ class OpenAPIGenerator:
         if schemas:
             components["schemas"] = schemas
 
+        security_schemes = self._build_security_schemes()
+        if security_schemes:
+            components["securitySchemes"] = security_schemes
+
         return components
 
     def _generate_tags(self) -> list[dict[str, Any]]:
@@ -651,3 +670,120 @@ class OpenAPIGenerator:
         if clean_parts:
             return f"{method.lower()}_{'_'.join(clean_parts)}"
         return f"{method.lower()}_root"
+
+    def _build_security_schemes(self) -> dict[str, Any]:
+        """Build securitySchemes dict from config or auto-detect from routes.
+
+        Returns:
+            Dictionary of security scheme names to their OpenAPI definitions.
+            Returns default bearerAuth if require_scope is used but no schemes configured.
+        """
+        if self._config.security_schemes is not None:
+            return {
+                name: self._convert_security_scheme(scheme_config)
+                for name, scheme_config in self._config.security_schemes.items()
+            }
+
+        # Auto-detect: if any handler uses require_scope, add default bearerAuth
+        if self._has_any_scope_requirement():
+            return {_DEFAULT_BEARER_SCHEME_NAME: _DEFAULT_BEARER_SCHEME}
+
+        return {}
+
+    def _convert_security_scheme(self, config: SecuritySchemeConfig) -> dict[str, Any]:
+        """Convert SecuritySchemeConfig to OpenAPI security scheme dict.
+
+        Args:
+            config: Security scheme configuration.
+
+        Returns:
+            OpenAPI security scheme object.
+        """
+        scheme: dict[str, Any] = {"type": config.type}
+
+        if config.description is not None:
+            scheme["description"] = config.description
+
+        if config.type == "http":
+            if config.scheme is not None:
+                scheme["scheme"] = config.scheme
+            if config.bearer_format is not None:
+                scheme["bearerFormat"] = config.bearer_format
+
+        elif config.type == "apiKey":
+            if config.name is not None:
+                scheme["name"] = config.name
+            if config.api_key_in is not None:
+                scheme["in"] = config.api_key_in
+
+        elif config.type == "oauth2":
+            if config.flows is not None:
+                flows_dict: dict[str, Any] = {}
+                for flow_name, flow in config.flows.items():
+                    flow_obj: dict[str, Any] = {"scopes": flow.scopes}
+                    if flow.authorization_url is not None:
+                        flow_obj["authorizationUrl"] = flow.authorization_url
+                    if flow.token_url is not None:
+                        flow_obj["tokenUrl"] = flow.token_url
+                    if flow.refresh_url is not None:
+                        flow_obj["refreshUrl"] = flow.refresh_url
+                    flows_dict[flow_name] = flow_obj
+                scheme["flows"] = flows_dict
+
+        elif config.type == "openIdConnect":
+            if config.open_id_connect_url is not None:
+                scheme["openIdConnectUrl"] = config.open_id_connect_url
+
+        return scheme
+
+    def _has_scope_requirement(self, handler: Callable[..., Any]) -> bool:
+        """Check if handler has __openapi_security__ metadata.
+
+        Args:
+            handler: Route handler callable.
+
+        Returns:
+            True if handler has scope requirements.
+        """
+        return hasattr(handler, "__openapi_security__")
+
+    def _has_any_scope_requirement(self) -> bool:
+        """Check if any route handler uses require_scope.
+
+        Returns:
+            True if at least one handler has scope requirements.
+        """
+        for route in self._router.routes:
+            for handler in route.handlers.values():
+                if self._has_scope_requirement(handler):
+                    return True
+        return False
+
+    def _extract_operation_security(
+        self, handler: Callable[..., Any]
+    ) -> list[dict[str, list[str]]] | None:
+        """Extract security requirements from handler metadata.
+
+        Args:
+            handler: Route handler callable.
+
+        Returns:
+            List of security requirement objects, or None if no requirements.
+        """
+        if not self._has_scope_requirement(handler):
+            return None
+
+        metadata = handler.__openapi_security__  # type: ignore[attr-defined]
+        scopes: list[str] = metadata.get("scopes", [])
+        scheme_name = self._resolve_security_scheme_name()
+        return [{scheme_name: scopes}]
+
+    def _resolve_security_scheme_name(self) -> str:
+        """Resolve the primary security scheme name.
+
+        Returns:
+            The first configured scheme name, or the default bearerAuth name.
+        """
+        if self._config.security_schemes:
+            return next(iter(self._config.security_schemes))
+        return _DEFAULT_BEARER_SCHEME_NAME

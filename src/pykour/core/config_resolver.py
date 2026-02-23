@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from pykour.db import Database
     from pykour.health.config import HealthCheckConfig
     from pykour.metrics.config import MetricsConfig
-    from pykour.openapi.config import OpenAPIConfig
+    from pykour.openapi.config import OpenAPIConfig, SecuritySchemeConfig
 
 
 # Sentinel value to indicate that routes_dir should be resolved from the caller's directory
@@ -198,6 +198,8 @@ def resolve_openapi_config(
     docs_url: str | None | object = _USE_CONFIG_DEFAULT,
     openapi_url: str | None | object = _USE_CONFIG_DEFAULT,
     redoc_url: str | None | object = _USE_CONFIG_DEFAULT,
+    security_schemes: "dict[str, SecuritySchemeConfig] | None" = None,
+    global_security: "list[dict[str, list[str]]] | None" = None,
 ) -> "OpenAPIConfig":
     """Resolve OpenAPI configuration.
 
@@ -211,6 +213,8 @@ def resolve_openapi_config(
         docs_url: Swagger UI URL.
         openapi_url: OpenAPI JSON URL.
         redoc_url: ReDoc URL.
+        security_schemes: Security scheme configurations for OpenAPI documentation.
+        global_security: Global security requirements applied to all operations.
 
     Returns:
         Resolved OpenAPI configuration.
@@ -245,6 +249,8 @@ def resolve_openapi_config(
         docs_url=resolved_docs_url,
         openapi_url=resolved_openapi_url,
         redoc_url=resolved_redoc_url,
+        security_schemes=security_schemes,
+        global_security=global_security,
     )
 
 
