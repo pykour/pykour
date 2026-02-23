@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from pykour.cache.decorators import get_cache_evict_info, get_cache_info
 from pykour.conditional import get_etag_info, get_last_modified_info
+from pykour.di.container import RequestScope
 from pykour.core.handler import (
     check_etag_match,
     compute_etag,
@@ -85,9 +86,10 @@ class RequestHandler:
 
         if handler is not None:
             request = Request(scope, receive, path_params)
-            return await self._execute_handler(
-                handler, request, path_params, is_auto_head
-            )
+            async with RequestScope():
+                return await self._execute_handler(
+                    handler, request, path_params, is_auto_head
+                )
 
         # Check if path exists but method is not allowed
         allowed_methods = self._router.get_allowed_methods(path)

@@ -39,6 +39,7 @@ Example:
 from pykour.di.container import (
     CircularDependencyError,
     Depends,
+    RequestScope,
     Scope,
     ServiceContainer,
     # New exception name (preferred)
@@ -51,6 +52,7 @@ from pykour.di.container import (
 __all__ = [
     "CircularDependencyError",
     "Depends",
+    "RequestScope",
     "Scope",
     "ServiceContainer",
     "ServiceNotFoundException",  # New name

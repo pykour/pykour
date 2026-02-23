@@ -261,7 +261,7 @@ class TestListBodyParser:
 class TestParameterInjectorServiceDepends:
     """Tests for service dependency injection."""
 
-    def test_inject_registered_service(self, services: ServiceContainer) -> None:
+    async def test_inject_registered_service(self, services: ServiceContainer) -> None:
         """Registered services should be injected."""
 
         class MyService:
@@ -271,11 +271,11 @@ class TestParameterInjectorServiceDepends:
         services.register(MyService)
         injector = ParameterInjector(services)
 
-        result = injector.inject_service_depends("svc", MyService, Depends())
+        result = await injector.inject_service_depends("svc", MyService, Depends())
         assert isinstance(result, MyService)
         assert result.get_value() == "test"
 
-    def test_inject_service_with_explicit_type(
+    async def test_inject_service_with_explicit_type(
         self, services: ServiceContainer
     ) -> None:
         """Explicit dependency type in Depends should be used."""
@@ -289,10 +289,12 @@ class TestParameterInjectorServiceDepends:
         services.register(Interface, Implementation)
         injector = ParameterInjector(services)
 
-        result = injector.inject_service_depends("svc", object, Depends(Interface))
+        result = await injector.inject_service_depends(
+            "svc", object, Depends(Interface)
+        )
         assert isinstance(result, Implementation)
 
-    def test_inject_unregistered_service_raises(
+    async def test_inject_unregistered_service_raises(
         self, services: ServiceContainer
     ) -> None:
         """Unregistered services should raise exception."""
@@ -304,7 +306,7 @@ class TestParameterInjectorServiceDepends:
             pass
 
         with pytest.raises(ServiceNotFoundException):
-            injector.inject_service_depends("svc", UnknownService, Depends())
+            await injector.inject_service_depends("svc", UnknownService, Depends())
 
 
 class TestParameterInjectorPathParam:

@@ -71,7 +71,7 @@ class ParameterInjector:
         self._database = database
         self._body_parsers = body_parsers or DEFAULT_BODY_PARSERS
 
-    def inject_service_depends(
+    async def inject_service_depends(
         self,
         param_name: str,
         param_type: type,
@@ -94,13 +94,13 @@ class ParameterInjector:
 
         dep_type = default.dependency or param_type
 
-        # Check if it's a callable (factory function)
+        # Check if it's a callable (factory function, possibly async)
         if callable(dep_type) and not isinstance(dep_type, type):
-            return self._services._call_with_dependencies(dep_type)
+            return await self._services._call_with_dependencies_async(dep_type)
 
-        # Try to resolve from service container
+        # Try to resolve from service container (supports async factories)
         if self._services.is_registered(dep_type):
-            return self._services.resolve(dep_type)
+            return await self._services.aresolve(dep_type)
 
         # Fallback: check if it's a Database type for backward compatibility
         if dep_type is Database or (
@@ -442,7 +442,7 @@ class ParameterInjector:
 
             # Check for Depends (pykour.di)
             if isinstance(default, DIDepends):
-                kwargs[param_name] = self.inject_service_depends(
+                kwargs[param_name] = await self.inject_service_depends(
                     param_name, param_type, default
                 )
 
