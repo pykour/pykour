@@ -94,9 +94,8 @@ raise UnauthorizedException(
 特定の例外タイプに対するカスタムハンドラを登録します:
 
 ```python
-from pykour import Pykour
+from pykour import Pykour, JSONResponse
 from pykour.exceptions import NotFoundException
-from pykour.response import JSONResponse
 
 app = Pykour()
 
@@ -193,6 +192,28 @@ Pykour はデフォルトで以下の例外ハンドラを登録しています:
     ]
 }
 ```
+
+## ExceptionHandler / ExceptionHandlerRegistry
+
+Pykour は内部的に `ExceptionHandlerRegistry` を使って例外ハンドラを管理しています。上級ユーザーはこれらを直接使用することもできます。
+
+```python
+from pykour import ExceptionHandler, ExceptionHandlerRegistry
+```
+
+`ExceptionHandler` は型エイリアスで、`Callable[[Request, Any], Response | Awaitable[Response]]` を表します。
+
+`ExceptionHandlerRegistry` は例外クラスとハンドラのマッピングを管理するクラスです:
+
+```python
+registry = ExceptionHandlerRegistry()
+registry.add(NotFoundException, handle_not_found)
+
+# 例外インスタンスから最適なハンドラを取得 (MRO に基づく)
+handler = registry.get(exc)
+```
+
+通常は `@app.exception_handler` や `app.add_exception_handler` を使用すれば十分です。
 
 ## See also
 

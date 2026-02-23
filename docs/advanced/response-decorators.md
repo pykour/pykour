@@ -22,9 +22,8 @@ Pykour provides declarative decorators for controlling HTTP response status code
 Declare the default HTTP status code for a handler response. When the handler returns a response with the default status code (200), the declared status code is applied instead.
 
 ```python
-from pykour import Request, JSONResponse
+from pykour import Request, JSONResponse, Body
 from pykour.status_code import status_code
-from pykour.params import Body
 
 @status_code(201, description="Created")
 async def post(request: Request, data: UserSchema = Body()) -> JSONResponse:

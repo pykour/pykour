@@ -218,5 +218,5 @@ async def error_logging_middleware(request, call_next):
 ```
 
 ---
-**See also:** [Exception Handling](../core/exception-handling.md) · [Middleware](../middleware/custom-middleware.md)
+**See also:** [Exception Handling](../core/exception-handling.md)
 [← Back to Home](../index.md)

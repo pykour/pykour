@@ -72,7 +72,7 @@ async def post(request: Request) -> JSONResponse:
 ```python
 # GET /search?q=pykour&tag=web&tag=python
 async def get(request: Request) -> JSONResponse:
-    params = await request.query_params()
+    params = request.query_params
     # params: {"q": "pykour", "tag": ["web", "python"]}
     return JSONResponse(params)
 ```

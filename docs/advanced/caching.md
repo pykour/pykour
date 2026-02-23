@@ -57,8 +57,7 @@ The `@cache` decorator caches handler responses based on a key template. The key
 
 ```python
 from pykour.cache import cache
-from pykour import Request, JSONResponse
-from pykour.params import Path
+from pykour import Request, JSONResponse, Path
 
 @cache(key="user:{id}", ttl=300)
 async def get(request: Request, id: int = Path()) -> JSONResponse:

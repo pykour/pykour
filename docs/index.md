@@ -87,7 +87,7 @@ async def post(user: UserSchema = Body()):
 
 | Page | Description |
 |:-----|:------------|
-| [Overview](middleware/overview) | Middleware architecture and custom middleware |
+| [Overview](middleware/) | Middleware architecture and custom middleware |
 | [JWT Auth](middleware/jwt-auth) | JSON Web Token authentication and authorization |
 | [CORS](middleware/cors) | Cross-Origin Resource Sharing configuration |
 | [CSRF](middleware/csrf) | Cross-Site Request Forgery protection |
@@ -103,7 +103,7 @@ async def post(user: UserSchema = Body()):
 
 | Page | Description |
 |:-----|:------------|
-| [Overview](database/overview) | Database setup and driver configuration |
+| [Overview](database/) | Database setup and driver configuration |
 | [Query Builder](database/query-builder) | Fluent API for SELECT, INSERT, UPDATE, DELETE |
 | [Transactions](database/transactions) | Transaction management and isolation levels |
 | [Migrations](database/migrations) | Schema migrations and version control |
@@ -114,7 +114,7 @@ async def post(user: UserSchema = Body()):
 
 | Page | Description |
 |:-----|:------------|
-| [Overview](advanced/overview) | Advanced features summary |
+| [Overview](advanced/) | Advanced features summary |
 | [Caching](advanced/caching) | Response caching strategies |
 | [OpenAPI](advanced/openapi) | Automatic OpenAPI schema generation |
 | [Testing](advanced/testing) | TestClient and SyncTestClient usage |

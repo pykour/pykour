@@ -123,15 +123,15 @@ app.add_middleware(
 Implement the `RateLimitStorage` abstract class for shared storage (e.g., Redis):
 
 ```python
-from pykour.middleware import RateLimitStorage
+from pykour.middleware import RateLimitConfig, RateLimitStorage
 
 class RedisStorage(RateLimitStorage):
-    async def get_tokens(self, key: str) -> tuple[float, float] | None:
-        """Return (tokens, last_refill_time) or None."""
+    async def get_tokens(self, key: str, config: RateLimitConfig) -> tuple[float, float]:
+        """Return (tokens, last_update_time)."""
         ...
 
-    async def set_tokens(self, key: str, tokens: float, last_refill: float) -> None:
-        """Store token count and last refill time."""
+    async def set_tokens(self, key: str, tokens: float, timestamp: float) -> None:
+        """Store token count and update timestamp."""
         ...
 
     async def cleanup(self) -> None:

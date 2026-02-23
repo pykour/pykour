@@ -197,10 +197,8 @@ async with RequestScope():
 ## 完全な例
 
 ```python
-from pykour import Pykour
+from pykour import Pykour, Path, JSONResponse
 from pykour.di import ServiceContainer, Depends, Scope
-from pykour.schema import Path
-from pykour.response import JSONResponse
 
 # サービス定義
 class DatabasePool:

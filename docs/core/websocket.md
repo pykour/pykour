@@ -9,7 +9,7 @@ nav_order: 8
 Pykour は WebSocket によるリアルタイム双方向通信をサポートしています。ファイルベースルーティングと統合されており、`route.py` 内に `websocket` 関数を定義するだけで利用できます。
 
 ```python
-from pykour.websocket import WebSocket, WebSocketDisconnect
+from pykour import WebSocket, WebSocketDisconnect
 ```
 
 ## WebSocket ルートの定義
@@ -18,7 +18,7 @@ from pykour.websocket import WebSocket, WebSocketDisconnect
 
 ```python
 # routes/ws/route.py
-from pykour.websocket import WebSocket
+from pykour import WebSocket
 
 async def websocket(ws: WebSocket) -> None:
     await ws.accept()
@@ -35,9 +35,7 @@ HTTP ハンドラと WebSocket ハンドラは同じ `route.py` に共存でき�
 
 ```python
 # routes/chat/route.py
-from pykour.request import Request
-from pykour.response import HTMLResponse
-from pykour.websocket import WebSocket
+from pykour import Request, HTMLResponse, WebSocket
 
 async def get(request: Request) -> HTMLResponse:
     """チャットページの HTML を返す"""
@@ -148,7 +146,7 @@ await ws.close(code: int = 1000, reason: str = "")
 クライアントが切断した場合にスローされる例外です:
 
 ```python
-from pykour.websocket import WebSocket, WebSocketDisconnect
+from pykour import WebSocket, WebSocketDisconnect
 
 async def websocket(ws: WebSocket) -> None:
     await ws.accept()
@@ -172,9 +170,9 @@ async def websocket(ws: WebSocket) -> None:
 |-----------|-----|------|
 | `path` | `str` | リクエストパス |
 | `path_params` | `dict[str, str]` | URL パスパラメータ |
-| `query_params` | `dict[str, str]` | クエリパラメータ |
+| `query_params` | `dict[str, str \| list[str]]` | クエリパラメータ |
 | `headers` | `dict[str, str]` | リクエストヘッダー |
-| `state` | `State` | 接続状態オブジェクト |
+| `state` | `WebSocketState` | 接続状態オブジェクト |
 | `client` | `tuple \| None` | クライアントのアドレス情報 |
 | `scope` | `Scope` | 生の ASGI スコープ |
 
@@ -184,7 +182,7 @@ async def websocket(ws: WebSocket) -> None:
 
 ```python
 # routes/ws/[room_id]/route.py
-from pykour.websocket import WebSocket
+from pykour import WebSocket
 
 async def websocket(ws: WebSocket) -> None:
     room_id = ws.path_params["room_id"]
@@ -199,7 +197,7 @@ async def websocket(ws: WebSocket) -> None:
 
 ```python
 # routes/ws/chat/route.py
-from pykour.websocket import WebSocket, WebSocketDisconnect
+from pykour import WebSocket, WebSocketDisconnect
 
 # 接続中のクライアントを管理
 clients: set[WebSocket] = set()

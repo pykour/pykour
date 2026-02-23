@@ -101,7 +101,7 @@ Each `route.py` can export any combination of `get`, `post`, `put`, `delete`, an
 ## Next steps
 
 - Learn about the [Project Structure](project-structure.md) and file-based routing conventions.
-- Explore [Request & Response](../core/request-response.md) handling.
+- Explore [Request](../core/request.md) and [Response](../core/response.md) handling.
 - Add [Middleware](../middleware/index.md) for CORS, authentication, and more.
 
 ---

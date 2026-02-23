@@ -9,7 +9,8 @@ nav_order: 5
 Pykour は独自のスキーマバリデーションシステムを提供しています。`Schema` クラスを継承してリクエストデータのバリデーションルールを定義します。
 
 ```python
-from pykour.schema import Schema, Field, field_validator, model_validator
+from pykour import Schema, Field
+from pykour.schema import field_validator, model_validator
 ```
 
 ## Schema クラス
@@ -17,7 +18,7 @@ from pykour.schema import Schema, Field, field_validator, model_validator
 `Schema` を継承してバリデーション付きのデータモデルを定義します。インスタンス化時にバリデーションが自動実行されます。
 
 ```python
-from pykour.schema import Schema, Field
+from pykour import Schema, Field
 
 class UserSchema(Schema):
     name: str
@@ -207,7 +208,8 @@ class SignupSchema(Schema):
 バリデーション失敗時に送出される例外です。
 
 ```python
-from pykour.schema.errors import ValidationError, ErrorDetail
+from pykour import ValidationError
+from pykour.schema.errors import ErrorDetail
 ```
 
 ### エラーレスポンスの形式
@@ -244,7 +246,7 @@ from pykour.schema.errors import ValidationError, ErrorDetail
 ### エラーハンドリング
 
 ```python
-from pykour.schema.errors import ValidationError
+from pykour import ValidationError
 
 try:
     user = UserSchema(name="", email="invalid", age=-1)
@@ -259,7 +261,8 @@ except ValidationError as e:
 `Body()` マーカーと組み合わせて、リクエストボディを自動バリデーションします:
 
 ```python
-from pykour.schema import Schema, Field, Body, field_validator
+from pykour import Schema, Field, Body
+from pykour.schema import field_validator
 
 class CreateUserSchema(Schema):
     name: str = Field(min_length=1, max_length=50)
