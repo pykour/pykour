@@ -69,26 +69,6 @@ class SelectQuery(WhereClauseMixin, BaseQuery):
         self._table = table
         return self
 
-    def where(self, **conditions: Any) -> Self:
-        """Add WHERE conditions (AND).
-
-        Args:
-            **conditions: Column-value pairs for equality conditions.
-        """
-        self._where_clauses = self._build_where_clause(conditions, self._where_clauses)
-        return self
-
-    def where_raw(self, condition: str, *args: Any) -> Self:
-        """Add a raw WHERE condition.
-
-        Args:
-            condition: SQL condition with $1, $2, ... placeholders.
-            *args: Values for the placeholders.
-        """
-        processed = self._process_raw_condition(condition, args)
-        self._where_clauses.append(processed)
-        return self
-
     def order_by(self, *columns: str, desc: bool = False) -> Self:
         """Add ORDER BY clause.
 
@@ -172,15 +152,7 @@ class SelectQuery(WhereClauseMixin, BaseQuery):
         self, sql: str, args: tuple[Any, ...]
     ) -> tuple[str, tuple[Any, ...]]:
         """Apply access policy to the query."""
-        result = self._should_apply_policy()
-        if result is None:
-            return sql, args
-        policy, context = result
-        # _should_apply_policy already verified _policy_enforcer is not None
-        assert self._policy_enforcer is not None
-        return self._policy_enforcer.apply_to_select(
-            sql, args, self._table, policy, context
-        )
+        return self._apply_policy_with(sql, args, "apply_to_select")
 
     async def fetch_all(self) -> list["Row"]:
         """Execute query and fetch all rows."""
@@ -193,12 +165,3 @@ class SelectQuery(WhereClauseMixin, BaseQuery):
         sql = self._build_sql()
         sql, args = self._apply_policy(sql, tuple(self._params))
         return await self._fetch_one_func(sql, args)
-
-    async def fetch_val(self) -> Any:
-        """Execute query and fetch the first column of the first row."""
-        row = await self.fetch_one()
-        if row is None:
-            return None
-        # Get first value from the row
-        values = list(row.values())
-        return values[0] if values else None

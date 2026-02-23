@@ -14,6 +14,28 @@ class WhereClauseMixin:
     _build_comparison: Callable[[str, str, Any], str]
     _build_in_clause: Callable[[str, list[Any], bool], str]
     _build_between: Callable[[str, Any, Any], str]
+    _build_where_clause: Callable[[dict[str, Any], list[str]], list[str]]
+    _process_raw_condition: Callable[[str, tuple[Any, ...]], str]
+
+    def where(self, **conditions: Any) -> Self:
+        """Add WHERE conditions (AND).
+
+        Args:
+            **conditions: Column-value pairs for equality conditions.
+        """
+        self._where_clauses = self._build_where_clause(conditions, self._where_clauses)
+        return self
+
+    def where_raw(self, condition: str, *args: Any) -> Self:
+        """Add a raw WHERE condition.
+
+        Args:
+            condition: SQL condition with $1, $2, ... placeholders.
+            *args: Values for the placeholders.
+        """
+        processed = self._process_raw_condition(condition, args)
+        self._where_clauses.append(processed)
+        return self
 
     def where_gt(self, column: str, value: Any) -> Self:
         """Add WHERE column > value condition.

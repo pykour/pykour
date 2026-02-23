@@ -66,17 +66,6 @@ class UpdateQuery(WhereClauseMixin, BaseQuery):
             self._set_clauses.append(f"{key} = {placeholder}")
         return self
 
-    def where(self, **conditions: Any) -> Self:
-        """Add WHERE conditions (AND)."""
-        self._where_clauses = self._build_where_clause(conditions, self._where_clauses)
-        return self
-
-    def where_raw(self, condition: str, *args: Any) -> Self:
-        """Add a raw WHERE condition."""
-        processed = self._process_raw_condition(condition, args)
-        self._where_clauses.append(processed)
-        return self
-
     def returning(self, *columns: str) -> Self:
         """Add RETURNING clause."""
         self._returning.extend(columns)
@@ -147,15 +136,7 @@ class UpdateQuery(WhereClauseMixin, BaseQuery):
         self, sql: str, args: tuple[Any, ...]
     ) -> tuple[str, tuple[Any, ...]]:
         """Apply access policy to the query."""
-        result = self._should_apply_policy()
-        if result is None:
-            return sql, args
-        policy, context = result
-        # _should_apply_policy already verified _policy_enforcer is not None
-        assert self._policy_enforcer is not None
-        return self._policy_enforcer.apply_to_update(
-            sql, args, self._table, policy, context
-        )
+        return self._apply_policy_with(sql, args, "apply_to_update")
 
     async def execute(self) -> int:
         """Execute the update and return affected rows."""

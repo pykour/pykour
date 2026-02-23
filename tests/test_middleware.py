@@ -26,6 +26,46 @@ class TestBaseMiddleware:
         middleware = CustomMiddleware(lambda s, r, sn: None)
         assert middleware.app is not None
 
+    def test_should_process_path_not_excluded(self) -> None:
+        """should_process_path returns True for paths not in exclude list."""
+
+        class ConcreteMiddleware(BaseMiddleware):
+            async def __call__(self, scope, receive, send) -> None:
+                pass
+
+        middleware = ConcreteMiddleware(None)
+        assert middleware.should_process_path("/api/users", ["/health", "/metrics"])
+
+    def test_should_process_path_exact_excluded(self) -> None:
+        """should_process_path returns False for exact excluded path."""
+
+        class ConcreteMiddleware(BaseMiddleware):
+            async def __call__(self, scope, receive, send) -> None:
+                pass
+
+        middleware = ConcreteMiddleware(None)
+        assert not middleware.should_process_path("/health", ["/health"])
+
+    def test_should_process_path_prefix_excluded(self) -> None:
+        """should_process_path returns False for path under excluded prefix."""
+
+        class ConcreteMiddleware(BaseMiddleware):
+            async def __call__(self, scope, receive, send) -> None:
+                pass
+
+        middleware = ConcreteMiddleware(None)
+        assert not middleware.should_process_path("/health/check", ["/health"])
+
+    def test_should_process_path_empty_excludes(self) -> None:
+        """should_process_path returns True when exclude list is empty."""
+
+        class ConcreteMiddleware(BaseMiddleware):
+            async def __call__(self, scope, receive, send) -> None:
+                pass
+
+        middleware = ConcreteMiddleware(None)
+        assert middleware.should_process_path("/any/path", [])
+
 
 class TestFunctionMiddleware:
     """Tests for FunctionMiddleware class."""

@@ -46,11 +46,13 @@ class BaseQuery:
         self._table_classes: dict[str, type] = table_classes or {}
         self._get_policy_context = get_policy_context
 
-    def _should_apply_policy(self) -> "tuple[AccessPolicy, PolicyContextData] | None":
-        """Check if policy should be applied and return policy and context.
+    def _should_apply_policy(
+        self,
+    ) -> "tuple[BasePolicyEnforcer, AccessPolicy, PolicyContextData] | None":
+        """Check if policy should be applied and return enforcer, policy and context.
 
         Returns:
-            Tuple of (policy, context) if policy should be applied, None otherwise.
+            Tuple of (enforcer, policy, context) if policy should be applied, None otherwise.
         """
         if self._policy_enforcer is None or self._get_policy_context is None:
             return None
@@ -63,7 +65,7 @@ class BaseQuery:
         if policy is None:
             return None
 
-        return policy, context
+        return self._policy_enforcer, policy, context
 
     def _add_param(self, value: Any) -> str:
         """Add a parameter and return its placeholder."""
@@ -152,3 +154,43 @@ class BaseQuery:
         p1 = self._add_param(min_val)
         p2 = self._add_param(max_val)
         return f"{column} BETWEEN {p1} AND {p2}"
+
+    def _apply_policy_with(
+        self,
+        sql: str,
+        args: tuple[Any, ...],
+        enforcer_method: str,
+    ) -> tuple[str, tuple[Any, ...]]:
+        """Apply access policy using the named enforcer method.
+
+        Args:
+            sql: SQL query string.
+            args: Query arguments.
+            enforcer_method: Method name on the policy enforcer to call
+                (e.g. "apply_to_select", "apply_to_update", "apply_to_delete").
+
+        Returns:
+            Tuple of (sql, args) with policy applied, or original (sql, args) if no policy.
+        """
+        result = self._should_apply_policy()
+        if result is None:
+            return sql, args
+        enforcer, policy, context = result
+        return getattr(enforcer, enforcer_method)(
+            sql, args, self._table, policy, context
+        )
+
+    async def fetch_one(self) -> "Row | None":
+        """Execute query and fetch one row.
+
+        Subclasses that support RETURNING or SELECT should override this method.
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not support fetch_one()")
+
+    async def fetch_val(self) -> Any:
+        """Execute query and fetch the first column of the first row."""
+        row = await self.fetch_one()
+        if row is None:
+            return None
+        values = list(row.values())
+        return values[0] if values else None

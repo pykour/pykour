@@ -10,7 +10,6 @@ from typing import Any, Callable
 
 from pykour.common.storage import BaseInMemoryStorage
 from pykour.middleware.base import BaseMiddleware
-from pykour.middleware.utils import is_path_excluded
 from pykour.response import JSONResponse
 from pykour.types import Message, Receive, Scope, Send
 
@@ -425,7 +424,7 @@ class RateLimitMiddleware(BaseMiddleware):
         Returns:
             True if should apply rate limiting.
         """
-        return not is_path_excluded(path, self.exclude_paths)
+        return self.should_process_path(path, self.exclude_paths)
 
     def _get_bucket(self, config: RateLimitConfig) -> TokenBucket:
         """Get or create a token bucket for config.

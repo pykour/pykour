@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 class OpContext:
     """Context for migration operations."""
 
-    driver: BaseDriver
+    driver: BaseDriver | None
     conn: Any
     operations: list[Operation]
 

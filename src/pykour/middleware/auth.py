@@ -10,7 +10,7 @@ import time
 from typing import Any, Sequence
 
 from pykour.middleware.base import BaseMiddleware, Receive, Scope, Send
-from pykour.middleware.utils import extract_bearer_token, is_path_excluded
+from pykour.middleware.utils import extract_bearer_token
 from pykour.response import JSONResponse
 
 # Base64 encodes 3 bytes into 4 characters, requiring padding to multiple of 4
@@ -245,7 +245,7 @@ class JWTAuthMiddleware(BaseMiddleware):
         path = scope.get("path", "/")
 
         # Skip authentication for excluded paths
-        if is_path_excluded(path, self.exclude_paths):
+        if not self.should_process_path(path, self.exclude_paths):
             await self.app(scope, receive, send)
             return
 

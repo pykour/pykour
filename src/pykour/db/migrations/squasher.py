@@ -134,7 +134,7 @@ class MigrationSquasher:
         Returns:
             List of operations.
         """
-        ctx = OpContext(driver=None, conn=None, operations=[])  # type: ignore[arg-type]
+        ctx = OpContext(driver=None, conn=None, operations=[])
         set_context(ctx)
         try:
             func()

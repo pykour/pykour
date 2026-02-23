@@ -9,7 +9,7 @@ from pykour.db.drivers.base import BaseDriver
 from pykour.db.exceptions import DatabaseConnectionException, DriverNotFoundException
 
 if TYPE_CHECKING:
-    pass
+    from pykour.db.result import Row
 
 
 def get_driver(scheme: str) -> tuple[BaseDriver, str]:
@@ -196,7 +196,9 @@ class ConnectionManager:
         """
         await self._driver.commit(conn)
 
-    async def fetch_all(self, conn: Any, sql: str, args: tuple[Any, ...]) -> Any:
+    async def fetch_all(
+        self, conn: Any, sql: str, args: tuple[Any, ...]
+    ) -> "list[Row]":
         """Fetch all rows from a query.
 
         Args:
@@ -209,7 +211,9 @@ class ConnectionManager:
         """
         return await self._driver.fetch_all(conn, sql, args)
 
-    async def fetch_one(self, conn: Any, sql: str, args: tuple[Any, ...]) -> Any:
+    async def fetch_one(
+        self, conn: Any, sql: str, args: tuple[Any, ...]
+    ) -> "Row | None":
         """Fetch one row from a query.
 
         Args:

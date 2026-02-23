@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pykour.middleware.base import BaseMiddleware
-from pykour.middleware.utils import is_path_excluded
 from pykour.types import Receive, Scope, Send
 
 
@@ -291,7 +290,7 @@ class SecurityHeadersMiddleware(BaseMiddleware):
         Returns:
             True if headers should be added.
         """
-        return not is_path_excluded(path, self.exclude_paths)
+        return self.should_process_path(path, self.exclude_paths)
 
     async def __call__(
         self,

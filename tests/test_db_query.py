@@ -338,3 +338,109 @@ class TestDeleteQuery:
         query.where_is_null("verified_at")
         sql = query._build_sql()
         assert "WHERE verified_at IS NULL" in sql
+
+
+class TestFetchVal:
+    """Tests for BaseQuery.fetch_val() shared implementation."""
+
+    @pytest.mark.asyncio
+    async def test_select_fetch_val_returns_first_column(self) -> None:
+        """fetch_val returns the first column value from SelectQuery."""
+        from pykour.db.result import Row
+
+        async def fetch_one_row(sql: str, args: tuple):
+            return Row({"count": 42, "name": "Alice"})
+
+        query = SelectQuery(("count(*)",), mock_execute, mock_fetch_all, fetch_one_row)
+        query.from_("users")
+        val = await query.fetch_val()
+        assert val == 42
+
+    @pytest.mark.asyncio
+    async def test_select_fetch_val_returns_none_when_no_row(self) -> None:
+        """fetch_val returns None when no row is found."""
+        query = SelectQuery(("count(*)",), mock_execute, mock_fetch_all, mock_fetch_one)
+        query.from_("users")
+        val = await query.fetch_val()
+        assert val is None
+
+    @pytest.mark.asyncio
+    async def test_insert_fetch_val_returns_first_column(self) -> None:
+        """fetch_val returns the first column value from InsertQuery."""
+        from pykour.db.result import Row
+
+        async def fetch_one_row(sql: str, args: tuple):
+            return Row({"id": 99})
+
+        query = InsertQuery("users", mock_execute, mock_fetch_all, fetch_one_row)
+        query.values(name="Alice").returning("id")
+        val = await query.fetch_val()
+        assert val == 99
+
+    @pytest.mark.asyncio
+    async def test_fetch_val_empty_row_returns_none(self) -> None:
+        """fetch_val returns None when the row has no values."""
+        from pykour.db.result import Row
+
+        async def fetch_one_empty(sql: str, args: tuple):
+            return Row()
+
+        query = SelectQuery(("*",), mock_execute, mock_fetch_all, fetch_one_empty)
+        query.from_("users")
+        val = await query.fetch_val()
+        assert val is None
+
+
+@pytest.mark.parametrize(
+    "columns,expected",
+    [
+        (("*",), "SELECT * FROM users"),
+        (("id",), "SELECT id FROM users"),
+        (("id", "name", "email"), "SELECT id, name, email FROM users"),
+    ],
+)
+def test_select_columns_parametrize(columns: tuple, expected: str) -> None:
+    """Parametrized test for SELECT columns."""
+    query = SelectQuery(columns, mock_execute, mock_fetch_all, mock_fetch_one)
+    query.from_("users")
+    assert query._build_sql() == expected
+
+
+@pytest.mark.parametrize(
+    "method,column,value,expected_op",
+    [
+        ("where_gt", "age", 18, ">"),
+        ("where_gte", "age", 18, ">="),
+        ("where_lt", "age", 65, "<"),
+        ("where_lte", "age", 65, "<="),
+        ("where_like", "name", "Al%", "LIKE"),
+    ],
+)
+def test_where_clause_mixin_operators_parametrize(
+    method: str, column: str, value: object, expected_op: str
+) -> None:
+    """Parametrized test for WhereClauseMixin comparison operators."""
+    query = SelectQuery(("*",), mock_execute, mock_fetch_all, mock_fetch_one)
+    query.from_("users")
+    getattr(query, method)(column, value)
+    sql = query._build_sql()
+    assert f"WHERE {column} {expected_op} $1" in sql
+
+
+def test_where_raw_out_of_order_placeholders() -> None:
+    """where_raw handles out-of-order $N placeholders correctly."""
+    query = SelectQuery(("*",), mock_execute, mock_fetch_all, mock_fetch_one)
+    query.from_("t").where_raw("$2 > $1", 10, 20)
+    sql = query._build_sql()
+    assert "WHERE" in sql
+    assert query._params == [10, 20]
+
+
+def test_where_raw_repeated_placeholder() -> None:
+    """where_raw handles repeated $N placeholders."""
+    query = SelectQuery(("*",), mock_execute, mock_fetch_all, mock_fetch_one)
+    query.from_("t").where_raw("x BETWEEN $1 AND $1", 5)
+    sql = query._build_sql()
+    assert "WHERE" in sql
+    # Only one unique param added since $1 is repeated
+    assert len(query._params) == 1

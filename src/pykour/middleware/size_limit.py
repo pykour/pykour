@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Sequence
 
 from pykour.middleware.base import BaseMiddleware
-from pykour.middleware.utils import extract_header, is_path_excluded
+from pykour.middleware.utils import extract_header
 from pykour.response import JSONResponse
 from pykour.types import Message, Receive, Scope, Send
 
@@ -125,7 +125,7 @@ class RequestSizeLimitMiddleware(BaseMiddleware):
         path = scope.get("path", "/")
 
         # Skip size check for excluded paths
-        if is_path_excluded(path, self.exclude_paths):
+        if not self.should_process_path(path, self.exclude_paths):
             await self.app(scope, receive, send)
             return
 

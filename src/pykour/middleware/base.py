@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
+from pykour.middleware.utils import is_path_excluded
 from pykour.types import MiddlewareFunc, Receive, Scope, Send
 
 if TYPE_CHECKING:
@@ -39,6 +41,18 @@ class BaseMiddleware(ABC):
             **options: Additional options for the middleware.
         """
         self.app = app
+
+    def should_process_path(self, path: str, exclude_paths: Sequence[str]) -> bool:
+        """Return True if the middleware should process this path.
+
+        Args:
+            path: The request path to check.
+            exclude_paths: List of paths/prefixes to exclude from processing.
+
+        Returns:
+            True if the path should be processed, False if it should be skipped.
+        """
+        return not is_path_excluded(path, exclude_paths)
 
     @abstractmethod
     async def __call__(

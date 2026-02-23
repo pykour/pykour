@@ -14,7 +14,6 @@ from pykour.middleware.utils import (
     get_client_ip,
     get_content_length,
     get_user_agent,
-    is_path_excluded,
 )
 from pykour.types import Receive, Scope, Send
 
@@ -90,7 +89,7 @@ class LoggingMiddleware(BaseMiddleware):
 
     def _is_excluded(self, path: str) -> bool:
         """Check if path is excluded from logging."""
-        return is_path_excluded(path, self.exclude_paths)
+        return not self.should_process_path(path, self.exclude_paths)
 
     def _get_client_ip(self, scope: Scope) -> str:
         """Extract client IP from scope."""

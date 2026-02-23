@@ -223,19 +223,13 @@ class InsertQuery(BaseQuery):
         values_data = self._apply_column_auto_set(self._values_data)
 
         # Then apply access policy auto_set
-        if self._policy_enforcer is None or self._get_policy_context is None:
+        result = self._should_apply_policy()
+        if result is None:
             return values_data
 
-        context = self._get_policy_context()
-        if context is None or context.bypass_enforcement:
-            return values_data
-
-        policy = self._table_policies.get(self._table)
-        if policy is None:
-            return values_data
-
+        enforcer, policy, context = result
         # Apply policy to get modified values
-        _, _, modified_values = self._policy_enforcer.apply_to_insert(
+        _, _, modified_values = enforcer.apply_to_insert(
             "",  # SQL not used here
             (),  # args not used here
             self._table,
@@ -289,11 +283,3 @@ class InsertQuery(BaseQuery):
         values_data = self._apply_policy()
         sql = self._build_sql(values_data)
         return await self._fetch_one_func(sql, tuple(self._params))
-
-    async def fetch_val(self) -> Any:
-        """Execute and fetch the first column of the returned row."""
-        row = await self.fetch_one()
-        if row is None:
-            return None
-        values = list(row.values())
-        return values[0] if values else None
