@@ -1,9 +1,3 @@
----
-title: Logging
-parent: Middleware
-nav_order: 6
----
-
 # Logging
 
 `LoggingMiddleware` provides structured access logging for HTTP requests, capturing method, path, status code, response time, and optionally headers. It supports both text and JSON output formats.

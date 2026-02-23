@@ -1,19 +1,4 @@
----
-title: CRUD Generation
-parent: Advanced
-nav_order: 8
----
-
 # CRUD Generation
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour can automatically generate CRUD (Create, Read, Update, Delete) endpoints for your database tables, either at runtime via `register_crud()` or at development time via the CLI.
 
@@ -157,8 +142,3 @@ class CRUDConfig:
     exclude_fields: list[str] = []
     readonly_fields: list[str] = []
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

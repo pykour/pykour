@@ -1,9 +1,3 @@
----
-title: Migrations
-parent: Database
-nav_order: 3
----
-
 # Migrations
 
 Pykour includes a migration system for managing database schema changes. Migrations are Python files with `upgrade()` and `downgrade()` functions.
@@ -107,7 +101,6 @@ Migration files are Python scripts in a `migrations/` directory with a versioned
 
 from pykour.db.migrations import op
 
-
 def upgrade():
     op.create_table(
         "users",
@@ -117,7 +110,6 @@ def upgrade():
         op.column("active", "BOOLEAN", default=True),
     )
     op.create_index("idx_users_email", "users", ["email"], unique=True)
-
 
 def downgrade():
     op.drop_index("idx_users_email")
@@ -180,8 +172,7 @@ op.alter_column("users", "name", drop_default=True)
 op.rename_column("users", "old_name", "new_name")
 ```
 
-{: .note }
-`alter_column` and `rename_column` are supported on all three databases (SQLite, PostgreSQL, MySQL), with driver-specific SQL generation.
+> **Note:** `alter_column` and `rename_column` are supported on all three databases (SQLite, PostgreSQL, MySQL), with driver-specific SQL generation.
 
 #### Index Operations
 
@@ -344,8 +335,3 @@ history = await runner.history()
 
 await db.disconnect()
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

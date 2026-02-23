@@ -1,19 +1,4 @@
----
-title: Response Decorators
-parent: Advanced
-nav_order: 9
----
-
 # Response Decorators
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour provides declarative decorators for controlling HTTP response status codes, headers, and conditional responses (ETag, Last-Modified). These decorators also feed into the OpenAPI documentation.
 
@@ -204,8 +189,3 @@ async def get(request: Request, id: int = Path()) -> JSONResponse:
         return JSONResponse({"error": "Not found"}, status_code=404)
     return JSONResponse(user)
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

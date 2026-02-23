@@ -1,9 +1,3 @@
----
-title: Exception Handling
-parent: Core
-nav_order: 7
----
-
 # Exception Handling
 
 Pykour は包括的な例外ハンドリングシステムを提供しています。組み込みの HTTP 例外クラスとカスタム例外ハンドラの登録が可能です。

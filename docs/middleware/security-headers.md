@@ -1,9 +1,3 @@
----
-title: Security Headers
-parent: Middleware
-nav_order: 5
----
-
 # Security Headers
 
 `SecurityHeadersMiddleware` adds recommended security headers to HTTP responses, including HSTS, Content Security Policy, X-Frame-Options, and more.

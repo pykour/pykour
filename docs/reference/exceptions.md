@@ -1,9 +1,3 @@
----
-title: HTTP Exceptions
-parent: Reference
-nav_order: 1
----
-
 # HTTP Exceptions
 
 Pykour provides a comprehensive set of HTTP exception classes in `pykour.exceptions`. All exceptions inherit from the base `HTTPException` class and can be raised in route handlers or middleware to return appropriate HTTP error responses.

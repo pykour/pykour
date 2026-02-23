@@ -1,9 +1,3 @@
----
-title: Reference
-nav_order: 7
-has_children: true
----
-
 # Reference
 
 This section provides detailed reference documentation for the Pykour framework.

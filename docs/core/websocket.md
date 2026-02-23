@@ -1,9 +1,3 @@
----
-title: WebSocket
-parent: Core
-nav_order: 8
----
-
 # WebSocket
 
 Pykour は WebSocket によるリアルタイム双方向通信をサポートしています。ファイルベースルーティングと統合されており、`route.py` 内に `websocket` 関数を定義するだけで利用できます。

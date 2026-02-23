@@ -1,19 +1,4 @@
----
-title: Testing
-parent: Advanced
-nav_order: 3
----
-
 # Testing
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour provides a `TestClient` for testing ASGI applications without running an HTTP server. Tests execute requests directly against the application, making them fast and reliable.
 
@@ -266,8 +251,3 @@ Access the cookie jar directly:
 ```python
 client.cookie_jar.set("custom", "value")
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

@@ -1,9 +1,3 @@
----
-title: JWT Authentication
-parent: Middleware
-nav_order: 1
----
-
 # JWT Authentication
 
 `JWTAuthMiddleware` provides JSON Web Token (JWT) authentication using the `Authorization: Bearer <token>` header. It supports key rotation, scope-based authorization, and path exclusion.

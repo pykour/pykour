@@ -1,9 +1,3 @@
----
-title: Project Structure
-parent: Getting Started
-nav_order: 3
----
-
 # Project Structure
 
 Pykour uses **file-based routing** inspired by Next.js. The directory layout of your `routes/` folder directly maps to URL paths.

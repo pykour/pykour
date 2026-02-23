@@ -1,9 +1,3 @@
----
-title: Access Policies
-parent: Database
-nav_order: 4
----
-
 # Access Policies
 
 Access policies provide row-level security (RLS) for your database queries. They automatically add WHERE conditions and inject values into INSERT operations based on the current request context.
@@ -292,8 +286,3 @@ def upgrade():
         new_select=["tenant_id = :tenant_id", "active = true"],
     )
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

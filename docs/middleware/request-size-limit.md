@@ -1,9 +1,3 @@
----
-title: Request Size Limit
-parent: Middleware
-nav_order: 8
----
-
 # Request Size Limit
 
 `RequestSizeLimitMiddleware` enforces maximum request body sizes to protect your application from oversized payloads. It supports both upfront `Content-Length` checking and streaming body size enforcement, with per-content-type limits.

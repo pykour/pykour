@@ -1,9 +1,3 @@
----
-title: Request
-parent: Core
-nav_order: 2
----
-
 # Request
 
 `Request` クラスは ASGI スコープをラップし、HTTP リクエストの情報にアクセスするための API を提供します。

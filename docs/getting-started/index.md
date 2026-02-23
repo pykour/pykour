@@ -1,9 +1,3 @@
----
-title: Getting Started
-nav_order: 2
-has_children: true
----
-
 # Getting Started
 
 Welcome to Pykour! This section walks you through installing the framework, creating your first application, and understanding the project layout.

@@ -1,9 +1,3 @@
----
-title: Parameter Injection
-parent: Core
-nav_order: 4
----
-
 # Parameter Injection
 
 Pykour はハンドラ関数の引数に対して、型ヒントとマーカーデフォルトに基づいたパラメータの自動注入を行います。

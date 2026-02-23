@@ -1,19 +1,4 @@
----
-title: Configuration
-parent: Advanced
-nav_order: 4
----
-
 # Configuration
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour supports TOML-based configuration with environment variable overrides. Configuration is loaded with a clear priority order, allowing you to define defaults in a file and override them per environment.
 
@@ -220,8 +205,3 @@ config = load_config(config_file="custom.toml")
 # Load without auto-discovery
 config = load_config(auto_discover=False)
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

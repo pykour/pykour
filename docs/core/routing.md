@@ -1,9 +1,3 @@
----
-title: File-Based Routing
-parent: Core
-nav_order: 1
----
-
 # File-Based Routing
 
 Pykour は Next.js にインスパイアされたファイルベースルーティングを採用しています。`routes/` ディレクトリ内のファイル構造が URL パスに直接マッピングされます。

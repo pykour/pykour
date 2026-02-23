@@ -1,9 +1,3 @@
----
-title: Tracing
-parent: Middleware
-nav_order: 7
----
-
 # Tracing
 
 `TraceMiddleware` adds distributed tracing support by managing trace IDs across requests. It follows the W3C Trace Context specification, extracting trace IDs from incoming `traceparent` headers or generating new ones.

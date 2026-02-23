@@ -1,19 +1,4 @@
----
-title: OpenAPI
-parent: Advanced
-nav_order: 2
----
-
 # OpenAPI Documentation
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour automatically generates OpenAPI 3.1 documentation from your routes, parameter annotations, and schema definitions. Swagger UI and ReDoc are served as built-in endpoints.
 
@@ -203,8 +188,3 @@ Pykour automatically extracts the following from your route handlers:
 - **Response codes** from `@status_code` decorators
 - **Tags** from the route path (first path segment)
 - **Operation IDs** generated from path and method
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

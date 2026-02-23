@@ -1,9 +1,3 @@
----
-title: Response
-parent: Core
-nav_order: 3
----
-
 # Response
 
 Pykour はさまざまなレスポンスタイプを提供しています。全てのレスポンスクラスは基底クラス `Response` を継承しています。

@@ -1,9 +1,3 @@
----
-title: Quickstart
-parent: Getting Started
-nav_order: 2
----
-
 # Quickstart
 
 This guide creates a minimal Pykour application in under five minutes.

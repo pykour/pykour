@@ -1,9 +1,3 @@
----
-title: Schema Validation
-parent: Core
-nav_order: 5
----
-
 # Schema Validation
 
 Pykour は独自のスキーマバリデーションシステムを提供しています。`Schema` クラスを継承してリクエストデータのバリデーションルールを定義します。

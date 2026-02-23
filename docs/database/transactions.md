@@ -1,9 +1,3 @@
----
-title: Transactions
-parent: Database
-nav_order: 2
----
-
 # Transactions
 
 Pykour provides transaction support with automatic commit/rollback, isolation levels, and savepoints.
@@ -21,8 +15,7 @@ async with await db.transaction():
 # If an exception occurs, the transaction is rolled back automatically
 ```
 
-{: .important }
-Note the `await` before `db.transaction()`. The method is async and returns a `Transaction` context manager.
+> **Important:** Note the `await` before `db.transaction()`. The method is async and returns a `Transaction` context manager.
 
 ## Explicit Commit and Rollback
 
@@ -66,8 +59,7 @@ from pykour.db import IsolationLevel
 level: IsolationLevel = "SERIALIZABLE"
 ```
 
-{: .note }
-Not all databases support all isolation levels. SQLite defaults to `SERIALIZABLE`. Check your database documentation for details.
+> **Note:** Not all databases support all isolation levels. SQLite defaults to `SERIALIZABLE`. Check your database documentation for details.
 
 ## Savepoints
 
@@ -140,8 +132,3 @@ async with await db.transaction():
     await db.insert("orders").values(user_id=1, total=50).execute()
     count = await db.select("COUNT(*) as c").from_("orders").where(user_id=1).fetch_one()
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

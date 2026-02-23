@@ -1,9 +1,3 @@
----
-title: CSRF Protection
-parent: Middleware
-nav_order: 3
----
-
 # CSRF Protection
 
 `CSRFMiddleware` protects against Cross-Site Request Forgery attacks using the double-submit cookie pattern. A CSRF token is set as a cookie and must be sent back in a request header for non-safe HTTP methods.

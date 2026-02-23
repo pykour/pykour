@@ -1,19 +1,4 @@
----
-title: Metrics
-parent: Advanced
-nav_order: 6
----
-
 # Metrics
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour provides Prometheus-compatible metrics collection that can be scraped by monitoring systems. Metrics are collected via middleware and exposed through a dedicated endpoint.
 
@@ -119,8 +104,3 @@ Results in:
 ```
 myapp_api_request_duration_seconds
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

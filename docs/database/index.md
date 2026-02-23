@@ -1,9 +1,3 @@
----
-title: Database
-nav_order: 5
-has_children: true
----
-
 # Database
 
 Pykour provides built-in database support with a fluent query builder, connection pooling, transactions, migrations, and row-level access policies.
@@ -167,8 +161,3 @@ You can also register tables manually:
 db.register_table(UserTable)
 db.register_tables([UserTable, OrderTable])
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

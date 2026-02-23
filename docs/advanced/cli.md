@@ -1,19 +1,4 @@
----
-title: CLI
-parent: Advanced
-nav_order: 5
----
-
 # CLI
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour includes a command-line interface for running the development server, inspecting routes, generating scaffolding code, and managing database migrations.
 
@@ -288,8 +273,3 @@ pykour migrate archive --to 005 --database sqlite:///app.db
 # Dry run
 pykour migrate archive --to 005 --dry-run --database sqlite:///app.db
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

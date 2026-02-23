@@ -1,19 +1,4 @@
----
-title: Caching
-parent: Advanced
-nav_order: 1
----
-
 # Caching
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour provides a built-in caching system with decorator-based response caching and a programmatic `Cache` client. Two storage backends are included: in-memory (for development and single-instance deployments) and Valkey/Redis (for production distributed caching).
 
@@ -252,8 +237,3 @@ from pykour.cache.serializers import PickleSerializer
 
 cache = Cache(storage, serializer=PickleSerializer())
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

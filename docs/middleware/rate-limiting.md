@@ -1,9 +1,3 @@
----
-title: Rate Limiting
-parent: Middleware
-nav_order: 4
----
-
 # Rate Limiting
 
 `RateLimitMiddleware` enforces request rate limits using the token bucket algorithm. It supports per-path configuration, custom key extraction, and pluggable storage backends.

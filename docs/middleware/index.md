@@ -1,9 +1,3 @@
----
-title: Middleware
-nav_order: 4
-has_children: true
----
-
 # Middleware
 
 Middleware intercepts every HTTP request and response, letting you add cross-cutting concerns such as authentication, logging, and security headers without touching individual route handlers.

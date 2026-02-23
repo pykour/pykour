@@ -1,9 +1,3 @@
----
-title: CORS
-parent: Middleware
-nav_order: 2
----
-
 # CORS
 
 `CORSMiddleware` handles Cross-Origin Resource Sharing (CORS) by managing preflight requests and adding the appropriate response headers.

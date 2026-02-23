@@ -1,8 +1,3 @@
----
-title: Home
-nav_order: 1
----
-
 # Pykour Documentation
 
 Pykour is a lightweight ASGI web framework for Python 3.13+ that brings **Next.js-style file-based routing** to Python. It includes built-in schema validation, dependency injection, database support (SQLite, PostgreSQL, MySQL), and a rich middleware stack.
@@ -60,7 +55,6 @@ async def post(user: UserSchema = Body()):
 ## Documentation Map
 
 ### Getting Started
-{: .text-gamma }
 
 | Page | Description |
 |:-----|:------------|
@@ -69,7 +63,6 @@ async def post(user: UserSchema = Body()):
 | [Project Structure](getting-started/project-structure) | Recommended directory layout and conventions |
 
 ### Core
-{: .text-gamma }
 
 | Page | Description |
 |:-----|:------------|
@@ -83,7 +76,6 @@ async def post(user: UserSchema = Body()):
 | [WebSocket](core/websocket) | WebSocket connections and message handling |
 
 ### Middleware
-{: .text-gamma }
 
 | Page | Description |
 |:-----|:------------|
@@ -99,7 +91,6 @@ async def post(user: UserSchema = Body()):
 | [Content Type](middleware/content-type) | Content type validation and negotiation |
 
 ### Database
-{: .text-gamma }
 
 | Page | Description |
 |:-----|:------------|
@@ -110,7 +101,6 @@ async def post(user: UserSchema = Body()):
 | [Access Policies](database/access-policies) | Row-level security and access control |
 
 ### Advanced
-{: .text-gamma }
 
 | Page | Description |
 |:-----|:------------|
@@ -126,7 +116,6 @@ async def post(user: UserSchema = Body()):
 | [Response Decorators](advanced/response-decorators) | Headers, status codes, and response metadata |
 
 ### Reference
-{: .text-gamma }
 
 | Page | Description |
 |:-----|:------------|

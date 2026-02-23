@@ -1,9 +1,3 @@
----
-title: Query Builder
-parent: Database
-nav_order: 1
----
-
 # Query Builder
 
 Pykour's query builder provides a fluent, chainable API for constructing SQL queries. All query methods return `self`, so you can chain calls together.
@@ -356,8 +350,3 @@ deleted = (
 | `db.delete(table)` | `DeleteQuery` | `DELETE` |
 | `db.count(table, **cond)` | `int` | `SELECT COUNT(*)` |
 | `db.exists(table, **cond)` | `bool` | `SELECT COUNT(*)` |
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

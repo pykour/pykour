@@ -1,19 +1,4 @@
----
-title: Health Checks
-parent: Advanced
-nav_order: 7
----
-
 # Health Checks
-{: .no_toc }
-
-## Table of Contents
-{: .no_toc .text-delta }
-
-1. TOC
-{:toc}
-
----
 
 Pykour provides a built-in health check endpoint for use with load balancers, Kubernetes probes, and monitoring systems.
 
@@ -135,8 +120,3 @@ For applications with database dependencies, you may want separate liveness and 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:8000/health || exit 1
 ```
-
----
-
-{: .fs-2 .text-muted }
-Pykour Documentation

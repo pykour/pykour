@@ -1,9 +1,3 @@
----
-title: Changelog
-parent: Reference
-nav_order: 2
----
-
 # Changelog
 
 All notable changes to the Pykour framework are documented here. This project follows [Semantic Versioning](https://semver.org/).

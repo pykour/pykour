@@ -1,9 +1,3 @@
----
-title: Dependency Injection
-parent: Core
-nav_order: 6
----
-
 # Dependency Injection
 
 Pykour は組み込みの依存性注入 (DI) コンテナを提供しています。サービスの登録、スコープ管理、ハンドラへの自動注入をサポートします。

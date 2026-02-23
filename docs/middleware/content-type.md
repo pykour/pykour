@@ -1,9 +1,3 @@
----
-title: Content Type
-parent: Middleware
-nav_order: 9
----
-
 # Content Type
 
 `ContentTypeMiddleware` validates the `Content-Type` header of incoming requests, rejecting requests with unsupported media types. This prevents handlers from receiving unexpected content formats.
