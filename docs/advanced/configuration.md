@@ -105,7 +105,7 @@ openapi_url = "/openapi.json"
 redoc_url = "/redoc"
 ```
 
-See the [OpenAPI page](openapi) for full configuration details including contact, license, and server settings.
+See the [OpenAPI page](openapi.md) for full configuration details including contact, license, and server settings.
 
 ### `[health]` -- Health Check
 
@@ -115,7 +115,7 @@ health_url = "/health"
 include_details = false
 ```
 
-See the [Health Checks page](health-checks) for details.
+See the [Health Checks page](health-checks.md) for details.
 
 ### `[metrics]` -- Metrics
 
@@ -127,7 +127,7 @@ namespace = ""
 subsystem = "http"
 ```
 
-See the [Metrics page](metrics) for details.
+See the [Metrics page](metrics.md) for details.
 
 ### `[middleware]` -- Middleware Configuration
 

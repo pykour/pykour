@@ -125,7 +125,7 @@ await db.update("users").set(name="Bob").where(id=1).execute()
 await db.delete("users").where(id=1).execute()
 ```
 
-See [Query Builder](query-builder) for the full API.
+See [Query Builder](query-builder.md) for the full API.
 
 ### Convenience Methods
 

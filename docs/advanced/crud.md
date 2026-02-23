@@ -125,7 +125,7 @@ pykour generate crud users --table-class models.tables:UserTable
 pykour generate crud orders --table orders --id-type str --id-field order_id
 ```
 
-See the [CLI page](cli#pykour-generate-crud) for all options.
+See the [CLI page](cli.md#pykour-generate-crud) for all options.
 
 ## CRUDConfig
 
