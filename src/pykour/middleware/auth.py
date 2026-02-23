@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import base64
+import functools
 import hashlib
 import hmac
 import json
 import time
-from typing import Any, Sequence
+from typing import Any, Callable, Literal, Sequence
 
+from pykour.exceptions import ForbiddenException, UnauthorizedException
 from pykour.middleware.base import BaseMiddleware, Receive, Scope, Send
 from pykour.middleware.utils import extract_bearer_token
 from pykour.response import JSONResponse
@@ -339,3 +341,106 @@ def create_jwt_token(
     signature_b64 = _urlsafe_b64encode_nopad(signature)
 
     return f"{header_b64}.{payload_b64}.{signature_b64}"
+
+
+def _extract_scopes(payload: dict[str, Any], claim: str) -> list[str]:
+    """Extract scopes from JWT payload.
+
+    Supports both space-delimited strings (RFC 8693) and lists.
+
+    Args:
+        payload: Decoded JWT payload.
+        claim: Name of the claim containing scopes.
+
+    Returns:
+        List of scope strings.
+    """
+    value = payload.get(claim)
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return value.split()
+    if isinstance(value, list):
+        return [str(s) for s in value]
+    return []
+
+
+def _check_scopes(
+    required: Sequence[str],
+    actual: list[str],
+    match: str,
+) -> bool:
+    """Check whether actual scopes satisfy the requirement.
+
+    Args:
+        required: Scopes that the handler requires.
+        actual: Scopes present in the JWT payload.
+        match: "any" (at least one match) or "all" (every required scope).
+
+    Returns:
+        True if the requirement is satisfied.
+    """
+    actual_set = set(actual)
+    if match == "all":
+        return all(s in actual_set for s in required)
+    return any(s in actual_set for s in required)
+
+
+def require_scope(
+    *scopes: str,
+    claim: str = "scope",
+    match: Literal["any", "all"] = "any",
+) -> Callable:
+    """Decorator that enforces JWT scope / permission requirements.
+
+    Must be used on route handlers that are behind ``JWTAuthMiddleware``.
+    The middleware stores the decoded payload in ``scope["user"]``, which
+    is accessible as ``request.user``.
+
+    Args:
+        *scopes: One or more scope strings that the caller must possess.
+        claim: JWT claim name that contains the scopes (default ``"scope"``).
+        match: ``"any"`` requires at least one scope to match;
+               ``"all"`` requires every listed scope.
+
+    Example::
+
+        @require_scope("users:read")
+        async def get(request: Request) -> JSONResponse:
+            return JSONResponse({"users": []})
+
+        @require_scope("admin", "superuser", match="any")
+        async def delete(request: Request) -> JSONResponse:
+            ...
+    """
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(**kwargs: Any) -> Any:
+            request: Any | None = kwargs.get("request")
+
+            # Retrieve JWT payload set by JWTAuthMiddleware
+            payload: dict[str, Any] | None = None
+            if request is not None:
+                payload = getattr(request, "user", None)
+
+            if payload is None:
+                raise UnauthorizedException(
+                    detail="Not authenticated",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            actual = _extract_scopes(payload, claim)
+            if not _check_scopes(scopes, actual, match):
+                raise ForbiddenException(
+                    detail="Insufficient permissions",
+                )
+
+            return await func(**kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+require_roles = require_scope

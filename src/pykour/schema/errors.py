@@ -8,10 +8,11 @@ from typing import Any
 class ErrorDetail:
     """Single validation error detail."""
 
-    loc: tuple[str, ...]
+    loc: tuple[str | int, ...]
     msg: str
     type: str
     input: Any = None
+    ctx: dict[str, Any] | None = None
 
 
 class ValidationError(Exception):
@@ -34,6 +35,8 @@ class ValidationError(Exception):
                     "loc": list(err.loc),
                     "msg": err.msg,
                     "type": err.type,
+                    "input": err.input,
+                    **({"ctx": err.ctx} if err.ctx else {}),
                 }
                 for err in self.errors
             ],

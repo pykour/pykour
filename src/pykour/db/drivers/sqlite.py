@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 from urllib.parse import urlparse
 
 from pykour.db.drivers.base import BaseDriver
 from pykour.db.result import Row
+
+logger = logging.getLogger(__name__)
 
 try:
     import aiosqlite
@@ -169,8 +172,14 @@ class SQLiteDriver(BaseDriver):
         row = await cursor.fetchone()
         return Row(dict(row)) if row else None
 
-    async def begin(self, conn: Any) -> None:
+    async def begin(self, conn: Any, isolation_level: str | None = None) -> None:
         """Begin a transaction."""
+        if isolation_level and isolation_level != "SERIALIZABLE":
+            logger.warning(
+                "SQLite does not support isolation level '%s'. "
+                "Falling back to default (SERIALIZABLE).",
+                isolation_level,
+            )
         await conn.execute("BEGIN")
 
     async def commit(self, conn: Any) -> None:

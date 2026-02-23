@@ -1,6 +1,11 @@
 """Middleware package for Pykour."""
 
-from pykour.middleware.auth import JWTAuthMiddleware, create_jwt_token
+from pykour.middleware.auth import (
+    JWTAuthMiddleware,
+    create_jwt_token,
+    require_roles,
+    require_scope,
+)
 from pykour.middleware.base import (
     BaseMiddleware,
     FunctionMiddleware,
@@ -46,6 +51,8 @@ __all__ = [
     "CSRFMiddleware",
     "JWTAuthMiddleware",
     "create_jwt_token",
+    "require_scope",
+    "require_roles",
     "create_key_extractor",
     "LoggingMiddleware",
     "RateLimitConfig",

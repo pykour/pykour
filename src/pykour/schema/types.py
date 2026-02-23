@@ -136,7 +136,38 @@ def coerce_value(value: Any, target_type: Any, *, _depth: int = 0) -> Any:
         if not isinstance(value, (list, tuple)):
             raise TypeError("Expected list")
         elem_type = args[0] if args else Any
-        return [coerce_value(v, elem_type, _depth=_depth + 1) for v in value]
+        from pykour.schema.errors import ErrorDetail, ValidationError
+
+        result = []
+        elem_errors: list[ErrorDetail] = []
+        for i, v in enumerate(value):
+            try:
+                result.append(coerce_value(v, elem_type, _depth=_depth + 1))
+            except ValidationError as e:
+                for err in e.errors:
+                    # Insert array index after the first "body" element
+                    new_loc: tuple[str | int, ...] = err.loc[:1] + (i,) + err.loc[1:]
+                    elem_errors.append(
+                        ErrorDetail(
+                            loc=new_loc,
+                            msg=err.msg,
+                            type=err.type,
+                            input=err.input,
+                            ctx=err.ctx,
+                        )
+                    )
+            except (TypeError, ValueError) as e:
+                elem_errors.append(
+                    ErrorDetail(
+                        loc=("body", i),
+                        msg=str(e),
+                        type="type_error",
+                        input=v,
+                    )
+                )
+        if elem_errors:
+            raise ValidationError(elem_errors)
+        return result
 
     # Handle dict[K, V]
     if origin is dict:

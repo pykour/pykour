@@ -2,9 +2,16 @@
 
 import re
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Literal
 
 from pykour.db.result import Row
+
+IsolationLevel = Literal[
+    "READ UNCOMMITTED",
+    "READ COMMITTED",
+    "REPEATABLE READ",
+    "SERIALIZABLE",
+]
 
 
 class BaseDriver(ABC):
@@ -124,11 +131,12 @@ class BaseDriver(ABC):
         """
 
     @abstractmethod
-    async def begin(self, conn: Any) -> None:
+    async def begin(self, conn: Any, isolation_level: str | None = None) -> None:
         """Begin a transaction.
 
         Args:
             conn: Database connection.
+            isolation_level: Optional isolation level for the transaction.
         """
 
     @abstractmethod

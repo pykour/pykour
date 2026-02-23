@@ -26,17 +26,19 @@ class Transaction:
         driver: "BaseDriver",
         conn: Any,
         release_func: Any,
+        isolation_level: str | None = None,
     ) -> None:
         self._database = database
         self._driver = driver
         self._conn = conn
         self._release_func = release_func
+        self._isolation_level = isolation_level
         self._committed = False
         self._rolled_back = False
 
     async def __aenter__(self) -> Self:
         """Enter transaction context."""
-        await self._driver.begin(self._conn)
+        await self._driver.begin(self._conn, isolation_level=self._isolation_level)
         # Set the transaction connection on the database
         self._database._set_transaction_connection(self._conn)
         return self

@@ -1,6 +1,7 @@
 """Database access module for Pykour."""
 
 from pykour.db.database import Database
+from pykour.db.drivers.base import IsolationLevel
 from pykour.db.exceptions import (
     # New exception names (preferred)
     DatabaseConnectionException,
@@ -23,6 +24,7 @@ __all__ = [
     # Main classes
     "Database",
     "Transaction",
+    "IsolationLevel",
     # Query builders
     "SelectQuery",
     "InsertQuery",

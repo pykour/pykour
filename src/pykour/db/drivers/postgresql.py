@@ -109,9 +109,12 @@ class PostgreSQLDriver(BaseDriver):
         record = await conn.fetchrow(sql, *args)
         return Row(dict(record)) if record else None
 
-    async def begin(self, conn: Any) -> None:
+    async def begin(self, conn: Any, isolation_level: str | None = None) -> None:
         """Begin a transaction."""
-        await conn.execute("BEGIN")
+        if isolation_level:
+            await conn.execute(f"BEGIN TRANSACTION ISOLATION LEVEL {isolation_level}")
+        else:
+            await conn.execute("BEGIN")
 
     async def commit(self, conn: Any) -> None:
         """Commit a transaction."""

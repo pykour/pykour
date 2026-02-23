@@ -128,9 +128,14 @@ class MySQLDriver(BaseDriver):
             row = await cursor.fetchone()
             return Row(row) if row else None
 
-    async def begin(self, conn: Any) -> None:
+    async def begin(self, conn: Any, isolation_level: str | None = None) -> None:
         """Begin a transaction."""
-        await conn.begin()
+        if isolation_level:
+            async with conn.cursor() as cur:
+                await cur.execute(f"SET TRANSACTION ISOLATION LEVEL {isolation_level}")
+            await conn.begin()
+        else:
+            await conn.begin()
 
     async def commit(self, conn: Any) -> None:
         """Commit a transaction."""

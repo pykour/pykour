@@ -339,6 +339,9 @@ class TestClient:
         base_url: str = "http://testserver",
         default_headers: dict[str, str] | None = None,
         cookies: dict[str, str] | None = None,
+        *,
+        follow_redirects: bool = False,
+        max_redirects: int = 10,
     ) -> None:
         """Initialize test client.
 
@@ -347,11 +350,15 @@ class TestClient:
             base_url: Base URL for requests (used in headers).
             default_headers: Headers to include in every request.
             cookies: Initial cookies to include in requests.
+            follow_redirects: Whether to automatically follow redirect responses.
+            max_redirects: Maximum number of redirects to follow.
         """
         self.app = app
         self.base_url = base_url.rstrip("/")
         self.default_headers = default_headers or {}
         self.cookie_jar = CookieJar()
+        self.follow_redirects = follow_redirects
+        self.max_redirects = max_redirects
 
         # Set initial cookies
         if cookies:
@@ -487,6 +494,49 @@ class TestClient:
 
         # Update cookie jar from Set-Cookie headers
         self.cookie_jar.update_from_response(response.raw_headers)
+
+        # Follow redirects if enabled
+        if self.follow_redirects and response.is_redirect:
+            redirect_count = 0
+            current_method = method
+            current_body = body
+            current_headers = request_headers
+
+            while response.is_redirect and redirect_count < self.max_redirects:
+                redirect_count += 1
+                location = response.get_header("location")
+                if not location:
+                    break
+
+                # RFC 7231: POST/PUT/PATCH with 301/302/303 -> convert to GET
+                if response.status_code in (
+                    301,
+                    302,
+                    303,
+                ) and current_method.upper() in (
+                    "POST",
+                    "PUT",
+                    "PATCH",
+                ):
+                    current_method = "GET"
+                    current_body = b""
+                    # Remove body-related headers
+                    current_headers = {
+                        k: v
+                        for k, v in current_headers.items()
+                        if k.lower() not in ("content-type", "content-length")
+                    }
+
+                redirect_scope = self._build_scope(
+                    current_method, location, current_headers, None
+                )
+                redirect_receive = _ASGIReceive(body=current_body)
+                redirect_send = _ASGISend()
+
+                await self.app(redirect_scope, redirect_receive, redirect_send)
+
+                response = redirect_send.get_response()
+                self.cookie_jar.update_from_response(response.raw_headers)
 
         return response
 
@@ -862,6 +912,108 @@ class TestClient:
         )
 
 
+class AuthTestClient(TestClient):
+    """Test client with built-in JWT authentication support.
+
+    Extends TestClient with methods for easily authenticating requests
+    using JWT tokens.
+
+    Example:
+        client = AuthTestClient(app, secret_key="my-secret")
+        client.authenticate(sub="user-1", scopes=["read", "write"])
+
+        # All subsequent requests include the JWT Authorization header
+        response = await client.get("/protected")
+        assert response.status_code == 200
+
+        client.logout()
+        response = await client.get("/protected")
+        assert response.status_code == 401
+    """
+
+    __test__ = False  # Prevent pytest from collecting this class
+
+    def __init__(
+        self, app: ASGIApp, *, secret_key: str = "test-secret-key", **kwargs: Any
+    ) -> None:
+        """Initialize auth test client.
+
+        Args:
+            app: The ASGI application to test.
+            secret_key: Secret key for signing JWT tokens.
+            **kwargs: Additional arguments passed to TestClient.
+        """
+        super().__init__(app, **kwargs)
+        self._secret_key = secret_key
+        self._auth_headers: dict[str, str] = {}
+
+    def authenticate(
+        self,
+        payload: dict[str, Any] | None = None,
+        *,
+        scopes: list[str] | None = None,
+        roles: list[str] | None = None,
+        sub: str = "test-user",
+        expires_in: int = 3600,
+    ) -> "AuthTestClient":
+        """Set JWT authentication for all subsequent requests.
+
+        Args:
+            payload: Custom JWT payload. If provided, sub/scopes/roles are
+                merged into it (payload values take precedence).
+            scopes: List of scopes to include in the token.
+            roles: List of roles to include in the token.
+            sub: Subject claim for the token.
+            expires_in: Token expiration time in seconds.
+
+        Returns:
+            Self for method chaining.
+        """
+        from pykour.middleware.auth import create_jwt_token
+
+        token_payload: dict[str, Any] = {"sub": sub}
+        if scopes is not None:
+            token_payload["scope"] = " ".join(scopes)
+        if roles is not None:
+            token_payload["roles"] = roles
+        if payload is not None:
+            token_payload.update(payload)
+
+        token = create_jwt_token(
+            token_payload,
+            self._secret_key,
+            expires_in=expires_in,
+        )
+        self._auth_headers["authorization"] = f"Bearer {token}"
+        return self
+
+    def logout(self) -> "AuthTestClient":
+        """Remove authentication headers from subsequent requests.
+
+        Returns:
+            Self for method chaining.
+        """
+        self._auth_headers.clear()
+        return self
+
+    async def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        headers: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> TestResponse:
+        """Send an HTTP request with auth headers merged in.
+
+        Auth headers are added as defaults; explicit headers take precedence.
+        """
+        merged_headers = {**self._auth_headers}
+        if headers:
+            merged_headers.update(headers)
+        return await super().request(method, path, headers=merged_headers, **kwargs)
+
+
 class SyncTestClient:
     """Synchronous wrapper for TestClient.
 
@@ -883,6 +1035,9 @@ class SyncTestClient:
         base_url: str = "http://testserver",
         default_headers: dict[str, str] | None = None,
         cookies: dict[str, str] | None = None,
+        *,
+        follow_redirects: bool = False,
+        max_redirects: int = 10,
     ) -> None:
         """Initialize sync test client.
 
@@ -891,8 +1046,17 @@ class SyncTestClient:
             base_url: Base URL for requests.
             default_headers: Headers to include in every request.
             cookies: Initial cookies to include in requests.
+            follow_redirects: Whether to automatically follow redirect responses.
+            max_redirects: Maximum number of redirects to follow.
         """
-        self._client = TestClient(app, base_url, default_headers, cookies)
+        self._client = TestClient(
+            app,
+            base_url,
+            default_headers,
+            cookies,
+            follow_redirects=follow_redirects,
+            max_redirects=max_redirects,
+        )
 
     @property
     def cookie_jar(self) -> CookieJar:

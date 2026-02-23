@@ -8,6 +8,7 @@ import pkgutil
 from typing import TYPE_CHECKING, Any
 
 from pykour.db.connection import ConnectionManager
+from pykour.db.drivers.base import IsolationLevel
 from pykour.db.policy_manager import AccessPolicyManager
 from pykour.db.query import DeleteQuery, InsertQuery, SelectQuery, UpdateQuery
 from pykour.db.query_factory import QueryBuilderFactory
@@ -375,12 +376,18 @@ class Database:
 
     # Transaction
 
-    async def transaction(self) -> Transaction:
+    async def transaction(self, isolation: IsolationLevel | None = None) -> Transaction:
         """Create a transaction context manager.
 
         Example:
             async with await db.transaction():
                 await db.insert("users").values(name="Alice").execute()
+
+            async with await db.transaction(isolation="SERIALIZABLE"):
+                await db.insert("users").values(name="Alice").execute()
+
+        Args:
+            isolation: Optional transaction isolation level.
 
         Returns:
             Transaction context manager.
@@ -392,6 +399,7 @@ class Database:
             self._conn_manager.driver,
             conn,
             self._conn_manager.driver.release,
+            isolation_level=isolation,
         )
 
     # Helper methods

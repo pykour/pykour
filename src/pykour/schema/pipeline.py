@@ -12,7 +12,24 @@ from pykour.schema.types import coerce_value
 
 if TYPE_CHECKING:
     from pykour.schema.fields import FieldInfo
-    from pykour.schema.validators import FieldValidatorInfo, ModelValidatorInfo
+    from pykour.schema.validators import (
+        Constraint,
+        FieldValidatorInfo,
+        ModelValidatorInfo,
+    )
+
+
+def _build_constraint_ctx(constraint: "Constraint") -> dict[str, Any] | None:
+    """Build ctx dict for a constraint violation."""
+    from pykour.schema.validators import Ge, Gt, Le, Lt, MaxLength, MinLength, Pattern
+
+    if isinstance(constraint, (Ge, Gt, Le, Lt)):
+        return {"limit": constraint.limit}
+    if isinstance(constraint, (MinLength, MaxLength)):
+        return {"limit_value": constraint.length}
+    if isinstance(constraint, Pattern):
+        return {"pattern": constraint.pattern}
+    return None
 
 
 def is_optional(type_: type | Any) -> bool:
@@ -211,6 +228,21 @@ class FieldValidationStage(ValidationStage):
         """Coerce value to field type."""
         try:
             return coerce_value(raw_value, field_type, _depth=ctx.coercion_depth)
+        except ValidationError as e:
+            # Nested schema validation error - prepend field name to each error's loc
+            for err in e.errors:
+                # err.loc starts with "body"; insert field_name after it
+                new_loc: tuple[str | int, ...] = ("body", field_name) + err.loc[1:]
+                ctx.errors.append(
+                    ErrorDetail(
+                        loc=new_loc,
+                        msg=err.msg,
+                        type=err.type,
+                        input=err.input,
+                        ctx=err.ctx,
+                    )
+                )
+            return None
         except (TypeError, ValueError, RecursionError) as e:
             ctx.errors.append(
                 ErrorDetail(
@@ -241,6 +273,7 @@ class FieldValidationStage(ValidationStage):
                         msg=str(e),
                         type=f"value_error.{constraint.__class__.__name__.lower()}",
                         input=raw_value,
+                        ctx=_build_constraint_ctx(constraint),
                     )
                 )
 
