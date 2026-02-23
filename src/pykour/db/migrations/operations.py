@@ -6,7 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from pykour.db.migrations.table import ColumnDef, IndexDef
+from pykour.db.migrations.introspector import get_introspector
+from pykour.db.migrations.table import ColumnDef, ColumnInfo, IndexDef
 from pykour.db.sql_utils import validate_identifier
 
 if TYPE_CHECKING:
@@ -160,6 +161,21 @@ class DropColumn(Operation):
         return f'op.drop_column("{self.table}", "{self.column_name}")'
 
 
+def _format_mysql_existing_default(value: Any) -> str:
+    """Format an existing MySQL default value (from DESCRIBE) for MODIFY/CHANGE COLUMN SQL."""
+    s = str(value)
+    upper = s.upper().strip()
+    if upper in ("CURRENT_TIMESTAMP", "NOW()", "CURRENT_DATE", "CURRENT_TIME"):
+        return upper
+    try:
+        float(s)
+        return s
+    except ValueError:
+        pass
+    escaped = s.replace("'", "''")
+    return f"'{escaped}'"
+
+
 @dataclass
 class AlterColumn(Operation):
     """Alter a column in a table."""
@@ -183,9 +199,9 @@ class AlterColumn(Operation):
         if driver_name == "postgresql":
             await self._execute_postgresql(conn)
         elif driver_name == "mysql":
-            await self._execute_mysql(conn)
+            await self._execute_mysql(driver, conn)
         else:
-            raise NotImplementedError("SQLite does not support ALTER COLUMN")
+            await self._execute_sqlite(driver, conn)
 
     async def _execute_postgresql(self, conn: Any) -> None:
         if self.new_type:
@@ -206,27 +222,106 @@ class AlterColumn(Operation):
             sql = f"ALTER TABLE {self.table} ALTER COLUMN {self.column_name} SET DEFAULT {self._format_default(self.new_default)}"
             await conn.execute(sql)
 
-    async def _execute_mysql(self, conn: Any) -> None:
-        # MySQL MODIFY COLUMN requires full column definition, not partial changes.
-        # Changing only nullable or default without providing the full definition
-        # would reset other attributes, causing potential data loss.
-        if self.nullable is not None:
-            raise NotImplementedError(
-                "MySQL ALTER COLUMN cannot safely change nullable without full column "
-                "definition. Use ExecuteSQL with explicit MODIFY COLUMN syntax instead."
-            )
-        if self.new_default is not None or self.drop_default:
-            raise NotImplementedError(
-                "MySQL ALTER COLUMN cannot safely change default without full column "
-                "definition. Use ExecuteSQL with explicit MODIFY COLUMN syntax instead."
-            )
+    async def _execute_mysql(self, driver: "BaseDriver", conn: Any) -> None:
+        introspector = get_introspector(driver)
+        table_info = await introspector.get_table_info(conn, self.table)
 
-        if self.new_type:
-            # Type-only change is also unsafe without full definition, but we allow it
-            # with a warning that other attributes may be reset to defaults.
-            # For safe type changes, use ExecuteSQL with explicit MODIFY COLUMN syntax.
-            sql = f"ALTER TABLE {self.table} MODIFY COLUMN {self.column_name} {self.new_type}"
-            await conn.execute(sql)
+        current_col = next(
+            (c for c in table_info.columns if c.name == self.column_name), None
+        )
+        if current_col is None:
+            raise ValueError(f"Column {self.column_name!r} not found in {self.table!r}")
+
+        final_type = self.new_type if self.new_type else current_col.type
+        final_nullable = (
+            self.nullable if self.nullable is not None else current_col.nullable
+        )
+
+        if self.drop_default:
+            default_clause = ""
+        elif self.new_default is not None:
+            default_clause = f" DEFAULT {self._format_default(self.new_default)}"
+        elif current_col.default is not None:
+            default_clause = (
+                f" DEFAULT {_format_mysql_existing_default(current_col.default)}"
+            )
+        else:
+            default_clause = ""
+
+        null_clause = "NULL" if final_nullable else "NOT NULL"
+        auto_increment_clause = " AUTO_INCREMENT" if current_col.autoincrement else ""
+        sql = (
+            f"ALTER TABLE `{self.table}` MODIFY COLUMN `{self.column_name}` "
+            f"{final_type} {null_clause}{default_clause}{auto_increment_clause}"
+        )
+        await conn.execute(sql)
+
+    def _build_sqlite_col_def(self, col: ColumnInfo, *, is_target: bool = False) -> str:
+        """Build a SQLite column definition string from ColumnInfo."""
+        if is_target:
+            col_type = self.new_type if self.new_type else col.type
+            col_nullable = self.nullable if self.nullable is not None else col.nullable
+        else:
+            col_type = col.type
+            col_nullable = col.nullable
+
+        parts = [col.name, col_type]
+
+        if col.primary_key:
+            parts.append("PRIMARY KEY")
+            if col.autoincrement:
+                parts.append("AUTOINCREMENT")
+        elif not col_nullable:
+            parts.append("NOT NULL")
+
+        if is_target:
+            if self.drop_default:
+                pass
+            elif self.new_default is not None:
+                parts.append(f"DEFAULT {self._format_default(self.new_default)}")
+            elif col.default is not None:
+                parts.append(f"DEFAULT {col.default}")
+        else:
+            if col.default is not None:
+                parts.append(f"DEFAULT {col.default}")
+
+        return " ".join(parts)
+
+    async def _execute_sqlite(self, driver: "BaseDriver", conn: Any) -> None:
+        introspector = get_introspector(driver)
+        table_info = await introspector.get_table_info(conn, self.table)
+
+        current_col = next(
+            (c for c in table_info.columns if c.name == self.column_name), None
+        )
+        if current_col is None:
+            raise ValueError(f"Column {self.column_name!r} not found in {self.table!r}")
+
+        tmp_table = f"{self.table}__pykour_alter_tmp"
+        col_sqls = [
+            self._build_sqlite_col_def(col, is_target=(col.name == self.column_name))
+            for col in table_info.columns
+        ]
+        col_names = [col.name for col in table_info.columns]
+        columns_sql = ", ".join(col_sqls)
+        col_names_sql = ", ".join(col_names)
+
+        await conn.execute("PRAGMA foreign_keys = OFF")
+        try:
+            await conn.execute(f"CREATE TABLE {tmp_table} ({columns_sql})")
+            await conn.execute(
+                f"INSERT INTO {tmp_table} SELECT {col_names_sql} FROM {self.table}"
+            )
+            await conn.execute(f"DROP TABLE {self.table}")
+            await conn.execute(f"ALTER TABLE {tmp_table} RENAME TO {self.table}")
+            for idx in table_info.indexes:
+                unique_clause = "UNIQUE " if idx.unique else ""
+                idx_cols = ", ".join(idx.columns)
+                await conn.execute(
+                    f"CREATE {unique_clause}INDEX {idx.name} ON {self.table} ({idx_cols})"
+                )
+        finally:
+            await conn.execute("PRAGMA foreign_keys = ON")
 
     def _format_default(self, value: Any) -> str:
         if isinstance(value, str):
@@ -303,7 +398,31 @@ class RenameColumn(Operation):
 
         driver_name = driver.driver_name
         if driver_name == "mysql":
-            raise NotImplementedError("MySQL requires column type for CHANGE COLUMN")
+            introspector = get_introspector(driver)
+            table_info = await introspector.get_table_info(conn, self.table)
+            current_col = next(
+                (c for c in table_info.columns if c.name == self.old_name), None
+            )
+            if current_col is None:
+                raise ValueError(
+                    f"Column {self.old_name!r} not found in {self.table!r}"
+                )
+            null_clause = "NULL" if current_col.nullable else "NOT NULL"
+            default_clause = (
+                f" DEFAULT {_format_mysql_existing_default(current_col.default)}"
+                if current_col.default is not None
+                else ""
+            )
+            auto_increment_clause = (
+                " AUTO_INCREMENT" if current_col.autoincrement else ""
+            )
+            sql = (
+                f"ALTER TABLE `{self.table}` CHANGE COLUMN `{self.old_name}` "
+                f"`{self.new_name}` {current_col.type} {null_clause}"
+                f"{default_clause}{auto_increment_clause}"
+            )
+            await conn.execute(sql)
+            return
         sql = (
             f"ALTER TABLE {self.table} RENAME COLUMN {self.old_name} TO {self.new_name}"
         )
