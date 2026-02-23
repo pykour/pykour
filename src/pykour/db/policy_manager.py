@@ -17,12 +17,16 @@ class AccessPolicyManager:
     - Policy lookup by table name
     - Policy enforcer initialization
     - Policy context retrieval
+    - Table class storage for auto-set column access
 
     Example:
         manager = AccessPolicyManager()
 
         # Register a table class
         manager.register_table(UserTable)
+
+        # Register multiple table classes at once
+        manager.register_tables([UserTable, OrderTable, ProductTable])
 
         # Or register a policy directly
         manager.register_policy("orders", AccessPolicy(
@@ -31,6 +35,9 @@ class AccessPolicyManager:
 
         # Get policy for a table
         policy = manager.get_policy("orders")
+
+        # Get table class for auto-set columns
+        table_class = manager.get_table_class("orders")
     """
 
     def __init__(self, enable_policies: bool = True) -> None:
@@ -41,6 +48,7 @@ class AccessPolicyManager:
         """
         self._enable_policies = enable_policies
         self._table_policies: dict[str, AccessPolicy] = {}
+        self._table_classes: dict[str, type] = {}
         self._policy_enforcer: BasePolicyEnforcer | None = None
 
     @property
@@ -76,18 +84,37 @@ class AccessPolicyManager:
 
         The table class should have:
         - __tablename__: Table name (optional, defaults to class name lowercased)
-        - __access_policy__: AccessPolicy instance (optional)
+        - _access_policy: AccessPolicy instance (from Meta class or __access_policy__)
 
         Args:
-            table_class: A Table subclass with optional __access_policy__.
+            table_class: A Table subclass with optional access policy.
         """
         tablename = getattr(table_class, "__tablename__", None)
         if tablename is None:
             tablename = table_class.__name__.lower()
 
-        policy = getattr(table_class, "__access_policy__", None)
+        # Store the table class for auto-set column access
+        self._table_classes[tablename] = table_class
+
+        # First check _access_policy (set by TableMeta from Meta.access_policy or __access_policy__)
+        policy = getattr(table_class, "_access_policy", None)
+        # Fall back to __access_policy__ for backwards compatibility
+        if policy is None:
+            policy = getattr(table_class, "__access_policy__", None)
         if policy is not None:
             self._table_policies[tablename] = policy
+
+    def register_tables(self, table_classes: list[type]) -> None:
+        """Register multiple table classes at once.
+
+        Args:
+            table_classes: List of Table subclasses to register.
+
+        Example:
+            manager.register_tables([UserTable, OrderTable, ProductTable])
+        """
+        for table_class in table_classes:
+            self.register_table(table_class)
 
     def register_policy(self, table_name: str, policy: "AccessPolicy") -> None:
         """Register an access policy for a table.
@@ -109,6 +136,17 @@ class AccessPolicyManager:
         """
         return self._table_policies.get(table_name)
 
+    def get_table_class(self, table_name: str) -> type | None:
+        """Get the table class for a table.
+
+        Args:
+            table_name: Name of the table.
+
+        Returns:
+            Table class or None if not registered.
+        """
+        return self._table_classes.get(table_name)
+
     def get_policy_context(self) -> Any:
         """Get the current policy context.
 
@@ -123,10 +161,12 @@ class AccessPolicyManager:
         """Get kwargs for policy-enabled query builders.
 
         Returns:
-            Dict with policy_enforcer, table_policies, and get_policy_context.
+            Dict with policy_enforcer, table_policies, table_classes,
+            and get_policy_context.
         """
         return {
             "policy_enforcer": self._policy_enforcer,
             "table_policies": self._table_policies,
+            "table_classes": self._table_classes,
             "get_policy_context": self.get_policy_context,
         }

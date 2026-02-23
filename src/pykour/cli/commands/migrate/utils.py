@@ -14,12 +14,33 @@ if TYPE_CHECKING:
 
 
 def get_database_url(args: argparse.Namespace) -> str:
-    """Get database URL from args or environment."""
-    import os
+    """Get database URL following the standard priority order.
 
-    url = args.database or os.environ.get("PYKOUR_DATABASE_URL")
+    Priority (highest to lowest):
+    1. CLI flag (--database)
+    2. Environment variable (PYKOUR_DATABASE_URL)
+    3. pykour.toml database.url (with ${VAR} expansion)
+
+    Args:
+        args: Parsed CLI arguments
+
+    Returns:
+        Database URL string
+
+    Raises:
+        SystemExit: If no database URL is configured
+    """
+    from pykour.config.cli import get_database_url_from_config
+
+    url = get_database_url_from_config(args)
     if not url:
-        print("Error: Database URL required. Use --database or set PYKOUR_DATABASE_URL")
+        print(
+            "Error: Database URL required.\n"
+            "Configure it via:\n"
+            "  - --database flag\n"
+            "  - PYKOUR_DATABASE_URL environment variable\n"
+            "  - database.url in pykour.toml"
+        )
         raise SystemExit(1)
     return url
 
@@ -56,8 +77,19 @@ async def get_runner(
 
 
 def load_tables(models_path: str) -> list[type["Table"]]:
-    """Load Table classes from a module."""
+    """Load Table classes from a module or package.
+
+    Recursively scans the module and all submodules for Table subclasses.
+
+    Args:
+        models_path: Module path (e.g., "app.models" or "models")
+
+    Returns:
+        List of Table subclasses found in the module(s).
+    """
     import importlib
+    import inspect
+    import pkgutil
 
     from pykour.db.migrations.table import Table
 
@@ -74,11 +106,34 @@ def load_tables(models_path: str) -> list[type["Table"]]:
             print(f"Error importing {models_path}: {e}")
             return []
 
-        tables = []
-        for name in dir(module):
-            obj = getattr(module, name)
-            if isinstance(obj, type) and issubclass(obj, Table) and obj is not Table:
-                tables.append(obj)
+        tables: list[type[Table]] = []
+        seen: set[type] = set()
+
+        def collect_tables_from_module(mod: object) -> None:
+            """Collect Table subclasses from a module."""
+            for name, obj in inspect.getmembers(mod, inspect.isclass):
+                if (
+                    obj not in seen
+                    and obj is not Table
+                    and issubclass(obj, Table)
+                    and hasattr(obj, "__tablename__")
+                ):
+                    seen.add(obj)
+                    tables.append(obj)
+
+        # Collect from the main module
+        collect_tables_from_module(module)
+
+        # If it's a package, also scan submodules
+        if hasattr(module, "__path__"):
+            for _, submodule_name, _ in pkgutil.walk_packages(
+                module.__path__, prefix=module.__name__ + "."
+            ):
+                try:
+                    submodule = importlib.import_module(submodule_name)
+                    collect_tables_from_module(submodule)
+                except ImportError:
+                    continue
 
         return tables
     finally:

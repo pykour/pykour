@@ -25,6 +25,7 @@ from pykour.db.access_policy.middleware import (
     create_header_extractor,
     create_state_extractor,
 )
+from pykour.db.access_policy.resolver import ValueResolver
 
 __all__ = [
     # Policy definition
@@ -46,6 +47,8 @@ __all__ = [
     "AccessPolicyMiddleware",
     "create_header_extractor",
     "create_state_extractor",
+    # Value resolution
+    "ValueResolver",
     # Exceptions
     "PolicyError",
     "PolicyViolationError",

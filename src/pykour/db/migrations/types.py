@@ -90,11 +90,19 @@ class Decimal(ColumnType):
 
 
 class DateTime(ColumnType):
-    """DateTime column type."""
+    """DateTime column type.
+
+    Args:
+        timezone: If True, use timezone-aware type (TIMESTAMPTZ for PostgreSQL).
+                  Default is False for compatibility with other frameworks.
+    """
+
+    def __init__(self, timezone: bool = False) -> None:
+        self.timezone = timezone
 
     def to_sql(self, driver: str) -> str:
         if driver == "postgresql":
-            return "TIMESTAMP"
+            return "TIMESTAMPTZ" if self.timezone else "TIMESTAMP"
         if driver == "mysql":
             return "DATETIME"
         return "TIMESTAMP"

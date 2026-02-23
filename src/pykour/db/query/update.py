@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self
 
+from pykour.db.access_policy.resolver import ValueResolver
 from pykour.db.query.base import (
     BaseQuery,
     ExecuteFunc,
@@ -35,16 +36,19 @@ class UpdateQuery(WhereClauseMixin, BaseQuery):
         *,
         policy_enforcer: "BasePolicyEnforcer | None" = None,
         table_policies: dict[str, "AccessPolicy"] | None = None,
+        table_classes: dict[str, type] | None = None,
         get_policy_context: GetPolicyContextFunc | None = None,
     ) -> None:
         super().__init__(execute_func, fetch_all_func, fetch_one_func)
         self._table = table
         self._set_clauses: list[str] = []
+        self._set_data: dict[str, Any] = {}  # Track user-provided set data
         self._where_clauses: list[str] = []
         self._returning: list[str] = []
         # Policy support
         self._policy_enforcer = policy_enforcer
         self._table_policies = table_policies or {}
+        self._table_classes = table_classes or {}
         self._get_policy_context = get_policy_context
 
     def set(self, **data: Any) -> Self:
@@ -54,6 +58,7 @@ class UpdateQuery(WhereClauseMixin, BaseQuery):
             **data: Column-value pairs.
         """
         for key, value in data.items():
+            self._set_data[key] = value
             placeholder = self._add_param(value)
             self._set_clauses.append(f"{key} = {placeholder}")
         return self
@@ -74,12 +79,58 @@ class UpdateQuery(WhereClauseMixin, BaseQuery):
         self._returning.extend(columns)
         return self
 
+    def _apply_column_auto_set(self) -> list[str]:
+        """Apply column-level auto_set values for UPDATE.
+
+        Returns:
+            Additional SET clauses for auto-set columns.
+        """
+        table_class = self._table_classes.get(self._table)
+        if table_class is None:
+            return []
+
+        # Get columns with auto-set options for UPDATE
+        get_auto_set_columns = getattr(table_class, "get_auto_set_columns", None)
+        if get_auto_set_columns is None:
+            return []
+
+        auto_set_columns = get_auto_set_columns(on_insert=False)
+        if not auto_set_columns:
+            return []
+
+        # Get context for value resolution
+        context = None
+        if self._get_policy_context is not None:
+            context = self._get_policy_context()
+            if context is not None and context.bypass_enforcement:
+                context = None
+
+        resolver = ValueResolver(context)
+
+        # Build additional SET clauses
+        additional_clauses = []
+        for col_name, col in auto_set_columns.items():
+            # Skip if user already provided a value for this column
+            if col_name in self._set_data:
+                continue
+
+            value = resolver.resolve_for_update(col.auto_now, col.auto_set)
+            if value is not None:
+                placeholder = self._add_param(value)
+                additional_clauses.append(f"{col_name} = {placeholder}")
+
+        return additional_clauses
+
     def _build_sql(self) -> str:
         """Build the SQL query string."""
-        if not self._set_clauses:
+        # Apply column-level auto_set and get additional clauses
+        auto_set_clauses = self._apply_column_auto_set()
+        all_clauses = self._set_clauses + auto_set_clauses
+
+        if not all_clauses:
             raise ValueError("No columns specified for UPDATE")
 
-        sql = f"UPDATE {self._table} SET {', '.join(self._set_clauses)}"
+        sql = f"UPDATE {self._table} SET {', '.join(all_clauses)}"
 
         if self._where_clauses:
             sql += f" WHERE {' AND '.join(self._where_clauses)}"

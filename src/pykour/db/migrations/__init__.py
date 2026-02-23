@@ -2,20 +2,27 @@
 
 Example usage:
 
-    # Define a table with indexes
-    from pykour.db.migrations import Table, Column, Index, Integer, String, Boolean
+    # Define a table with indexes using Meta class
+    from pykour.db.migrations import Table, Column, Integer, String, Boolean
 
     class UserTable(Table):
         __tablename__ = "users"
 
-        id = Column(Integer, primary_key=True, autoincrement=True)
+        id = Column(Integer(), primary_key=True, autoincrement=True)
         name = Column(String(100), nullable=False)
         email = Column(String(255), unique=True, nullable=False)
-        active = Column(Boolean, default=True)
+        active = Column(Boolean(), default=True)
 
-        # Index definitions
-        idx_email = Index(["email"], unique=True)
-        idx_active = Index(["email"], where="active = 1")  # Partial index
+        class Meta:
+            # Unique constraint (creates UNIQUE INDEX)
+            unique_together = [
+                ("email",),  # Single column unique
+            ]
+
+            # Search keys (creates INDEX)
+            search_keys = [
+                ["email"],  # For fast email lookups
+            ]
 
     # Migration file (migrations/0001_create_users.py)
     from pykour.db.migrations import op
@@ -29,10 +36,8 @@ Example usage:
             op.column("active", "BOOLEAN", default=True),
         )
         op.create_index("idx_users_email", "users", ["email"], unique=True)
-        op.create_index("idx_users_active", "users", ["email"], where="active = 1")
 
     def downgrade():
-        op.drop_index("idx_users_active")
         op.drop_index("idx_users_email")
         op.drop_table("users")
 """
@@ -67,7 +72,6 @@ from pykour.db.migrations.table import (
     Column,
     ColumnDef,
     ColumnInfo,
-    Index,
     IndexDef,
     Table,
     TableInfo,
@@ -130,10 +134,9 @@ __all__ = [
     "Binary",
     "JSON",
     "UUID",
-    # Table/Column/Index
+    # Table/Column
     "Table",
     "Column",
-    "Index",
     "ColumnDef",
     "ColumnInfo",
     "IndexDef",

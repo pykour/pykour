@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, Self
 
+from pykour.db.access_policy.resolver import ValueResolver
 from pykour.db.query.base import (
     BaseQuery,
     ExecuteFunc,
@@ -35,6 +36,7 @@ class InsertQuery(BaseQuery):
         *,
         policy_enforcer: "BasePolicyEnforcer | None" = None,
         table_policies: dict[str, "AccessPolicy"] | None = None,
+        table_classes: dict[str, type] | None = None,
         get_policy_context: GetPolicyContextFunc | None = None,
     ) -> None:
         super().__init__(execute_func, fetch_all_func, fetch_one_func)
@@ -45,6 +47,7 @@ class InsertQuery(BaseQuery):
         # Policy support
         self._policy_enforcer = policy_enforcer
         self._table_policies = table_policies or {}
+        self._table_classes = table_classes or {}
         self._get_policy_context = get_policy_context
 
     def values(self, **data: Any) -> Self:
@@ -157,10 +160,66 @@ class InsertQuery(BaseQuery):
 
         return ""
 
-    def _apply_policy(self) -> list[dict[str, Any]]:
-        """Apply access policy to INSERT data (auto_set)."""
-        values_data = self._values_data
+    def _apply_column_auto_set(
+        self, values_data: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Apply column-level auto_set values for INSERT.
 
+        Args:
+            values_data: List of row data dictionaries.
+
+        Returns:
+            Modified values_data with auto-set values applied.
+        """
+        table_class = self._table_classes.get(self._table)
+        if table_class is None:
+            return values_data
+
+        # Get columns with auto-set options for INSERT
+        get_auto_set_columns = getattr(table_class, "get_auto_set_columns", None)
+        if get_auto_set_columns is None:
+            return values_data
+
+        auto_set_columns = get_auto_set_columns(on_insert=True)
+        if not auto_set_columns:
+            return values_data
+
+        # Get context for value resolution
+        context = None
+        if self._get_policy_context is not None:
+            context = self._get_policy_context()
+            if context is not None and context.bypass_enforcement:
+                context = None
+
+        resolver = ValueResolver(context)
+
+        # Apply auto-set values to each row
+        modified_values = []
+        for row in values_data:
+            new_row = row.copy()
+            for col_name, col in auto_set_columns.items():
+                # Skip if user already provided a value
+                if col_name in new_row:
+                    continue
+
+                value = resolver.resolve_for_insert(
+                    col.auto_now_add,
+                    col.auto_now,
+                    col.auto_set_on_insert,
+                    col.auto_set,
+                )
+                if value is not None:
+                    new_row[col_name] = value
+            modified_values.append(new_row)
+
+        return modified_values
+
+    def _apply_policy(self) -> list[dict[str, Any]]:
+        """Apply access policy and column auto_set to INSERT data."""
+        # First apply column-level auto_set
+        values_data = self._apply_column_auto_set(self._values_data)
+
+        # Then apply access policy auto_set
         if self._policy_enforcer is None or self._get_policy_context is None:
             return values_data
 

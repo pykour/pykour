@@ -92,7 +92,8 @@ class Pykour:
         routes/api/users/route.py:
         ```python
         from pykour import Request, JSONResponse
-        from pykour.db import Database, Depends
+        from pykour.db import Database
+        from pykour.di import Depends
 
         async def get(request: Request, db: Database = Depends()) -> JSONResponse:
             users = await db.select("*").from_("users").fetch_all()

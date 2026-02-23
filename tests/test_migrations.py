@@ -22,7 +22,7 @@ from pykour.db.migrations.operations import (
     RenameColumn,
     RenameTable,
 )
-from pykour.db.migrations.table import Column, ColumnDef, Index, Table
+from pykour.db.migrations.table import Column, ColumnDef, IndexDef, Table
 from pykour.db.migrations.types import (
     BigInt,
     Binary,
@@ -155,8 +155,12 @@ class TestDateTimeType:
         assert DateTime().to_sql("sqlite") == "TIMESTAMP"
 
     def test_to_sql_postgresql(self) -> None:
-        """DateTime should return TIMESTAMP for PostgreSQL."""
+        """DateTime should return TIMESTAMP for PostgreSQL by default."""
         assert DateTime().to_sql("postgresql") == "TIMESTAMP"
+
+    def test_to_sql_postgresql_with_timezone(self) -> None:
+        """DateTime(timezone=True) should return TIMESTAMPTZ for PostgreSQL."""
+        assert DateTime(timezone=True).to_sql("postgresql") == "TIMESTAMPTZ"
 
     def test_to_sql_mysql(self) -> None:
         """DateTime should return DATETIME for MySQL."""
@@ -614,78 +618,77 @@ class TestTable:
         assert name_col.name == "name"
 
 
-class TestIndex:
-    """Tests for Index class."""
+class TestIndexDef:
+    """Tests for IndexDef class."""
 
-    def test_basic_index(self) -> None:
-        """Basic index should have correct defaults."""
-        idx = Index(["email"])
+    def test_basic_index_def(self) -> None:
+        """Basic IndexDef should have correct defaults."""
+        idx = IndexDef(name="idx_test", table="test", columns=["email"])
         assert idx.columns == ["email"]
         assert idx.unique is False
         assert idx.where is None
-        assert idx.name == ""
+        assert idx.name == "idx_test"
 
-    def test_unique_index(self) -> None:
-        """Unique index should have correct settings."""
-        idx = Index(["email"], unique=True)
+    def test_unique_index_def(self) -> None:
+        """Unique IndexDef should have correct settings."""
+        idx = IndexDef(name="uq_test", table="test", columns=["email"], unique=True)
         assert idx.unique is True
 
-    def test_partial_index(self) -> None:
-        """Partial index should store WHERE clause."""
-        idx = Index(["email"], where="active = 1")
+    def test_partial_index_def(self) -> None:
+        """Partial IndexDef should store WHERE clause."""
+        idx = IndexDef(
+            name="idx_test", table="test", columns=["email"], where="active = 1"
+        )
         assert idx.where == "active = 1"
 
-    def test_composite_index(self) -> None:
-        """Composite index should store multiple columns."""
-        idx = Index(["name", "created_at"])
+    def test_composite_index_def(self) -> None:
+        """Composite IndexDef should store multiple columns."""
+        idx = IndexDef(name="idx_test", table="test", columns=["name", "created_at"])
         assert idx.columns == ["name", "created_at"]
 
 
-class TestTableWithIndexes:
-    """Tests for Table class with indexes."""
+class TestTableWithMeta:
+    """Tests for Table class with Meta inner class."""
 
-    def test_table_with_indexes(self) -> None:
-        """Table should collect indexes via metaclass."""
+    def test_table_with_unique_together(self) -> None:
+        """Table should collect unique_together from Meta class."""
 
         class UserTable(Table):
             __tablename__ = "users"
             id = Column(Integer(), primary_key=True)
             email = Column(String(255))
-            active = Column(Boolean(), default=True)
+            domain = Column(String(100))
 
-            idx_email = Index(["email"], unique=True)
-            idx_active = Index(["email"], where="active = 1")
+            class Meta:
+                unique_together = [("email", "domain")]
 
         indexes = UserTable.get_indexes()
-        assert "idx_email" in indexes
-        assert "idx_active" in indexes
-        assert len(indexes) == 2
+        assert len(indexes) == 1
+        assert indexes[0].name == "uq_users_email_domain"
+        assert indexes[0].columns == ["email", "domain"]
+        assert indexes[0].unique is True
 
-    def test_index_names_set(self) -> None:
-        """Index names should be set by metaclass."""
+    def test_table_with_search_keys(self) -> None:
+        """Table should collect search_keys from Meta class."""
 
         class UserTable(Table):
             __tablename__ = "users"
             id = Column(Integer(), primary_key=True)
+            tenant_id = Column(String(36))
             email = Column(String(255))
 
-            idx_email = Index(["email"])
+            class Meta:
+                search_keys = [["tenant_id"], ["email"]]
 
-        idx = UserTable.get_index("idx_email")
-        assert idx is not None
-        assert idx.name == "idx_email"
+        indexes = UserTable.get_indexes()
+        assert len(indexes) == 2
+        assert indexes[0].name == "idx_users_tenant_id"
+        assert indexes[0].unique is False
+        assert indexes[1].name == "idx_users_email"
+        assert indexes[1].unique is False
 
-    def test_get_index_not_found(self) -> None:
-        """Table should return None for unknown index."""
-
-        class UserTable(Table):
-            __tablename__ = "users"
-            id = Column(Integer(), primary_key=True)
-
-        assert UserTable.get_index("unknown") is None
-
-    def test_table_without_indexes(self) -> None:
-        """Table without indexes should have empty indexes dict."""
+    def test_table_without_meta(self) -> None:
+        """Table without Meta should have empty indexes list."""
 
         class UserTable(Table):
             __tablename__ = "users"

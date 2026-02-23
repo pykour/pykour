@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import importlib
+import inspect
+import pkgutil
 from typing import TYPE_CHECKING, Any
 
 from pykour.db.connection import ConnectionManager
@@ -19,62 +22,111 @@ class Database:
     """Database connection manager and query builder factory.
 
     Example:
-        db = Database("sqlite:///app.db")
-        await db.connect()
+        async def main():
+            # URL can be omitted if configured in pykour.toml or env var
+            db = Database(models="app.models")
+            await db.connect()
 
-        # Query builder API
-        users = await db.select("*").from_("users").where(active=True).fetch_all()
+            # Query builder API
+            users = await db.select("*").from_("users").where(active=True).fetch_all()
 
-        # Raw SQL
-        users = await db.fetch_all("SELECT * FROM users WHERE active = $1", True)
+            # Raw SQL
+            users = await db.fetch_all("SELECT * FROM users WHERE active = $1", True)
 
-        # Transaction
-        async with db.transaction():
-            await db.insert("users").values(name="Alice").execute()
+            # Transaction
+            async with await db.transaction():
+                await db.insert("users").values(name="Alice").execute()
 
-        await db.disconnect()
+            await db.disconnect()
+
+    URL Resolution:
+        Database URL is resolved in this order:
+        1. url argument (if provided)
+        2. PYKOUR_DATABASE_URL environment variable
+        3. database.url in pykour.toml
 
     AccessPolicy Example:
         from pykour.db.access_policy import AccessPolicy, set_policy_context
 
-        # Define table with policy
+        # Define table with policy using Meta class (recommended)
         class OrderTable(Table):
             __tablename__ = "orders"
-            __access_policy__ = AccessPolicy(
-                select=["tenant_id = :tenant_id"],
-                auto_set={"tenant_id": ":tenant_id"},
-            )
+            id = Column(Integer(), primary_key=True)
+            tenant_id = Column(String(36), nullable=False)
 
-        # Register table and set context
-        db.register_table(OrderTable)
-        set_policy_context(tenant_id="tenant-123")
+            class Meta:
+                access_policy = AccessPolicy(
+                    select=["tenant_id = :tenant_id"],
+                    auto_set={"tenant_id": ":tenant_id"},
+                )
 
-        # Queries automatically filtered by policy
-        orders = await db.select("*").from_("orders").fetch_all()
+        # Auto-discover tables (URL from config)
+        db = Database(models="app.models")
+
+        # Or with explicit URL
+        db = Database("sqlite:///app.db", models="app.models")
+
+        async def query_orders():
+            set_policy_context(tenant_id="tenant-123")
+            orders = await db.select("*").from_("orders").fetch_all()
+            return orders
     """
 
     def __init__(
         self,
-        url: str,
+        url: str | None = None,
         min_size: int = 1,
         max_size: int = 10,
         *,
         enable_access_policies: bool = True,
+        models: str | list[str] | None = None,
     ) -> None:
         """Initialize database connection.
 
         Args:
-            url: Database connection URL.
+            url: Database connection URL. If not provided, will be loaded from:
+                1. PYKOUR_DATABASE_URL environment variable
+                2. pykour.toml database.url
+                Supported formats:
                 - SQLite: sqlite:///path/to/db.sqlite or sqlite:///:memory:
                 - PostgreSQL: postgresql://user:pass@host:port/dbname
                 - MySQL: mysql://user:pass@host:port/dbname
             min_size: Minimum number of connections in the pool.
             max_size: Maximum number of connections in the pool.
             enable_access_policies: Enable access policy enforcement.
+            models: Module path(s) containing Table subclasses to auto-register.
+                Can be a single module path (e.g., "app.models") or a list of
+                module paths (e.g., ["app.models", "app.core.models"]).
+                Tables are auto-discovered and registered on connect().
+
+        Raises:
+            ValueError: If no database URL is provided or configured.
         """
+        if url is None:
+            url = self._get_url_from_config()
+            if url is None:
+                raise ValueError(
+                    "Database URL required. Provide it via:\n"
+                    "  - url argument\n"
+                    "  - PYKOUR_DATABASE_URL environment variable\n"
+                    "  - database.url in pykour.toml"
+                )
         self._conn_manager = ConnectionManager(url, min_size, max_size)
         self._policy_manager = AccessPolicyManager(enable_access_policies)
         self._query_factory: QueryBuilderFactory | None = None
+        self._models: list[str] = []
+        if models is not None:
+            if isinstance(models, str):
+                self._models = [models]
+            else:
+                self._models = list(models)
+
+    @staticmethod
+    def _get_url_from_config() -> str | None:
+        """Get database URL from environment or config file."""
+        from pykour.config.cli import get_database_url_from_config
+
+        return get_database_url_from_config()
 
     @property
     def driver_name(self) -> str:
@@ -96,11 +148,55 @@ class Database:
         # Initialize policy enforcer after connection
         self._policy_manager.initialize_enforcer(self._conn_manager.driver_name)
 
+        # Auto-discover and register tables from specified model modules
+        if self._models:
+            self._auto_discover_tables()
+
         # Create query factory
         self._query_factory = QueryBuilderFactory(
             self._conn_manager,
             self._policy_manager,
         )
+
+    def _auto_discover_tables(self) -> None:
+        """Auto-discover and register Table subclasses from model modules."""
+        from pykour.db.migrations.table import Table
+
+        for module_path in self._models:
+            try:
+                module = importlib.import_module(module_path)
+            except ImportError:
+                continue
+
+            # Discover tables in this module
+            self._discover_tables_in_module(module, Table)
+
+            # If it's a package, also scan submodules
+            if hasattr(module, "__path__"):
+                for _, submodule_name, _ in pkgutil.walk_packages(
+                    module.__path__, prefix=module.__name__ + "."
+                ):
+                    try:
+                        submodule = importlib.import_module(submodule_name)
+                        self._discover_tables_in_module(submodule, Table)
+                    except ImportError:
+                        continue
+
+    def _discover_tables_in_module(self, module: Any, base_class: type) -> None:
+        """Discover and register Table subclasses in a module.
+
+        Args:
+            module: The module to scan.
+            base_class: The base Table class to check against.
+        """
+        for name, obj in inspect.getmembers(module, inspect.isclass):
+            # Check if it's a Table subclass (but not Table itself)
+            if (
+                obj is not base_class
+                and issubclass(obj, base_class)
+                and hasattr(obj, "__tablename__")
+            ):
+                self.register_table(obj)
 
     async def disconnect(self) -> None:
         """Disconnect from the database."""
@@ -112,9 +208,20 @@ class Database:
         """Register a table class and its access policy.
 
         Args:
-            table_class: A Table subclass with optional __access_policy__.
+            table_class: A Table subclass with optional access policy.
         """
         self._policy_manager.register_table(table_class)
+
+    def register_tables(self, table_classes: list[type]) -> None:
+        """Register multiple table classes at once.
+
+        Args:
+            table_classes: List of Table subclasses to register.
+
+        Example:
+            db.register_tables([UserTable, OrderTable, ProductTable])
+        """
+        self._policy_manager.register_tables(table_classes)
 
     def register_policy(self, table_name: str, policy: "AccessPolicy") -> None:
         """Register an access policy for a table.

@@ -55,15 +55,19 @@ class MigrationGenerator:
             columns = table_to_column_defs(table_cls, driver)
             upgrade_ops.append(CreateTable(table_name, columns))
 
+            # get_indexes() now returns list[IndexDef]
             indexes = table_cls.get_indexes()
-            for idx_name, idx in indexes.items():
-                full_name = f"idx_{table_name}_{idx_name}"
+            for idx_def in indexes:
                 upgrade_ops.append(
                     CreateIndex(
-                        full_name, table_name, idx.columns, idx.unique, where=idx.where
+                        idx_def.name,
+                        table_name,
+                        idx_def.columns,
+                        idx_def.unique,
+                        where=idx_def.where,
                     )
                 )
-                downgrade_ops.append(DropIndex(full_name))
+                downgrade_ops.append(DropIndex(idx_def.name))
 
             downgrade_ops.append(DropTable(table_name))
 
@@ -78,14 +82,18 @@ class MigrationGenerator:
         for table_name, col_name in diff.columns_to_drop:
             upgrade_ops.append(DropColumn(table_name, col_name))
 
-        for table_name, idx_name, idx in diff.indexes_to_create:
-            full_name = f"idx_{table_name}_{idx_name}"
+        # indexes_to_create now contains (table_name, IndexDef) tuples
+        for table_name, idx_def in diff.indexes_to_create:
             upgrade_ops.append(
                 CreateIndex(
-                    full_name, table_name, idx.columns, idx.unique, where=idx.where
+                    idx_def.name,
+                    table_name,
+                    idx_def.columns,
+                    idx_def.unique,
+                    where=idx_def.where,
                 )
             )
-            downgrade_ops.append(DropIndex(full_name))
+            downgrade_ops.append(DropIndex(idx_def.name))
 
         for table_name, idx_name in diff.indexes_to_drop:
             upgrade_ops.append(DropIndex(idx_name))

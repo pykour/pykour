@@ -122,8 +122,12 @@ class TestDateTime:
         assert DateTime().to_sql("sqlite") == "TIMESTAMP"
 
     def test_to_sql_postgresql(self) -> None:
-        """DateTime should return TIMESTAMP for PostgreSQL."""
+        """DateTime should return TIMESTAMP for PostgreSQL by default."""
         assert DateTime().to_sql("postgresql") == "TIMESTAMP"
+
+    def test_to_sql_postgresql_with_timezone(self) -> None:
+        """DateTime(timezone=True) should return TIMESTAMPTZ for PostgreSQL."""
+        assert DateTime(timezone=True).to_sql("postgresql") == "TIMESTAMPTZ"
 
     def test_to_sql_mysql(self) -> None:
         """DateTime should return DATETIME for MySQL."""

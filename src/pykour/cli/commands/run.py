@@ -269,18 +269,22 @@ def _run_migrations(args: argparse.Namespace) -> int:
         Exit code (0 for success, non-zero for failure).
     """
     import asyncio
-    import os
     from pathlib import Path
+
+    from pykour.config.cli import get_database_url_from_config
 
     async def run() -> int:
         from pykour.db.database import Database
         from pykour.db.migrations.runner import MigrationRunner
 
-        url = args.database or os.environ.get("PYKOUR_DATABASE_URL")
+        url = get_database_url_from_config(args)
         if not url:
             print(
                 "Error: Database URL required for --auto-migrate.\n"
-                "Use --database or set PYKOUR_DATABASE_URL"
+                "Configure it via:\n"
+                "  - --database flag\n"
+                "  - PYKOUR_DATABASE_URL environment variable\n"
+                "  - database.url in pykour.toml"
             )
             return 1
 

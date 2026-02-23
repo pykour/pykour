@@ -17,7 +17,17 @@ Example usage:
     config = load_config("pykour.toml")
 """
 
-from pykour.config.loader import find_config_file, load_config
+from pykour.config.cli import (
+    get_cli_config,
+    get_config_value,
+    get_database_url_from_config,
+)
+from pykour.config.loader import (
+    expand_env_vars,
+    expand_env_vars_recursive,
+    find_config_file,
+    load_config,
+)
 from pykour.config.models import (
     AppConfig,
     CacheConfig,
@@ -49,6 +59,12 @@ __all__ = [
     # Loader functions
     "load_config",
     "find_config_file",
+    "expand_env_vars",
+    "expand_env_vars_recursive",
+    # CLI functions
+    "get_cli_config",
+    "get_config_value",
+    "get_database_url_from_config",
     # Section configs
     "AppConfig",
     "CacheConfig",

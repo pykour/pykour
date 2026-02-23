@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from pykour.db.migrations.introspector import SchemaIntrospector
-from pykour.db.migrations.table import Column, ColumnDef, Index, Table
+from pykour.db.migrations.table import Column, ColumnDef, IndexDef, Table
 
 if TYPE_CHECKING:
     pass
@@ -23,7 +23,7 @@ class SchemaDiff:
     columns_to_alter: list[tuple[str, str, dict[str, Any]]] = field(
         default_factory=list
     )
-    indexes_to_create: list[tuple[str, str, Index]] = field(default_factory=list)
+    indexes_to_create: list[tuple[str, IndexDef]] = field(default_factory=list)
     indexes_to_drop: list[tuple[str, str]] = field(default_factory=list)
 
     def is_empty(self) -> bool:
@@ -106,16 +106,22 @@ class SchemaDiffer:
 
         db_index_names = {idx.name for idx in db_indexes}
 
-        for idx_name, idx in py_indexes.items():
-            full_name = f"idx_{table_name}_{idx_name}"
-            if full_name not in db_index_names:
-                result.indexes_to_create.append((table_name, idx_name, idx))
+        # Check for indexes to create
+        for idx_def in py_indexes:
+            if idx_def.name not in db_index_names:
+                result.indexes_to_create.append((table_name, idx_def))
 
-        py_full_names = {f"idx_{table_name}_{name}" for name in py_indexes}
+        # Collect Python index names
+        py_index_names = {idx_def.name for idx_def in py_indexes}
 
+        # Check for indexes to drop (only user-created indexes)
         for db_idx in db_indexes:
-            if db_idx.name.startswith("idx_") and db_idx.name not in py_full_names:
-                if not db_idx.name.startswith("sqlite_autoindex_"):
+            # Skip SQLite auto-generated indexes
+            if db_idx.name.startswith("sqlite_autoindex_"):
+                continue
+            # Only consider indexes we might have created (idx_ or uq_ prefix)
+            if db_idx.name.startswith(("idx_", "uq_")):
+                if db_idx.name not in py_index_names:
                     result.indexes_to_drop.append((table_name, db_idx.name))
 
 

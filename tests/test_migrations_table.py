@@ -1,6 +1,7 @@
 """Tests for migration table and column definitions."""
 
-from pykour.db.migrations.table import Column, ColumnDef, Index, Table
+from pykour.db.access_policy import AccessPolicy
+from pykour.db.migrations.table import Column, ColumnDef, IndexDef, Table
 from pykour.db.migrations.types import Boolean, DateTime, Integer, String
 
 
@@ -160,82 +161,183 @@ class TestTable:
         assert name_col.name == "name"
 
 
-class TestIndex:
-    """Tests for Index class."""
+class TestIndexDef:
+    """Tests for IndexDef class."""
 
-    def test_basic_index(self) -> None:
-        """Basic index should have correct defaults."""
-        idx = Index(["email"])
+    def test_basic_index_def(self) -> None:
+        """Basic IndexDef should have correct defaults."""
+        idx = IndexDef(name="idx_test", table="test", columns=["email"])
         assert idx.columns == ["email"]
         assert idx.unique is False
         assert idx.where is None
-        assert idx.name == ""
+        assert idx.name == "idx_test"
 
-    def test_unique_index(self) -> None:
-        """Unique index should have correct settings."""
-        idx = Index(["email"], unique=True)
+    def test_unique_index_def(self) -> None:
+        """Unique IndexDef should have correct settings."""
+        idx = IndexDef(name="uq_test", table="test", columns=["email"], unique=True)
         assert idx.unique is True
 
-    def test_partial_index(self) -> None:
-        """Partial index should store WHERE clause."""
-        idx = Index(["email"], where="active = 1")
+    def test_partial_index_def(self) -> None:
+        """Partial IndexDef should store WHERE clause."""
+        idx = IndexDef(
+            name="idx_test", table="test", columns=["email"], where="active = 1"
+        )
         assert idx.where == "active = 1"
 
-    def test_composite_index(self) -> None:
-        """Composite index should store multiple columns."""
-        idx = Index(["name", "created_at"])
+    def test_composite_index_def(self) -> None:
+        """Composite IndexDef should store multiple columns."""
+        idx = IndexDef(name="idx_test", table="test", columns=["name", "created_at"])
         assert idx.columns == ["name", "created_at"]
 
 
-class TestTableWithIndexes:
-    """Tests for Table class with indexes."""
+class TestTableWithMeta:
+    """Tests for Table class with Meta inner class."""
 
-    def test_table_with_indexes(self) -> None:
-        """Table should collect indexes via metaclass."""
+    def test_table_with_unique_together(self) -> None:
+        """Table should collect unique_together from Meta class."""
 
         class UserTable(Table):
             __tablename__ = "users"
             id = Column(Integer(), primary_key=True)
             email = Column(String(255))
-            active = Column(Boolean(), default=True)
+            domain = Column(String(100))
 
-            idx_email = Index(["email"], unique=True)
-            idx_active = Index(["email"], where="active = 1")
+            class Meta:
+                unique_together = [("email", "domain")]
 
+        unique = UserTable.get_unique_together()
+        assert len(unique) == 1
+        assert unique[0] == ("email", "domain")
+
+        # Should generate unique index
         indexes = UserTable.get_indexes()
-        assert "idx_email" in indexes
-        assert "idx_active" in indexes
+        assert len(indexes) == 1
+        assert indexes[0].name == "uq_users_email_domain"
+        assert indexes[0].columns == ["email", "domain"]
+        assert indexes[0].unique is True
+
+    def test_table_with_search_keys(self) -> None:
+        """Table should collect search_keys from Meta class."""
+
+        class UserTable(Table):
+            __tablename__ = "users"
+            id = Column(Integer(), primary_key=True)
+            tenant_id = Column(String(36))
+            email = Column(String(255))
+            created_at = Column(DateTime())
+
+            class Meta:
+                search_keys = [["tenant_id"], ["email", "created_at"]]
+
+        search_keys = UserTable.get_search_keys()
+        assert len(search_keys) == 2
+        assert search_keys[0] == ["tenant_id"]
+        assert search_keys[1] == ["email", "created_at"]
+
+        # Should generate non-unique indexes
+        indexes = UserTable.get_indexes()
         assert len(indexes) == 2
+        assert indexes[0].name == "idx_users_tenant_id"
+        assert indexes[0].columns == ["tenant_id"]
+        assert indexes[0].unique is False
+        assert indexes[1].name == "idx_users_email_created_at"
+        assert indexes[1].columns == ["email", "created_at"]
+        assert indexes[1].unique is False
 
-    def test_index_names_set(self) -> None:
-        """Index names should be set by metaclass."""
+    def test_table_with_meta_access_policy(self) -> None:
+        """Table should collect access_policy from Meta class."""
 
-        class UserTable(Table):
-            __tablename__ = "users"
+        class OrderTable(Table):
+            __tablename__ = "orders"
             id = Column(Integer(), primary_key=True)
+            tenant_id = Column(String(36))
+
+            class Meta:
+                access_policy = AccessPolicy(
+                    select=["tenant_id = :tenant_id"],
+                    insert=["tenant_id = :tenant_id"],
+                    auto_set={"tenant_id": ":tenant_id"},
+                )
+
+        policy = OrderTable.get_access_policy()
+        assert policy is not None
+        assert policy.select == ["tenant_id = :tenant_id"]
+        assert policy.insert == ["tenant_id = :tenant_id"]
+        assert policy.auto_set == {"tenant_id": ":tenant_id"}
+
+    def test_table_with_legacy_access_policy(self) -> None:
+        """Table should still support __access_policy__ attribute."""
+
+        class OrderTable(Table):
+            __tablename__ = "orders"
+            __access_policy__ = AccessPolicy(
+                select=["tenant_id = :tenant_id"],
+            )
+            id = Column(Integer(), primary_key=True)
+            tenant_id = Column(String(36))
+
+        policy = OrderTable.get_access_policy()
+        assert policy is not None
+        assert policy.select == ["tenant_id = :tenant_id"]
+
+    def test_meta_access_policy_takes_precedence(self) -> None:
+        """Meta.access_policy should take precedence over __access_policy__."""
+
+        class OrderTable(Table):
+            __tablename__ = "orders"
+            __access_policy__ = AccessPolicy(
+                select=["old = :old"],
+            )
+            id = Column(Integer(), primary_key=True)
+            tenant_id = Column(String(36))
+
+            class Meta:
+                access_policy = AccessPolicy(
+                    select=["new = :new"],
+                )
+
+        policy = OrderTable.get_access_policy()
+        assert policy is not None
+        assert policy.select == ["new = :new"]
+
+    def test_table_with_combined_meta(self) -> None:
+        """Table should handle all Meta options together."""
+
+        class OrderTable(Table):
+            __tablename__ = "orders"
+            id = Column(Integer(), primary_key=True)
+            tenant_id = Column(String(36))
+            user_id = Column(String(36))
             email = Column(String(255))
+            domain = Column(String(100))
 
-            idx_email = Index(["email"])
+            class Meta:
+                unique_together = [("email", "domain"), ("tenant_id", "email")]
+                search_keys = [["tenant_id"], ["user_id"]]
+                access_policy = AccessPolicy(
+                    select=["tenant_id = :tenant_id"],
+                )
 
-        idx = UserTable.get_index("idx_email")
-        assert idx is not None
-        assert idx.name == "idx_email"
+        unique = OrderTable.get_unique_together()
+        assert len(unique) == 2
 
-    def test_get_index_not_found(self) -> None:
-        """Table should return None for unknown index."""
+        search_keys = OrderTable.get_search_keys()
+        assert len(search_keys) == 2
+
+        indexes = OrderTable.get_indexes()
+        assert len(indexes) == 4  # 2 unique + 2 search
+
+        policy = OrderTable.get_access_policy()
+        assert policy is not None
+
+    def test_table_without_meta(self) -> None:
+        """Table without Meta should have empty indexes and no policy."""
 
         class UserTable(Table):
             __tablename__ = "users"
             id = Column(Integer(), primary_key=True)
 
-        assert UserTable.get_index("unknown") is None
-
-    def test_table_without_indexes(self) -> None:
-        """Table without indexes should have empty indexes dict."""
-
-        class UserTable(Table):
-            __tablename__ = "users"
-            id = Column(Integer(), primary_key=True)
-
-        indexes = UserTable.get_indexes()
-        assert len(indexes) == 0
+        assert UserTable.get_unique_together() == []
+        assert UserTable.get_search_keys() == []
+        assert UserTable.get_indexes() == []
+        assert UserTable.get_access_policy() is None

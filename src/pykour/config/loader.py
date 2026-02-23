@@ -1,6 +1,7 @@
 """TOML configuration file loading for Pykour."""
 
 import os
+import re
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,54 @@ from pykour.config.models import (
 
 # Default config file name
 DEFAULT_CONFIG_FILE = "pykour.toml"
+
+# Pattern to match ${VAR} or ${VAR:-default} format
+ENV_VAR_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}")
+
+
+def expand_env_vars(value: str) -> str:
+    """Expand environment variables in a string.
+
+    Supports two formats:
+    - ${VAR}: Expands to the value of VAR, or empty string if not set
+    - ${VAR:-default}: Expands to the value of VAR, or 'default' if not set
+
+    Args:
+        value: String potentially containing environment variable references
+
+    Returns:
+        String with environment variables expanded
+    """
+
+    def replace_match(match: re.Match[str]) -> str:
+        var_name = match.group(1)
+        default_value = match.group(2)
+        env_value = os.environ.get(var_name)
+        if env_value is not None:
+            return env_value
+        if default_value is not None:
+            return default_value
+        return ""
+
+    return ENV_VAR_PATTERN.sub(replace_match, value)
+
+
+def expand_env_vars_recursive(data: Any) -> Any:
+    """Recursively expand environment variables in nested data structures.
+
+    Args:
+        data: Any data structure (dict, list, str, etc.)
+
+    Returns:
+        Data structure with environment variables expanded in all strings
+    """
+    if isinstance(data, str):
+        return expand_env_vars(data)
+    if isinstance(data, dict):
+        return {key: expand_env_vars_recursive(value) for key, value in data.items()}
+    if isinstance(data, list):
+        return [expand_env_vars_recursive(item) for item in data]
+    return data
 
 
 def find_config_file(start_dir: Path | None = None) -> Path | None:
@@ -71,17 +120,21 @@ def find_config_file(start_dir: Path | None = None) -> Path | None:
     return None
 
 
-def load_toml(path: Path) -> dict[str, Any]:
-    """Load TOML file.
+def load_toml(path: Path, expand_env: bool = True) -> dict[str, Any]:
+    """Load TOML file with optional environment variable expansion.
 
     Args:
         path: Path to TOML file
+        expand_env: Whether to expand ${VAR} and ${VAR:-default} patterns
 
     Returns:
-        Parsed TOML data as dictionary
+        Parsed TOML data as dictionary with environment variables expanded
     """
     with open(path, "rb") as f:
-        return tomllib.load(f)
+        data = tomllib.load(f)
+    if expand_env:
+        data = expand_env_vars_recursive(data)
+    return data
 
 
 def _parse_app_config(data: dict[str, Any]) -> AppConfig:

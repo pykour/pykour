@@ -35,6 +35,7 @@ class DeleteQuery(WhereClauseMixin, BaseQuery):
         *,
         policy_enforcer: "BasePolicyEnforcer | None" = None,
         table_policies: dict[str, "AccessPolicy"] | None = None,
+        table_classes: dict[str, type] | None = None,
         get_policy_context: GetPolicyContextFunc | None = None,
     ) -> None:
         super().__init__(execute_func, fetch_all_func, fetch_one_func)
@@ -44,6 +45,7 @@ class DeleteQuery(WhereClauseMixin, BaseQuery):
         # Policy support
         self._policy_enforcer = policy_enforcer
         self._table_policies = table_policies or {}
+        self._table_classes = table_classes or {}  # Not used in DELETE, but accepted
         self._get_policy_context = get_policy_context
 
     def where(self, **conditions: Any) -> Self:
