@@ -23,10 +23,7 @@ GetPolicyContextFunc = Callable[[], "PolicyContextData | None"]
 class BaseQuery:
     """Base class for query builders."""
 
-    # These are set by subclasses that support access policies
-    _policy_enforcer: "BasePolicyEnforcer | None"
-    _table_policies: dict[str, "AccessPolicy"]
-    _get_policy_context: GetPolicyContextFunc | None
+    # Set by subclasses before any policy check
     _table: str
 
     def __init__(
@@ -34,11 +31,20 @@ class BaseQuery:
         execute_func: ExecuteFunc,
         fetch_all_func: FetchAllFunc,
         fetch_one_func: FetchOneFunc,
+        *,
+        policy_enforcer: "BasePolicyEnforcer | None" = None,
+        table_policies: "dict[str, AccessPolicy] | None" = None,
+        table_classes: dict[str, type] | None = None,
+        get_policy_context: GetPolicyContextFunc | None = None,
     ) -> None:
         self._execute_func = execute_func
         self._fetch_all_func = fetch_all_func
         self._fetch_one_func = fetch_one_func
         self._params: list[Any] = []
+        self._policy_enforcer = policy_enforcer
+        self._table_policies: "dict[str, AccessPolicy]" = table_policies or {}
+        self._table_classes: dict[str, type] = table_classes or {}
+        self._get_policy_context = get_policy_context
 
     def _should_apply_policy(self) -> "tuple[AccessPolicy, PolicyContextData] | None":
         """Check if policy should be applied and return policy and context.
@@ -46,19 +52,11 @@ class BaseQuery:
         Returns:
             Tuple of (policy, context) if policy should be applied, None otherwise.
         """
-        if (
-            not hasattr(self, "_policy_enforcer")
-            or self._policy_enforcer is None
-            or not hasattr(self, "_get_policy_context")
-            or self._get_policy_context is None
-        ):
+        if self._policy_enforcer is None or self._get_policy_context is None:
             return None
 
         context = self._get_policy_context()
         if context is None or context.bypass_enforcement:
-            return None
-
-        if not hasattr(self, "_table_policies"):
             return None
 
         policy = self._table_policies.get(self._table)

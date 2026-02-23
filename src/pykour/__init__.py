@@ -170,4 +170,9 @@ __all__ = [
     "NetworkAuthenticationRequiredException",
 ]
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import PackageNotFoundError, version
+
+    __version__ = version("pykour")
+except PackageNotFoundError:
+    __version__ = "unknown"

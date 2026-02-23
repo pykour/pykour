@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, TypeVar
 
 from pykour.db.query import DeleteQuery, InsertQuery, SelectQuery, UpdateQuery
 from pykour.db.result import Row
@@ -10,6 +10,8 @@ from pykour.db.result import Row
 if TYPE_CHECKING:
     from pykour.db.connection import ConnectionManager
     from pykour.db.policy_manager import AccessPolicyManager
+
+_T = TypeVar("_T")
 
 # Type aliases for query executor callbacks
 ExecuteCallback = Callable[[str, tuple[Any, ...]], Coroutine[Any, Any, int]]
@@ -49,62 +51,48 @@ class QueryBuilderFactory:
         self._conn = connection_manager
         self._policy = policy_manager
 
-    async def _execute_for_query(self, sql: str, args: tuple[Any, ...]) -> int:
-        """Execute a query and return affected rows.
-
-        Auto-commits if not in a transaction.
+    async def _with_connection(
+        self,
+        operation: "Callable[..., Coroutine[Any, Any, _T]]",
+        sql: str,
+        args: tuple[Any, ...],
+        *,
+        auto_commit: bool = False,
+    ) -> "_T":
+        """Acquire a connection, run an operation, then release it.
 
         Args:
+            operation: Coroutine-returning callable that takes (conn, sql, args).
             sql: SQL query with $N placeholders.
             args: Query arguments.
+            auto_commit: If True, commit after the operation (skipped inside transactions).
 
         Returns:
-            Number of affected rows.
+            Result of the operation.
         """
         conn = await self._conn.acquire()
         try:
             converted_sql = self._conn.convert_placeholders(sql, len(args))
-            result = await self._conn.execute(conn, converted_sql, args)
-            # Auto-commit if not in a transaction
-            if self._conn.transaction_connection is None:
+            result = await operation(conn, converted_sql, args)
+            if auto_commit and self._conn.transaction_connection is None:
                 await self._conn.commit(conn)
             return result
         finally:
             await self._conn.release(conn)
 
+    async def _execute_for_query(self, sql: str, args: tuple[Any, ...]) -> int:
+        """Execute a query and return affected rows (auto-commits outside transactions)."""
+        return await self._with_connection(
+            self._conn.execute, sql, args, auto_commit=True
+        )
+
     async def _fetch_all_for_query(self, sql: str, args: tuple[Any, ...]) -> list[Row]:
-        """Fetch all rows from a query.
-
-        Args:
-            sql: SQL query with $N placeholders.
-            args: Query arguments.
-
-        Returns:
-            List of Row objects.
-        """
-        conn = await self._conn.acquire()
-        try:
-            converted_sql = self._conn.convert_placeholders(sql, len(args))
-            return await self._conn.fetch_all(conn, converted_sql, args)
-        finally:
-            await self._conn.release(conn)
+        """Fetch all rows from a query."""
+        return await self._with_connection(self._conn.fetch_all, sql, args)
 
     async def _fetch_one_for_query(self, sql: str, args: tuple[Any, ...]) -> Row | None:
-        """Fetch one row from a query.
-
-        Args:
-            sql: SQL query with $N placeholders.
-            args: Query arguments.
-
-        Returns:
-            Row or None.
-        """
-        conn = await self._conn.acquire()
-        try:
-            converted_sql = self._conn.convert_placeholders(sql, len(args))
-            return await self._conn.fetch_one(conn, converted_sql, args)
-        finally:
-            await self._conn.release(conn)
+        """Fetch one row from a query."""
+        return await self._with_connection(self._conn.fetch_one, sql, args)
 
     def select(self, *columns: str) -> SelectQuery:
         """Create a SELECT query builder.

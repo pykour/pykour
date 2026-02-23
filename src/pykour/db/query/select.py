@@ -39,7 +39,15 @@ class SelectQuery(WhereClauseMixin, BaseQuery):
         table_classes: dict[str, type] | None = None,
         get_policy_context: GetPolicyContextFunc | None = None,
     ) -> None:
-        super().__init__(execute_func, fetch_all_func, fetch_one_func)
+        super().__init__(
+            execute_func,
+            fetch_all_func,
+            fetch_one_func,
+            policy_enforcer=policy_enforcer,
+            table_policies=table_policies,
+            table_classes=table_classes,
+            get_policy_context=get_policy_context,
+        )
         self._columns = columns or ("*",)
         self._table: str = ""
         self._where_clauses: list[str] = []
@@ -50,11 +58,6 @@ class SelectQuery(WhereClauseMixin, BaseQuery):
         self._group_by: list[str] = []
         self._having_clauses: list[str] = []
         self._distinct: bool = False
-        # Policy support
-        self._policy_enforcer = policy_enforcer
-        self._table_policies = table_policies or {}
-        self._table_classes = table_classes or {}  # Not used in SELECT, but accepted
-        self._get_policy_context = get_policy_context
 
     def distinct(self) -> Self:
         """Enable SELECT DISTINCT."""

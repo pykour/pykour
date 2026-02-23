@@ -39,17 +39,20 @@ class UpdateQuery(WhereClauseMixin, BaseQuery):
         table_classes: dict[str, type] | None = None,
         get_policy_context: GetPolicyContextFunc | None = None,
     ) -> None:
-        super().__init__(execute_func, fetch_all_func, fetch_one_func)
+        super().__init__(
+            execute_func,
+            fetch_all_func,
+            fetch_one_func,
+            policy_enforcer=policy_enforcer,
+            table_policies=table_policies,
+            table_classes=table_classes,
+            get_policy_context=get_policy_context,
+        )
         self._table = table
         self._set_clauses: list[str] = []
         self._set_data: dict[str, Any] = {}  # Track user-provided set data
         self._where_clauses: list[str] = []
         self._returning: list[str] = []
-        # Policy support
-        self._policy_enforcer = policy_enforcer
-        self._table_policies = table_policies or {}
-        self._table_classes = table_classes or {}
-        self._get_policy_context = get_policy_context
 
     def set(self, **data: Any) -> Self:
         """Set columns to update.

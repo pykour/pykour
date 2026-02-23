@@ -321,6 +321,14 @@ class Database:
 
     # Query builder methods (delegated to QueryBuilderFactory)
 
+    @property
+    def _factory(self) -> QueryBuilderFactory:
+        """Return the connected query factory, raising RuntimeError if not connected."""
+        if self._query_factory is None:
+            self._conn_manager.check_connected()
+            raise RuntimeError("Query factory is not initialized")
+        return self._query_factory
+
     def select(self, *columns: str) -> SelectQuery:
         """Create a SELECT query builder.
 
@@ -330,9 +338,7 @@ class Database:
         Returns:
             SelectQuery builder instance.
         """
-        if self._query_factory is None:
-            self._conn_manager.check_connected()
-        return self._query_factory.select(*columns)  # type: ignore[union-attr]
+        return self._factory.select(*columns)
 
     def insert(self, table: str) -> InsertQuery:
         """Create an INSERT query builder.
@@ -343,9 +349,7 @@ class Database:
         Returns:
             InsertQuery builder instance.
         """
-        if self._query_factory is None:
-            self._conn_manager.check_connected()
-        return self._query_factory.insert(table)  # type: ignore[union-attr]
+        return self._factory.insert(table)
 
     def update(self, table: str) -> UpdateQuery:
         """Create an UPDATE query builder.
@@ -356,9 +360,7 @@ class Database:
         Returns:
             UpdateQuery builder instance.
         """
-        if self._query_factory is None:
-            self._conn_manager.check_connected()
-        return self._query_factory.update(table)  # type: ignore[union-attr]
+        return self._factory.update(table)
 
     def delete(self, table: str) -> DeleteQuery:
         """Create a DELETE query builder.
@@ -369,9 +371,7 @@ class Database:
         Returns:
             DeleteQuery builder instance.
         """
-        if self._query_factory is None:
-            self._conn_manager.check_connected()
-        return self._query_factory.delete(table)  # type: ignore[union-attr]
+        return self._factory.delete(table)
 
     # Transaction
 
