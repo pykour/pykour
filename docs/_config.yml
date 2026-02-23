@@ -1,0 +1,9 @@
+title: Pykour Documentation
+description: Lightweight ASGI web framework for Python 3.13+ with file-based routing
+remote_theme: just-the-docs/just-the-docs
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+search_enabled: true
+nav_sort: case_insensitive
+color_scheme: dark
